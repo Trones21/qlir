@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qlir"
+version = "0.1.0"  # or use setuptools-scm (see note #5)
+description = "Indicators ➜ Features ➜ Signals on Pandas"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["pandas", "requests", "numpy"]
+authors = [{ name = "Thomas Rones" }]
+license = { text = "MIT" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+urls = { "Source" = "https://github.com/you/qlir" }
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+# Optional CLI entry point if you add qlir/cli.py
+# [project.scripts]
+# qlir = "qlir.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+# If you add py.typed:
+# [tool.setuptools.package-data]
+# qlir = ["py.typed"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q --maxfail=1"
+# Prefer editable install instead of pythonpath hacks:
+# pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-select = ["I"]

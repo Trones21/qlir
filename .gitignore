@@ -1,0 +1,53 @@
+# --- Python virtual environment ---
+venv/
+.env/
+.envrc
+.venv/
+
+# --- Python build artifacts ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# --- Distribution / packaging ---
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Test / coverage ---
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# --- IDE / editor stuff ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS-specific ---
+.DS_Store
+Thumbs.db
+
+# --- Logs / temp ---
+*.log
+*.tmp
+*.bak
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Poetry
+.poetry/
+
+# PyCharm cache
+__pypackages__/
+
+# VSCode Python
+.vscode/settings.json
+
