@@ -1,18 +1,81 @@
-.PHONY: setup test lint freeze clean
+# Makefile
+# Usage examples:
+#   make dev           # create venv + install with [dev]
+#   make run ARGS="--help"
+#   make format        # ruff format + autofix
+#   make test          # pytest
+#   make build         # python -m build
+#   make clean         # remove caches, build artifacts, venv
 
-setup:
-	python3 -m venv venv
-	. venv/bin/activate && pip install -U pip
-	. venv/bin/activate && pip install -e ".[dev]"
+.PHONY: dev install venv run cli test lint format check freeze build publish clean distclean help
 
+VENV ?= venv
+PY    = $(VENV)/bin/python
+PIP   = $(VENV)/bin/pip
+RUFF  = $(VENV)/bin/ruff
+PYT   = $(VENV)/bin/pytest
+TWINE = $(VENV)/bin/twine
+
+# ----- Setup -----
+venv:
+	python3 -m venv $(VENV)
+	$(PIP) install -U pip
+
+install: venv
+	$(PIP) install -e .
+
+dev: venv
+	$(PIP) install -e ".[dev]"
+
+# ----- Run (module or console script) -----
+# Run as a module (works even without entry point)
+run:  ## e.g. make run ARGS="--help"
+	$(PY) -m qlir.cli $(ARGS)
+
+# Run the console script (after enabling [project.scripts] qlir=...)
+cli:  ## e.g. make cli ARGS="--help"
+	$(VENV)/bin/qlir $(ARGS)
+
+# ----- Quality -----
 test:
-	. venv/bin/activate && pytest
+	$(PYT)
+
+test-file:
+	@if [ -z "$(f)" ]; then echo "Usage: make test-file f=path/to/test_file.py"; exit 1; fi
+	$(PYT) $(f)
+
+test-func:
+	@if [ -z "$(f)" ]; then echo "Usage: make test-func f=path/to/test_file.py::test_func"; exit 1; fi
+	$(PYT) $(f)
+
 
 lint:
-	. venv/bin/activate && ruff check src tests
+	$(RUFF) check src tests
+
+format:
+	$(RUFF) format src tests
+	$(RUFF) check --fix src tests
+
+check: lint test
 
 freeze:
-	. venv/bin/activate && pip freeze > requirements.txt
+	$(PIP) freeze > requirements.txt
 
+# ----- Build / Publish -----
+build:
+	$(PY) -m pip install -U build twine
+	$(PY) -m build
+	$(TWINE) check dist/*
+
+publish: build
+	$(TWINE) upload dist/*
+
+# ----- Cleanup -----
 clean:
-	rm -rf venv build dist *.egg-info .pytest_cache .ruff_cache
+	rm -rf build dist *.egg-info .pytest_cache .ruff_cache **/__pycache__
+
+distclean: clean
+	rm -rf $(VENV)
+
+help:
+	@echo "Targets: dev install venv run cli test lint format check freeze build publish clean distclean"

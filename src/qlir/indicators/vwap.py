@@ -1,35 +1,47 @@
+# src/qlir/indicators/vwap.py
 from __future__ import annotations
 import numpy as np
 import pandas as pd
 from ..utils.time import session_floor
 from ..utils.df_ops import ensure_copy
 
-__all__ = ["add_vwap_session"]
+__all__ = ["vwap_cum_hlc3", "add_vwap_hlc3_session"]
 
-
-def add_vwap_session(
+def vwap_cum_hlc3(
     df: pd.DataFrame,
     *,
-    tz: str = "UTC",
     price_cols: tuple[str, str, str] = ("high", "low", "close"),
     volume_col: str = "volume",
-    out_col: str = "vwap",
-    in_place: bool = False,
-) -> pd.DataFrame:
-    """Session-reset VWAP (resets at local midnight in `tz`). Requires tz-aware `timestamp`."""
-    out = ensure_copy(df, in_place)
+) -> pd.Series:
+    """Pure VWAP on a single session (no timestamps). HLC3 basis; NaN where cumvol==0."""
+    h, l, c = price_cols
+    vol = df[volume_col].astype(float)
+    hlc3 = (df[h] + df[l] + df[c]) / 3.0
+    cum_vol = vol.cumsum()
+    vwap = (hlc3 * vol).cumsum() / cum_vol
+    vwap[cum_vol == 0] = np.nan
+    vwap.name = "vwap"
+    return vwap
+
+
+# indicators/vwap.py
+def add_vwap_hlc3_session(df, *, tz="UTC", price_cols=("high","low","close"), volume_col="volume", out_col="vwap"):
+    out = df.copy()
     h, l, c = price_cols
     vol = out[volume_col].astype(float)
-    tp = ((out[h] + out[l] + out[c]) / 3.0).astype(float)
+    hlc3 = ((out[h] + out[l] + out[c]) / 3.0).astype(float)
+    
+    print(df)
+    # Session = calendar day of ts_end in tz (index is ts_end, thanks to data layer)
+    if isinstance(out.index, pd.DatetimeIndex):
+        session = out.index.tz_convert(tz).floor("D")
+    else:
+        # Fallback if someone passes columns instead of index
+        session = pd.to_datetime(out["ts_end"], utc=True).dt.tz_convert(tz).dt.floor("D")
 
-    session = session_floor(out, tz=tz)
-    out["_session"] = session
-
-    pv = tp * vol
-    g = out.groupby("_session", sort=False)
-    pv_cum = g[ pv.name ].cumsum()
-    v_cum  = g[ vol.name ].cumsum()
-
-    denom = v_cum.replace(0.0, np.nan)
-    out[out_col] = (pv_cum / denom).to_numpy()
+    cumv = vol.groupby(session).cumsum()
+    vwap = (hlc3 * vol).groupby(session).cumsum() / cumv
+    vwap[cumv == 0] = float("nan")
+    out[out_col] = vwap
     return out
+

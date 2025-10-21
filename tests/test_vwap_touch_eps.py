@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-from trading.indicators.vwap import add_vwap_session
-from trading.features.vwap.relations import flag_relations
+from qlir.indicators.vwap import add_vwap_session
+from qlir.features.vwap.relations import flag_relations
 
 
 def test_touch_eps_threshold():

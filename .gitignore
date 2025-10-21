@@ -51,3 +51,5 @@ __pypackages__/
 # VSCode Python
 .vscode/settings.json
 
+# CSVs
+*.csv

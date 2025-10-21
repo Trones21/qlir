@@ -1,7 +1,7 @@
-from trading.features.vwap.block import add_vwap_feature_block
-from trading.features.rsi.block import add_rsi_feature_block
-from trading.features.macd.block import add_macd_feature_block
-from trading.signals import add_vwap_rejection_signal, add_combo_signal
+from qlir.features.vwap.block import add_vwap_feature_block
+from qlir.features.rsi.block import add_rsi_feature_block
+from qlir.features.macd.block import add_macd_feature_block
+from qlir.signals import add_vwap_rejection_signal, add_combo_signal
 
 
 def test_signals_exist(ohlcv_1m_100):

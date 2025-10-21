@@ -1,6 +1,7 @@
 import argparse, sys
-from .data.csv import load_ohlcv_from_csv
-from .data.drift import fetch_drift_candles
+from qlir.data.csv import load_ohlcv_from_csv
+from qlir.data.drift import fetch_drift_candles
+from qlir.io.writer import write 
 
 def main():
     p = argparse.ArgumentParser(prog="qlir")
@@ -13,14 +14,22 @@ def main():
     p_fetch.add_argument("--symbol", default="SOL-PERP")
     p_fetch.add_argument("--res", default="1")
     p_fetch.add_argument("--limit", type=int)
+    p_fetch.add_argument("--out", help="Optional path to save CSV (e.g. data/sol_perp.csv)")
 
     args = p.parse_args()
     if args.cmd == "csv":
         df = load_ohlcv_from_csv(args.path)
         print(df.head(20).to_string(index=False))
     elif args.cmd == "fetch":
-        df = fetch_drift_candles(symbol=args.symbol, resolution=args.res, limit=args.limit)
+        df = fetch_drift_candles(symbol=args.symbol, resolution=args.res, label="start", add_bounds=True, set_index="ts_end", include_partial=False)
         print(df.tail().to_string(index=False))
+        if args.out:
+            path = write(
+                df,
+                args.out,
+                compression=args.compression if args.out.endswith(".parquet") else None,
+            )
+            print(f"\n✅ Saved {len(df)} rows → {path}")
     else:
         p.print_help(); sys.exit(2)
 

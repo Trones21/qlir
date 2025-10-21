@@ -1,0 +1,44 @@
+# tests/integration/test_data_roundtrip.py
+import logging
+log = logging.getLogger(__name__)
+
+import os
+import pandas as pd
+import pytest
+from qlir.data import fetch_drift_candles
+from qlir.io.writer import write
+
+def test_data_roundtrip(tmp_path):
+    """
+    Integration test: fetch → normalize → write CSV → read → validate contract.
+    Replace the placeholder functions below with your actual implementations.
+    """
+    log.info("Starting integration test with tmp_path=%s", tmp_path)
+    normalized = fetch_drift_candles()
+    out_path = tmp_path / "roundtrip.csv"
+    write(normalized, out_path)
+    log.info("Data shape after normalization: %s", normalized)
+
+    # 3. Read CSV back in (mimic downstream consumer)
+    back = pd.read_csv(out_path, parse_dates=["tz_start", "tz_end"])
+
+    validate_contract(back)
+
+    # # Optional: roundtrip equality check
+    # pd.testing.assert_index_equal(normalized.index, back.index, obj="index equality")
+    # for col in ["open", "high", "low", "close", "volume"]:
+    #     pd.testing.assert_series_equal(
+    #         normalized[col].astype(float),
+    #         back[col].astype(float),
+    #         check_exact=False,
+    #         rtol=1e-8,
+    #         obj=f"column {col}",
+    #     )
+    
+def validate_contract(df: pd.DataFrame):
+    """Validate schema, types, and logical consistency."""
+    required = {"tz_start", "tz_end", "open", "high", "low", "close", "volume"}
+    assert required.issubset(df.columns), f"Missing columns: {required - set(df.columns)}"
+    assert df["tz_start"].is_monotonic_increasing
+    assert (df["high"] >= df["low"]).all()
+    assert (df["volume"] >= 0).all()
