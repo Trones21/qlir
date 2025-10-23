@@ -18,11 +18,23 @@ def add_macd(
 ) -> pd.DataFrame:
     out = df if in_place else df.copy()
     close = out[close_col].astype(float)
+    
     ema_fast = close.ewm(span=fast, adjust=False).mean()
     ema_slow = close.ewm(span=slow, adjust=False).mean()
+
     macd = ema_fast - ema_slow
     sig = macd.ewm(span=signal, adjust=False).mean()
+    
+    out["ema_fast"] = ema_fast
+    out["ema_slow"] = ema_slow
+    
     out[out_macd] = macd
     out[out_signal] = sig
     out[out_hist] = macd - sig
+
+    # MACD line only valid once we have enough data 
+    out["macd_line_ready"] = df.index >= (slow - 1)
+    # Signal line & Histogram need even more time
+    out["macd_signal_line_and_hist_ready"] = df.index >= (slow + signal - 1)
+
     return out

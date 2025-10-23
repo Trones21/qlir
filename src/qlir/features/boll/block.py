@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pandas as pd
 from ...indicators.boll import add_bollinger
-from .bands_touch import add_boll_touch_squeeze_flags
+from .old_bands_touch import add_boll_touch_squeeze_flags
 
 __all__ = ["add_boll_feature_block"]
 

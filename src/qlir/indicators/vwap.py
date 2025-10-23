@@ -5,23 +5,26 @@ import pandas as pd
 from ..utils.time import session_floor
 from ..utils.df_ops import ensure_copy
 
-__all__ = ["vwap_cum_hlc3", "add_vwap_hlc3_session"]
+__all__ = ["add_vwap_cum_hlc3", "add_vwap_hlc3_session"]
 
-def vwap_cum_hlc3(
+def add_vwap_cum_hlc3(
     df: pd.DataFrame,
     *,
-    price_cols: tuple[str, str, str] = ("high", "low", "close"),
-    volume_col: str = "volume",
-) -> pd.Series:
-    """Pure VWAP on a single session (no timestamps). HLC3 basis; NaN where cumvol==0."""
+    price_cols=("high", "low", "close"),
+    volume_col="volume",
+    out_col="vwap",
+    in_place=False,
+) -> pd.DataFrame:
+    out = df if in_place else df.copy()
     h, l, c = price_cols
-    vol = df[volume_col].astype(float)
-    hlc3 = (df[h] + df[l] + df[c]) / 3.0
+    vol = out[volume_col].astype(float)
+    hlc3 = (out[h] + out[l] + out[c]) / 3.0
+
     cum_vol = vol.cumsum()
-    vwap = (hlc3 * vol).cumsum() / cum_vol
-    vwap[cum_vol == 0] = np.nan
-    vwap.name = "vwap"
-    return vwap
+    out[out_col] = (hlc3 * vol).cumsum() / cum_vol
+    out.loc[cum_vol == 0, out_col] = np.nan
+    return out
+
 
 
 # indicators/vwap.py

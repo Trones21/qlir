@@ -46,4 +46,8 @@ def read(path: str | Path, **kwargs) -> pd.DataFrame:
         return read_parquet(p, **kwargs)
     if suf == ".json":
         return read_json(p, **kwargs)
+    # Added so that we can keep static files for our tests, yet leave gitignore the same
+    if suf == ".test_csv":
+        return read_csv(p, **kwargs)
+    
     raise ValueError(f"Unsupported extension {suf!r}. Use .csv, .parquet, or .json.")

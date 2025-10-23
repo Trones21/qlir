@@ -1,7 +1,6 @@
 
 ### `USAGE.md`
 
-````md
 # QLIR — Usage Guide
 
 QLIR (**Quant Layered Indicator Runtime**) is a Python library + CLI for building pipelines that transform **Indicators → Features → Signals** on top of Pandas.

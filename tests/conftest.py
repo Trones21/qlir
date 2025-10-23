@@ -2,6 +2,20 @@
 import numpy as np
 import pandas as pd
 import pytest
+from pathlib  import Path
+from qlir.io.reader import read
+import logging
+log = logging.getLogger(__name__)
+
+@pytest.fixture(scope="session")
+def static_data() -> pd.DataFrame:
+    """
+    Loads the canonical static dataset for tests once per session.
+    """
+    path = Path(__file__).parent / "data" / "sol_1m.test_csv"
+    log.info(f"Loading test data from {path}")
+    df = read(path)
+    return df
 
 
 def _make_ohlcv(

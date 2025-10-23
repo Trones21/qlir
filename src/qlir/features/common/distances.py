@@ -1,7 +1,55 @@
 from __future__ import annotations
 import pandas as pd
+import numpy as np
 
-__all__ = ["add_zscore"]
+
+__all__ = ["add_zscore", "add_distance"]
+
+import numpy as np
+import pandas as pd
+
+def add_distance(
+    df: pd.DataFrame,
+    *,
+    from_: str,   # baseline (e.g., 'vwap')
+    to_: str,     # primary  (e.g., 'close')
+    include_pct: bool = True,
+    prefix: str | None = None,
+    in_place: bool = False,
+) -> pd.DataFrame:
+    """
+    distance   = to_ - from_
+    pct_dist   = (to_ - from_) / from_
+    """
+    out = df if in_place else df.copy()
+
+    # Validate presence
+    for col in (from_, to_):
+        if col not in out:
+            raise KeyError(f"Missing required column: {col}")
+
+    # Keep names separate from Series
+    base_name = from_
+    ref_name  = to_
+
+    base = pd.to_numeric(out[base_name], errors="coerce")  # denominator for pct
+    ref  = pd.to_numeric(out[ref_name],  errors="coerce")
+
+    # Column names
+    pref = prefix or f"{base_name}_to_{ref_name}"
+    dist_col = f"{pref}_dist"
+    pct_col  = f"{pref}_pct"
+
+    # Vectorized, index-aligned math
+    dist = ref.sub(base)
+    out[dist_col] = dist
+
+    if include_pct:
+        denom = base.replace(0.0, np.nan)  # guard div-by-zero
+        out[pct_col] = dist.div(denom)
+
+    return out
+
 
 
 def add_zscore(

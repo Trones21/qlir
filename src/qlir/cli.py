@@ -1,5 +1,5 @@
 import argparse, sys
-from qlir.data.csv import load_ohlcv_from_csv
+from qlir.data.load import load_ohlcv
 from qlir.data.drift import fetch_drift_candles
 from qlir.io.writer import write 
 
@@ -18,10 +18,10 @@ def main():
 
     args = p.parse_args()
     if args.cmd == "csv":
-        df = load_ohlcv_from_csv(args.path)
+        df = load_ohlcv(args.path)
         print(df.head(20).to_string(index=False))
     elif args.cmd == "fetch":
-        df = fetch_drift_candles(symbol=args.symbol, resolution=args.res, label="start", add_bounds=True, set_index="ts_end", include_partial=False)
+        df = fetch_drift_candles(symbol=args.symbol, resolution=args.res, include_partial=False)
         print(df.tail().to_string(index=False))
         if args.out:
             path = write(
