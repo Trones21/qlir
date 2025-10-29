@@ -5,8 +5,17 @@
 
 QLIR (**Quant Layered Indicator Runtime**) is a Python library + CLI for building pipelines that transform **Indicators → Features → Signals** on top of Pandas.
 
----
 
+# Quickstart 
+
+
+ Download `./quickstart/qlir_quickstart.py` and run it from your target project directory, this will scaffold a project for you. 
+ ```bash
+ e.g.
+me@abc: ~/my_backtests$ pythpon3 ~/Downloads/qlir_quickstart.py <projectname>
+```
+---
+-----  OLD --------
 ## Install
 
 ### From GitHub (read-only, no push access)

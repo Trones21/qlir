@@ -31,6 +31,12 @@ def _fmt_df(df: pd.DataFrame, rows: int = 10, max_width: int = 120) -> str:
     else:
         return df_head.to_string(index=False)
 
+def ensure_logging():
+    import logging
+    logger = logging.getLogger()
+    if not logger.hasHandlers():
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+        print("[init] Logging configured (default INFO)")
 
 def logdf(
     df: pd.DataFrame,
@@ -40,8 +46,9 @@ def logdf(
     max_width: int = 120,
 ):
     """
-    Log a DataFrame with aligned columns, truncated to fit max_width.
-
+    Log or print a DataFrame with aligned columns, truncated to fit max_width.
+    Falls back to print() if logging is not configured.
+    
     Parameters
     ----------
     df : pd.DataFrame
@@ -55,10 +62,14 @@ def logdf(
     max_width : int
         Max character width before truncating columns.
     """
+    ensure_logging()
+    logger = logging.getLogger()
+    emit = getattr(logger, level, logger.info)
+
     if df is None or df.empty:
-        getattr(log, level)(f"{name or 'DataFrame'} is empty.")
+        emit(f"{name or 'DataFrame'} is empty.")
         return
 
     header = f"\n📊 {name or 'DataFrame'} (shape={df.shape}):"
     table = _fmt_df(df, rows=rows, max_width=max_width)
-    getattr(log, level)(f"{header}\n{table}")
+    emit(f"{header}\n{table}")

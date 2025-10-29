@@ -14,6 +14,7 @@ def write_csv(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """Write DataFrame to CSV (overwrite). Extra kwargs forwarded to DataFrame.to_csv."""
     path = _prep_path(path)
     df.to_csv(path, index=False, **kwargs)
+    print(f"Wrote csv to {path}")
     return path
 
 
@@ -21,6 +22,7 @@ def write_parquet(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """Write DataFrame to Parquet (overwrite). Extra kwargs forwarded to DataFrame.to_parquet."""
     path = _prep_path(path)
     df.to_parquet(path, index=False, **kwargs)
+    print(f"Wrote parquet to {path}")
     return path
 
 
@@ -31,6 +33,7 @@ def write_json(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """
     path = _prep_path(path)
     df.to_json(path, **kwargs)
+    print(f"Wrote json to {path}")
     return path
 
 

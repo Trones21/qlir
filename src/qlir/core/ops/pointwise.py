@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, Sequence
 import numpy as np
 import pandas as pd
+import warnings 
 
 Number = Union[int, float]
-ColsLike = Optional[Iterable[str]]
+ColsLike =  Optional[Union[str, Sequence[str]]]
 
 # ----------------------------
 # Helpers
@@ -17,7 +18,13 @@ def _numeric_cols(df: pd.DataFrame) -> List[str]:
 def _normalize_cols(df: pd.DataFrame, cols: ColsLike) -> List[str]:
     if cols is None:
         return _numeric_cols(df)
-    return [c for c in cols if c in df.columns]
+    if isinstance(cols, str):
+        cols = [cols]
+    valid = [c for c in cols if c in df.columns]
+    invalid = [c for c in cols if c not in df.columns]
+    if invalid:
+        warnings.warn(f"Ignoring missing columns: {invalid}", RuntimeWarning)
+    return valid
 
 def _maybe_copy(df: pd.DataFrame, inplace: bool) -> pd.DataFrame:
     return df if inplace else df.copy()
