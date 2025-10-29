@@ -1,0 +1,27 @@
+[project]
+name = "breakouts"
+version = "0.1.0"
+description = "Starter project using QLIR"
+requires-python = ">=3.10"
+readme = "README.md"
+packages = [{ include = "breakouts" }]
+dependencies = [
+  "pandas>=2.2,<3.0",
+  "numpy>=1.26,<2.0",
+  # Local path dependency
+  "qlir @ file:///home/tjr/gh/qlir",
+  # or use the Git version:
+  # "qlir @ git+https://github.com/your-org/qlir.git@main",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "debugpy (>=1.8.17,<2.0.0)"
+]
