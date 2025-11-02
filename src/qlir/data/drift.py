@@ -184,9 +184,6 @@ def probe_candles_any_le(
         params=params,
         timeout=timeout,
     )
-    log.info(r.url)
-    log.info(r.status_code)
-    log.info(r.json)
     if r.status_code == 400:
         log.info("400 res")
         return None
@@ -199,7 +196,6 @@ def probe_candles_any_le(
         return None
 
     df = pd.DataFrame(records)
-    logdf(normalize_candles(df, venue="drift", resolution="1"))
     if df.empty:
         return None
     else:
@@ -241,7 +237,6 @@ def discover_earliest_candle_start(
 
     while lo <= hi:
         mid = (lo + hi) // 2
-        log.info("Mid: %s", mid)
         got_data = probe_candles_any_le(
             session=session,
             symbol=symbol,
@@ -250,7 +245,6 @@ def discover_earliest_candle_start(
             timeout=timeout,
             include_partial=include_partial,
         )
-        log.info("returned: %s", got_data)
         log.info(
             f"[drift] probe startTs={mid} -> {'hit' if got_data is not None else 'empty'}"
         )
@@ -268,7 +262,7 @@ def discover_earliest_candle_start(
     if best is None:
         log.info("[drift] No data found up to end bound.")
     else:
-        log.info(f"[drift] Earliest available tz(unix) = {best}")
+        log.info(f"[drift] Earliest available ts(unix) = {best}")
 
     return best
 
