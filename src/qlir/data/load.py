@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 import pandas as pd
 from .schema import validate_ohlcv, OhlcvContract
-from qlir.io.reader import read
+
 
 def load_ohlcv(
     path: str | Path,
@@ -17,6 +17,7 @@ def load_ohlcv(
     Load a canonical OHLCV file and validate it against the contract.
     This does NOT normalize — it only validates and (optionally) filters/indexes.
     """
+    from qlir.io.reader import read
     df = read(path)
 
     # Light coercions so files that are "almost right" pass (no normalization here)

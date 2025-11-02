@@ -1,3 +1,5 @@
+Viz_Demo
+
 - Test viz_demo.py
 - make instructions for viz-demo 
     - git clone 
@@ -6,3 +8,10 @@
     - run
 
 we also need to handle the cases where it touches multiple ... e.g. touch lower and touch mid, touch all, or touch mid and upper
+
+
+Tests:
+- for candle quality funcs
+ 
+
+

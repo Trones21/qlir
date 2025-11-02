@@ -4,7 +4,7 @@ from typing import Optional, List, Tuple
 import pandas as pd
 
 from .drift import fetch_drift_candles_all, normalize_drift_resolution_token
-from qlir.io.candles_dq import detect_candle_gaps
+from qlir.data.candle_quality import detect_candle_gaps
 
 # map Drift tokens to step seconds
 _STEP_SEC = {"1":60,"5":300,"15":900,"60":3600,"240":14400}
