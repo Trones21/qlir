@@ -41,5 +41,4 @@ def test_discover_earliest_candle_start_real():
 
 
 def test_fetch_loop():
-    log.info("Test Ftech loop")
-    #out = fetch_drift_candles_all("SOL-PERP", 5, start_time=)
+    

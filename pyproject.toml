@@ -7,8 +7,8 @@ name = "qlir"
 version = "0.1.0"  # or use setuptools-scm (see note #5)
 description = "Indicators ➜ Features ➜ Signals on Pandas"
 readme = "README.md"
-requires-python = ">=3.10"
-dependencies = ["pandas", "requests", "numpy", "pyarrow", "tabulate", "matplotlib"]
+requires-python = ">=3.10, <4.0"
+dependencies = ["pandas", "requests", "numpy", "pyarrow", "tabulate", "matplotlib", "drift-data-api-client @ file:///home/tjr/datasources/drift/drift-data-api-client/dist/drift_data_api_client-1.0.0-py3-none-any.whl"]
 authors = [{ name = "Thomas Rones" }]
 license = { text = "MIT" }
 classifiers = [

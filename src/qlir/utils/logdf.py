@@ -43,7 +43,7 @@ def logdf(
     rows: int = 10,
     level: str = "info",
     name: str | None = None,
-    max_width: int = 120,
+    max_width: int = 200,
 ):
     """
     Log or print a DataFrame with aligned columns, truncated to fit max_width.

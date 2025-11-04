@@ -2,6 +2,9 @@
 from typing import Optional
 import pandas as pd
 from .registry import CandleSpec, REGISTRY
+from collections import deque
+import logging
+log = logging.getLogger(__name__)
 
 def _pick(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
     lower = {c.lower(): c for c in df.columns}
@@ -22,6 +25,7 @@ def normalize_candles(
     *,
     venue: str,
     resolution: str,
+    keep_ts_start_unix: bool = False, 
     include_partial: bool = True,
 ) -> pd.DataFrame:
     """
@@ -32,7 +36,11 @@ def normalize_candles(
     """
     spec = REGISTRY[venue]
     if df.empty:
+        log.error("Empty dataframe passed to normalize candles")
         return df
+    if len(df.columns) < 6:
+        log.warning(f"Normalize candles passed df with {len(df.columns)}. Need at least 6 cols for full tohlcv")
+        log.warning(f"column names: {list(df.columns)}")   
 
     # ---- OHLCV field remap ----
     ts_col = _pick(df, spec.timestamp_fields) or "timestamp"
@@ -46,6 +54,9 @@ def normalize_candles(
     if v_col:
         out = out.rename(columns={v_col: "volume"})
 
+    if keep_ts_start_unix:
+        out["ts_start_unix"] = out["timestamp"]
+
     # Timestamp → UTC-aware
     ts = out["timestamp"]
     if pd.api.types.is_numeric_dtype(ts):
@@ -54,10 +65,6 @@ def normalize_candles(
     else:
         ts = pd.to_datetime(ts, utc=True, errors="coerce")
     out["timestamp"] = ts
-
-    # Keep needed columns
-    keep = ["timestamp", "open", "high", "low", "close"] + (["volume"] if "volume" in out.columns else [])
-    out = out[keep].dropna(subset=["timestamp", "open", "high", "low", "close"]).sort_values("timestamp").reset_index(drop=True)
 
     # ---- Bounds from semantics ----
     off = _offset(spec, resolution)
@@ -79,8 +86,11 @@ def normalize_candles(
         out = out[out["tz_end"].notna()]
 
     # Final canonical order
-    cols = ["tz_start", "tz_end", "open", "high", "low", "close"]
+    cols = deque(["tz_start", "tz_end", "open", "high", "low", "close"])
     if "volume" in out:
         cols.append("volume")
-    out = out[cols].reset_index(drop=True)
+    if keep_ts_start_unix:
+        cols.appendleft("ts_start_unix")
+    # Turn back into a list for pandas sake  
+    out = out[list(cols)].reset_index(drop=True)
     return out
