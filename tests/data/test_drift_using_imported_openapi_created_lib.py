@@ -39,15 +39,15 @@ def test_loop_candles():
     client = Client("https://data.api.drift.trade")
     # Get hourly candles for last 72 hours, get 20 candles per fetch
 
-    start_ts = math.floor(time.time() - (86400 * 3))
-    log.info("Anchor time: %s",  datetime.fromtimestamp(start_ts, timezone.utc))
+    anchor_ts = math.floor(time.time() - (86400 * 3))
+    log.info("Anchor time: %s",  datetime.fromtimestamp(anchor_ts, timezone.utc))
     
     pages: list[pd.DataFrame] = [] 
     #while start_ts < math.floor(time.time()):
     temp = 0 
     while temp < 3:
-        log.info(f"start_ts: {start_ts} current_ts: {math.floor(time.time())}")
-        resp = get_market_symbol_candles_resolution.sync("SOL-PERP", client=client, resolution=GetMarketSymbolCandlesResolutionResolution("60"), limit=20, start_ts=start_ts)
+        log.info(f"start_ts: {anchor_ts} current_ts: {math.floor(time.time())}")
+        resp = get_market_symbol_candles_resolution.sync("SOL-PERP", client=client, resolution=GetMarketSymbolCandlesResolutionResolution("60"), limit=20, start_ts=anchor_ts)
         if resp.records:
             #log.info(type(resp.records))
             resp_as_dict = resp.to_dict()
@@ -58,14 +58,16 @@ def test_loop_candles():
             clean = normalize_candles(page, venue="drift", resolution="60", keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
-            start_ts = int(sorted["ts_start_unix"].max())
+            
+            # need to calc start_ts as an offset from the largest timestamp e.g. current_anchor + (20 * 3600)
+            # start_ts = int(sorted["ts_start_unix"].max())
             first_row = sorted.iloc[0]
             last_row =  sorted.iloc[-1]
             log.info(f"First row unix:{first_row['ts_start_unix']} tz_start: {first_row['tz_start']}")
             log.info(f"Last  row unix:{last_row['ts_start_unix']} tz_start: {last_row['tz_start']}")
             #logdf(sorted, 100)
             temp += 1
-            log.info("Expected next start_ts at least: %s", start_ts)
+            log.info("Expected next start_ts at least: %s", anchor_ts)
 
     # for page in pages:
     #     logdf(page)
