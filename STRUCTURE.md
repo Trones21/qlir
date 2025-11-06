@@ -1,5 +1,3 @@
-Totally—think **ingredients vs recipes**. Here’s a clean MECE split for QLIR so you know what lives in the base lib (reusable primitives) vs what belongs in higher layers.
-
 # QLIR Layering (MECE)
 
 ## 0) Data (I/O + Shaping)

@@ -1,72 +1,76 @@
 # Makefile
 # Usage examples:
-#   make dev           # create venv + install with [dev]
+#   make install         # poetry install (with dev deps)
 #   make run ARGS="--help"
-#   make format        # ruff format + autofix
-#   make test          # pytest
-#   make build         # python -m build
-#   make clean         # remove caches, build artifacts, venv
+#   make cli ARGS="--help"
+#   make test
+#   make test-file f=tests/test_something.py
+#   make test-func f=tests/test_something.py::test_case
+#   make lint
+#   make format
+#   make build
+#   make clean
 
-.PHONY: dev install venv run cli test lint format check freeze build publish clean distclean help
+.PHONY: install run cli test test-file test-func lint format check freeze build publish clean distclean help
 
-VENV ?= venv
-PY    = $(VENV)/bin/python
-RUFF  = $(VENV)/bin/ruff
-PYT   = $(VENV)/bin/pytest
-TWINE = $(VENV)/bin/twine
-
-
-install: poetry install --extras dev
+# ----- Install / Setup -----
+install:
+	poetry install --with dev
 
 # ----- Run (module or console script) -----
-# Run as a module (works even without entry point)
+# Run as a module (doesn't require script entrypoint)
 run:  ## e.g. make run ARGS="--help"
-	$(PY) -m qlir.cli $(ARGS)
+	poetry run python -m qlir.cli $(ARGS)
 
-# Run the console script (after enabling [project.scripts] qlir=...)
+# Run the console script (after enabling [project.scripts] qlir=... in pyproject.toml)
 cli:  ## e.g. make cli ARGS="--help"
-	$(VENV)/bin/qlir $(ARGS)
+	poetry run qlir $(ARGS)
+
+# ----- Testing -----
+test:
+	poetry run pytest
+
+#file/func
+test-f:
+	@if [ -z "$(f)" ]; then echo "Filter tests to file or func Usage: make test-f f=path/to/test_file.py or make test-f f=path/to/test_file.py::test_func"; exit 1; fi
+	poetry run pytest $(f)
+
+# file/func with print enabled (-s)
+test-f-wp:
+	@if [ -z "-s $(f)" ]; then echo "Filter tests to file or func and run with print enabled (-s) Usage: make test-f-wp f=path/to/test_file.py or make test-f f=path/to/test_file.py::test_func"; exit 1; fi
+	poetry run pytest $(f)
+# make test-f-wp f="./tests/data/test_drift_using_imported_openapi_created_lib.py::test_loop_candles"
 
 # ----- Quality -----
-test:
-	$(PYT)
-
-test-file:
-	@if [ -z "$(f)" ]; then echo "Usage: make test-file f=path/to/test_file.py"; exit 1; fi
-	$(PYT) $(f)
-
-test-func:
-	@if [ -z "$(f)" ]; then echo "Usage: make test-func f=path/to/test_file.py::test_func"; exit 1; fi
-	$(PYT) $(f)
-
-
 lint:
-	$(RUFF) check src tests
+	poetry run ruff check src tests
 
 format:
-	$(RUFF) format src tests
-	$(RUFF) check --fix src tests
+	poetry run ruff format src tests
+	poetry run ruff check --fix src tests
 
 check: lint test
 
+# ----- Freeze (optional) -----
+# Only useful if you want a requirements.txt alongside Poetry
 freeze:
-	$(PIP) freeze > requirements.txt
+	poetry run pip freeze > requirements.txt
 
 # ----- Build / Publish -----
 build:
-	$(PY) -m pip install -U build twine
-	$(PY) -m build
-	$(TWINE) check dist/*
+	poetry run python -m pip install -U build twine
+	poetry run python -m build
+	poetry run twine check dist/*
 
 publish: build
-	$(TWINE) upload dist/*
+	poetry run twine upload dist/*
 
 # ----- Cleanup -----
 clean:
 	rm -rf build dist *.egg-info .pytest_cache .ruff_cache **/__pycache__
 
 distclean: clean
-	rm -rf $(VENV)
+	rm -rf .venv
 
 help:
-	@echo "Targets: dev install venv run cli test lint format check freeze build publish clean distclean"
+	@echo "Targets: install run cli test test-file test-func lint format check freeze build publish clean distclean"
