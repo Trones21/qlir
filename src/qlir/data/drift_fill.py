@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, List, Tuple
 import pandas as pd
 
-from .drift import fetch_drift_candles_all, normalize_drift_resolution_token
+from .drift import old_fetch_drift_candles_all, normalize_drift_resolution_token
 from qlir.data.candle_quality import detect_candle_gaps
 
 # map Drift tokens to step seconds

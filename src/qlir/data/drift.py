@@ -6,6 +6,23 @@ import pandas as pd
 import logging
 log = logging.getLogger(__name__)
 from qlir.utils.logdf import logdf
+
+from drift_data_api_client import Client
+from drift_data_api_client.api.market import get_market_symbol_funding_rates, get_market_symbol_candles_resolution
+from drift_data_api_client.models import get_market_symbol_candles_resolution_resolution, get_market_symbol_candles_resolution_response_200
+from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
+from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
+from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
+from qlir.data.candle_quality import validate_candles
+from qlir.data.normalize import normalize_candles
+from qlir.utils.logdf import logdf
+from qlir.io.checkpoint import write_checkpoint, FileType
+from qlir.io.union_files import union_file_datasets
+
+from datetime import datetime, timezone
+import math
+
+
 # ---------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------
@@ -120,45 +137,8 @@ def _unix_s(x: pd.Timestamp | int | float | None) -> Optional[int]:
 # Core fetchers
 # ---------------------------------------------------------
 
-def fetch_drift_candles(
-    symbol: str = "SOL-PERP",
-    resolution: str | int = "1",
-    limit: Optional[int] = None,
-    start_time: Optional[int] = None,
-    end_time: Optional[int] = None,
-    session: Optional[requests.Session] = None,
-    timeout: float = 15.0,
-    *,
-    include_partial: bool = True,
-) -> pd.DataFrame:
-    """
-    Fetch a single page of candles from Drift.
-    Returns a normalized DataFrame via normalize_candles().
-    """
-    from .normalize import normalize_candles  # lazy import
 
-    sess = session or requests.Session()
-    res_tok = normalize_drift_resolution_token(resolution)
-    url = f"{DRIFT_BASE}/market/{symbol}/candles/{res_tok}"
-    params: Dict[str, Any] = {}
-    if limit:
-        params["limit"] = int(limit)
-    if start_time:
-        params["startTs"] = int(start_time)
-    if end_time:
-        params["endTs"] = int(end_time)
 
-    print(f"[drift] Fetching {symbol} {res_tok}: start={start_time} end={end_time} limit={limit or 'default'}")
-
-    r = sess.get(url, params=params, timeout=timeout)
-    r.raise_for_status()
-    payload = r.json()
-    records = payload.get("records", payload)
-    df = pd.DataFrame(records)
-    if df.empty:
-        return df
-
-    return normalize_candles(df, venue="drift", resolution=res_tok, include_partial=include_partial)
 
 def probe_candles_any_le(
     *,
@@ -200,7 +180,6 @@ def probe_candles_any_le(
         return None
     else:
         return True
-
 
 def discover_earliest_candle_start(
     *,
@@ -270,7 +249,122 @@ def discover_earliest_candle_start(
 # Main fetch with forward pagination
 # -----------------------------------------------------------------------------
 
-def fetch_drift_candles_all(
+def get_candles_since():
+    return
+
+def get_candles_all():
+    return
+
+def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime):
+    
+    client = Client("https://data.api.drift.trade")
+    
+    # Rename for clarity 
+    intended_first_unix = from_ts
+    intended_final_unix = to_ts 
+
+    # wire format for the API (floor to seconds)
+    intended_first_unix = int(intended_first_unix.timestamp())
+    intended_final_unix = int(intended_final_unix.timestamp())
+
+    temp_folder = f"tmp/{symbol}_{resolution}/"
+
+    # need to first check if the intended_first_ts is within the range that the api provides 
+
+    next_call_unix = intended_final_unix # seed for FIRST call only
+
+    log.info("Paginiating backwards from: %s", datetime.fromtimestamp(intended_first_unix, timezone.utc) datetime.fromtimestamp(intended_first_ts, timezone.utc))
+    
+    pages: list[pd.DataFrame] = [] 
+    earliest_got_ts = math.inf
+    while earliest_got_ts > intended_first_unix:
+        #log.info(f"earliest_got_ts: {earliest_got_ts} > anchor_ts: {math.floor(time.time())}")
+        resp = get_market_symbol_candles_resolution.sync(symbol, client=client, resolution=GetMarketSymbolCandlesResolutionResolution(resolution), limit=20, start_ts=next_call_unix-1)
+        if resp.records:
+            resp_as_dict = resp.to_dict()
+            page = pd.DataFrame(resp_as_dict["records"])
+            clean = normalize_candles(page, venue="drift", resolution="60", keep_ts_start_unix=True, include_partial=False)
+            sorted = clean.sort_values("tz_start").reset_index(drop=True)
+            pages.append(sorted)
+            
+            # currently going to paginate backward from final_ts
+            first_row = sorted.iloc[0]
+            last_row =  sorted.iloc[-1]
+            log.info(f"Retrieved bars starting with: {first_row['tz_start']} to {last_row['tz_start']}")
+            # logdf(sorted, 25)
+            earliest_got_ts = first_row['ts_start_unix']
+            next_call_unix = earliest_got_ts - 1 # remove 1 second to avoid duplicating a row
+            if len(pages) > 2:
+                data = (
+                    pd.concat(pages, ignore_index=True)
+                    .sort_values("tz_start")
+                    .drop_duplicates(subset=["tz_start"], keep="last")
+                    .reset_index(drop=True)
+                )
+                write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname="")
+                pages = []
+
+    if pages:
+        data = (
+            pd.concat(pages, ignore_index=True)
+            .sort_values("tz_start")
+            .drop_duplicates(subset=["tz_start"], keep="last")
+            .reset_index(drop=True)
+        )
+        write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname="tmp/SOL_1hr_partial_last")
+
+    single_df = union_file_datasets("tmp") #note that this doesnt use read_candles but just read, could switch over later if we feel the need
+    validate_candles(single_df)
+
+
+
+
+
+
+
+# For Posterity
+def old_fetch_drift_candles(
+    symbol: str = "SOL-PERP",
+    resolution: str | int = "1",
+    limit: Optional[int] = None,
+    start_time: Optional[int] = None,
+    end_time: Optional[int] = None,
+    session: Optional[requests.Session] = None,
+    timeout: float = 15.0,
+    *,
+    include_partial: bool = True,
+) -> pd.DataFrame:
+    """
+    Fetch a single page of candles from Drift.
+    Returns a normalized DataFrame via normalize_candles().
+    """
+    from .normalize import normalize_candles  # lazy import
+
+    sess = session or requests.Session()
+    res_tok = normalize_drift_resolution_token(resolution)
+    url = f"{DRIFT_BASE}/market/{symbol}/candles/{res_tok}"
+    params: Dict[str, Any] = {}
+    if limit:
+        params["limit"] = int(limit)
+    if start_time:
+        params["startTs"] = int(start_time)
+    if end_time:
+        params["endTs"] = int(end_time)
+
+    print(f"[drift] Fetching {symbol} {res_tok}: start={start_time} end={end_time} limit={limit or 'default'}")
+
+    r = sess.get(url, params=params, timeout=timeout)
+    r.raise_for_status()
+    payload = r.json()
+    records = payload.get("records", payload)
+    df = pd.DataFrame(records)
+    if df.empty:
+        return df
+
+    return normalize_candles(df, venue="drift", resolution=res_tok, include_partial=include_partial)
+
+
+def old_fetch_drift_candles_all(
     symbol: str = "SOL-PERP",
     resolution: str | int = "1",
     *,
@@ -404,8 +498,7 @@ def fetch_drift_candles_all(
 
     return out.reset_index(drop=True)
 
-
-def fetch_drift_candles_update_from_df(
+def old_fetch_drift_candles_update_from_df(
     existing: Optional[pd.DataFrame],
     symbol: str = "SOL-PERP",
     resolution: Optional[str | int] = None,

@@ -31,42 +31,84 @@ def _sort_dedupe(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     out = out.drop_duplicates(subset=["tz_start"], keep="last").reset_index(drop=True)
     return out, before - len(out)
 
-def infer_freq(df: pd.DataFrame, token: Optional[str] = None) -> Optional[str]:
-    s = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
-    if len(s) < 3:
-        return DRIFT_TOKEN_TO_FREQ.get(str(token)) if token else None
-    freq = pd.infer_freq(s)
-    if freq is None and token:
-        freq = DRIFT_TOKEN_TO_FREQ.get(str(token))
-    return freq
 
-def detect_candle_gaps(df: pd.DataFrame, token: Optional[str] = None) -> tuple[List[pd.Timestamp], Optional[str]]:
+
+def ensure_homogeneous_timeframe(df: pd.DataFrame) -> None:
     """
-    Returns (missing_tz_starts, freq). Does NOT fill.
+    Raises ValueError if the DataFrame contains inconsistent candle spacing.
+
+    This version is strict — *all* deltas between consecutive tz_start
+    timestamps must be exactly equal. Any deviation is considered invalid.
     """
     if df.empty:
-        return [], DRIFT_TOKEN_TO_FREQ.get(str(token)) if token else None
+        return
 
-    # sanity
+    if "tz_start" not in df.columns:
+        raise ValueError("Missing tz_start column")
+
+    s = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
+    if len(s) < 3:
+        return
+
+    deltas = s.diff().dropna()
+
+    # check if all deltas are identical
+    if not deltas.eq(deltas.iloc[0]).all():
+        raise ValueError(
+            f"Heterogeneous candle spacing detected: {len(deltas.unique())} unique deltas found."
+        )
+
+
+def infer_freq(df: pd.DataFrame) -> Optional[str]:
+    """
+    Infer the frequency of a time-indexed candle DataFrame.
+
+    - Uses the first two unique timestamps to estimate delta-based frequency.
+    - If there are < 2 unique timestamps, returns None.
+    - Returns a pandas frequency string (e.g., '5T', 'H', '4H') if convertible,
+      otherwise None.
+    """
+    if df.empty or "tz_start" not in df.columns:
+        return None
+
+    s = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
+    if len(s) < 2:
+        return None
+
+    # use iloc[1] - iloc[0] for a simple delta
+    delta = s.iloc[1] - s.iloc[0]
+
+    try:
+        return pd.tseries.frequencies.to_offset(delta).freqstr # type: ignore
+    except ValueError:
+        # happens if delta can't be converted to a standard pandas frequency
+        return None
+
+
+def detect_candle_gaps(df: pd.DataFrame, freq: Optional[str] = None) -> list[pd.Timestamp]:
+    """
+    Return missing tz_start timestamps given a fixed frequency.
+    Does NOT fill or infer freq — pass freq explicitly.
+    """
+    if df.empty or freq is None or len(df) < 2:
+        return []
+
     req = {"tz_start", "open", "high", "low", "close"}
     miss = req - set(df.columns)
     if miss:
         raise ValueError(f"Missing required columns: {sorted(miss)}")
 
-    fixed, deduped = _sort_dedupe(df)
-    f = infer_freq(fixed, token=token)
-    if f is None or len(fixed) < 2:
-        return [], f
-
+    fixed = _sort_dedupe(df)[0]
     s = pd.to_datetime(fixed["tz_start"], utc=True)
-    exp = pd.date_range(s.iloc[0], s.iloc[-1], freq=f, inclusive="both", tz="UTC")
-    missing = exp.difference(pd.DatetimeIndex(s))
-    return list(missing), f
+    expected = pd.date_range(s.iloc[0], s.iloc[-1], freq=freq, inclusive="both", tz="UTC")
+    missing = expected.difference(s)
+    return list(missing)
 
-def validate_candles(df: pd.DataFrame, token: Optional[str] = None) -> tuple[pd.DataFrame, CandlesDQReport]:
+
+def validate_candles(df: pd.DataFrame) -> tuple[pd.DataFrame, CandlesDQReport]:
     fixed, deduped = _sort_dedupe(df)
-    freq = infer_freq(fixed, token=token)
-    missing, freq = detect_candle_gaps(fixed, token=token)
+    freq = infer_freq(fixed)
+    missing, freq = detect_candle_gaps(fixed)
     report = CandlesDQReport(
         freq=freq, n_rows=len(fixed), n_dupes_dropped=deduped,
         n_gaps=len(missing), missing_starts=missing

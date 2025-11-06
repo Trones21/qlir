@@ -4,8 +4,11 @@ from drift_data_api_client.models import get_market_symbol_candles_resolution_re
 from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
+from qlir.data.candle_quality import validate_candles
 from qlir.data.normalize import normalize_candles
 from qlir.utils.logdf import logdf
+from qlir.io.checkpoint import write_checkpoint, FileType
+from qlir.io.union_files import union_file_datasets
 import time
 from datetime import datetime, timezone
 import math
@@ -39,35 +42,54 @@ def test_loop_candles():
     client = Client("https://data.api.drift.trade")
     # Get hourly candles for last 72 hours, get 20 candles per fetch
 
-    anchor_ts = math.floor(time.time() - (86400 * 3))
+    anchor_ts = math.floor(time.time() - (86400 * 6))
+    final_ts = math.floor(time.time()) #flooring for the apis sake
+    temp_folder = "tmp/SOL_1hr_partial"
+    symbol = "SOL-PERP"
+    resolution = "60"
+    
+    next_call_ts = final_ts # seed for FIRST call only
+
     log.info("Anchor time: %s",  datetime.fromtimestamp(anchor_ts, timezone.utc))
     
     pages: list[pd.DataFrame] = [] 
-    #while start_ts < math.floor(time.time()):
-    temp = 0 
-    while temp < 3:
-        log.info(f"start_ts: {anchor_ts} current_ts: {math.floor(time.time())}")
-        resp = get_market_symbol_candles_resolution.sync("SOL-PERP", client=client, resolution=GetMarketSymbolCandlesResolutionResolution("60"), limit=20, start_ts=anchor_ts)
+    earliest_got_ts = math.inf
+    while earliest_got_ts > anchor_ts:
+        #log.info(f"earliest_got_ts: {earliest_got_ts} > anchor_ts: {math.floor(time.time())}")
+        resp = get_market_symbol_candles_resolution.sync(symbol, client=client, resolution=GetMarketSymbolCandlesResolutionResolution(resolution), limit=20, start_ts=next_call_ts-1)
         if resp.records:
-            #log.info(type(resp.records))
             resp_as_dict = resp.to_dict()
-            # log.info(resp_as_dict["records"])
             page = pd.DataFrame(resp_as_dict["records"])
-            #logdf(page)
-            #log.info("len : %s", len(page))
             clean = normalize_candles(page, venue="drift", resolution="60", keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
             
-            # need to calc start_ts as an offset from the largest timestamp e.g. current_anchor + (20 * 3600)
-            # start_ts = int(sorted["ts_start_unix"].max())
+            # currently going to paginate backward from final_ts
             first_row = sorted.iloc[0]
             last_row =  sorted.iloc[-1]
-            log.info(f"First row unix:{first_row['ts_start_unix']} tz_start: {first_row['tz_start']}")
-            log.info(f"Last  row unix:{last_row['ts_start_unix']} tz_start: {last_row['tz_start']}")
-            #logdf(sorted, 100)
-            temp += 1
-            log.info("Expected next start_ts at least: %s", anchor_ts)
+            log.info(f"Retrieved bars starting with: {first_row['tz_start']} to {last_row['tz_start']}")
+            # logdf(sorted, 25)
+            earliest_got_ts = first_row['ts_start_unix']
+            next_call_ts = earliest_got_ts - 1 # remove 1 second to avoid duplicating a row
+            if len(pages) > 2:
+                data = (
+                    pd.concat(pages, ignore_index=True)
+                    .sort_values("tz_start")
+                    .drop_duplicates(subset=["tz_start"], keep="last")
+                    .reset_index(drop=True)
+                )
+                write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname="")
+                pages = []
 
-    # for page in pages:
-    #     logdf(page)
+    if pages:
+        data = (
+            pd.concat(pages, ignore_index=True)
+            .sort_values("tz_start")
+            .drop_duplicates(subset=["tz_start"], keep="last")
+            .reset_index(drop=True)
+        )
+        write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname="tmp/SOL_1hr_partial_last")
+
+    single_df = union_file_datasets("tmp") #note that this doesnt use read_candles but just read, could switch over later if we feel the need
+    validate_candles(single_df)
+
