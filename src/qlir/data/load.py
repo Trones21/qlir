@@ -3,6 +3,10 @@ from pathlib import Path
 from typing import Optional
 import pandas as pd
 from .schema import validate_ohlcv, OhlcvContract
+import pyarrow.parquet as pq
+import json
+
+
 
 
 def load_ohlcv(
@@ -41,3 +45,64 @@ def load_ohlcv(
         df = df.set_index(index_by)
 
     return df
+
+def get_symbol(file_path: Path) -> str | None:
+    """
+    Infer trading symbol for a dataset file.
+    Standard naming:  <dir>/<symbol>_<resolution>.<ext>
+    Example: data/SOL-PERP_1m.parquet
+    """
+    p = file_path
+
+    # 1. Try Parquet metadata
+    if p.suffix == ".parquet":
+        try:
+            table = pq.read_table(p)
+            meta = table.schema.metadata or {}
+            if b"symbol" in meta:
+                return meta[b"symbol"].decode()
+        except Exception:
+            pass
+
+    # 2. Try sidecar metadata file
+    meta_path = p.with_suffix(".meta.json")
+    if meta_path.exists():
+        try:
+            with open(meta_path, "r") as f:
+                meta = json.load(f)
+            if "symbol" in meta:
+                return meta["symbol"]
+        except Exception:
+            pass
+
+    # 3. Derive from naming convention: symbol_resolution.ext
+    stem = p.stem  # e.g. SOL-PERP_1m
+    if "_" in stem:
+        symbol, _ = stem.split("_", 1)
+        return symbol
+
+    # 4. Fallback: check column (rare)
+    if p.suffix in (".csv", ".json"):
+        try:
+            df = pd.read_json(p) if p.suffix == ".json" else pd.read_csv(p)
+            if "symbol" in df.columns:
+                uniq = df["symbol"].dropna().unique()
+                if len(uniq) == 1:
+                    return uniq[0]
+        except Exception:
+            pass
+
+    return None
+
+
+def get_resolution(file_path: str) -> str | None:
+    """
+    Infer resolution (e.g. 1m, 5m, 1h) from <symbol>_<resolution>.<ext>
+    """
+    p = Path(file_path)
+    stem = p.stem
+    if "_" in stem:
+        _, resolution = stem.split("_", 1)
+        return resolution
+    return None
+

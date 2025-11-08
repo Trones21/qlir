@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from pathlib import Path
 import pandas as pd
 
@@ -55,3 +56,27 @@ def write(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
     if suf == ".json":
         return write_json(df, path, **kwargs)
     raise ValueError(f"Unsupported extension {suf!r}. Use .csv, .parquet, or .json.")
+
+
+def write_dataset_meta(dataset_path: str | Path, *, symbol: str, resolution: str, **extra: Any) -> None:
+    """
+    Write a sidecar .meta.json next to the dataset.
+
+    dataset_path: path to the main data file (csv/parquet/json)
+    symbol: e.g. "SOL-PERP"
+    resolution: e.g. "1m"
+    extra: any additional fields you want to persist (venue="drift", source="api", etc.)
+    """
+    if not isinstance(dataset_path, Path):
+        dataset_path = Path(dataset_path)
+
+    meta_path = dataset_path.with_suffix(".meta.json")
+
+    meta = {
+        "symbol": symbol,
+        "resolution": resolution,
+        **extra,
+    }
+
+    # pretty-print so you can debug with your eyes
+    meta_path.write_text(json.dumps(meta, indent=2))

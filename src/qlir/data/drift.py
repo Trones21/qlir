@@ -6,19 +6,22 @@ import pandas as pd
 import logging
 log = logging.getLogger(__name__)
 from qlir.utils.logdf import logdf
-
+from pathlib import Path
 from drift_data_api_client import Client
 from drift_data_api_client.api.market import get_market_symbol_funding_rates, get_market_symbol_candles_resolution
 from drift_data_api_client.models import get_market_symbol_candles_resolution_resolution, get_market_symbol_candles_resolution_response_200
 from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
-from qlir.data.candle_quality import validate_candles
+from qlir.data.candle_quality import validate_candles, infer_freq
 from qlir.data.normalize import normalize_candles
 from qlir.utils.logdf import logdf
 from qlir.io.checkpoint import write_checkpoint, FileType
 from qlir.io.union_files import union_file_datasets
-
+from qlir.io.writer import write, write_dataset_meta, _prep_path
+from qlir.io.reader import read
+from qlir.data.load import get_symbol
+from qlir.df.utils import union_and_sort
 from datetime import datetime, timezone
 import math
 
@@ -255,25 +258,65 @@ def get_candles_since():
 def get_candles_all():
     return
 
-def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime):
+def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None = None):
+    dataset_uri = Path(existing_file)
+    existing_df = read(dataset_uri)
+    
+    log.info("Currently using infer_freq only, not a full data quality check - may later change to full candle_quality func")
+    resolution = infer_freq(existing_df)
+    current_last_candle = existing_df["tz_start"].max()
+    
+    #Try to get symbol 
+    symbol: str | None = get_symbol(dataset_uri)    
+    if symbol is None and symbol_override is None:
+        raise Exception("Symbol cannot be inferred from existing_file or associated .meta.json and no symbol_override was passed, we therefore do not know which symbol to retrieve data for")
+    if symbol is None:
+        effective_symbol = symbol_override
+    else:
+        effective_symbol = symbol
+
+    log.info(f"Getting new {resolution} {effective_symbol} candles since {current_last_candle}")
+    new_candles_df = get_candles(effective_symbol, resolution=resolution, from_ts=current_last_candle )
+    full_df = union_and_sort([existing_df, new_candles_df], sort_by=["tz_start"])
+    write(full_df, dataset_uri)
+    write_dataset_meta(dataset_uri, symbol=effective_symbol, resolution=resolution)
+    return full_df
+
+def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime | None = None, save_dir: str = ".", filetype_out: FileType = FileType.PARQUET):
     
     client = Client("https://data.api.drift.trade")
     
-    # Rename for clarity 
-    intended_first_unix = from_ts
-    intended_final_unix = to_ts 
-
-    # wire format for the API (floor to seconds)
-    intended_first_unix = int(intended_first_unix.timestamp())
+    # Handle to_ts first (using current time if None)
+    intended_final_unix = datetime.now(timezone.utc) if to_ts is None else to_ts
     intended_final_unix = int(intended_final_unix.timestamp())
-
-    temp_folder = f"tmp/{symbol}_{resolution}/"
 
     # need to first check if the intended_first_ts is within the range that the api provides 
 
+
+    # Handle from_ts: if None, discover earliest candle start
+    if from_ts is None:
+        raise Exception("Discover earliest candle start not integrated with get candles, need to ensure the resolution map works correctly")
+        # discovered = discover_earliest_candle_start(
+        #     session=session,
+        #     symbol=symbol,
+        #     res_token=res_token,
+        #     end_bound_unix=intended_final_unix,
+        #     catalog_min_unix=catalog_min_unix,
+        #     timeout=timeout,
+        #     include_partial=include_partial,
+        # )
+        # intended_first_unix = discovered
+    else:
+        intended_first_unix = int(from_ts.timestamp())
+
+    
+    temp_folder = f"tmp/{symbol}_{resolution}/"
+
+    
+
     next_call_unix = intended_final_unix # seed for FIRST call only
 
-    log.info("Paginiating backwards from: %s", datetime.fromtimestamp(intended_first_unix, timezone.utc) datetime.fromtimestamp(intended_first_ts, timezone.utc))
+    log.info("Paginiating backwards from: %s", datetime.fromtimestamp(intended_final_unix, timezone.utc))
     
     pages: list[pd.DataFrame] = [] 
     earliest_got_ts = math.inf
@@ -301,7 +344,7 @@ def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime):
                     .drop_duplicates(subset=["tz_start"], keep="last")
                     .reset_index(drop=True)
                 )
-                write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname="")
+                write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname=temp_folder)
                 pages = []
 
     if pages:
@@ -311,11 +354,19 @@ def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime):
             .drop_duplicates(subset=["tz_start"], keep="last")
             .reset_index(drop=True)
         )
-        write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname="tmp/SOL_1hr_partial_last")
+        write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname=temp_folder)
 
     single_df = union_file_datasets("tmp") #note that this doesnt use read_candles but just read, could switch over later if we feel the need
     validate_candles(single_df)
 
+    # We should verify the range 
+
+    #Write the single file
+    clean_dirpath = _prep_path(save_dir)
+    dataset_uri = f"{clean_dirpath}/{symbol}_{resolution}.{filetype_out}"
+    write(single_df, dataset_uri)
+    write_dataset_meta(dataset_uri, symbol=symbol, resolution=resolution)
+    return single_df
 
 
 
