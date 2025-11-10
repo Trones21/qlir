@@ -264,6 +264,7 @@ def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None =
     
     log.info("Currently using infer_freq only, not a full data quality check - may later change to full candle_quality func")
     resolution = infer_freq(existing_df)
+    log.info 
     current_last_candle = existing_df["tz_start"].max()
     
     #Try to get symbol 
@@ -276,13 +277,14 @@ def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None =
         effective_symbol = symbol
 
     log.info(f"Getting new {resolution} {effective_symbol} candles since {current_last_candle}")
-    new_candles_df = get_candles(effective_symbol, resolution=resolution, from_ts=current_last_candle )
+    resolution_param = GetMarketSymbolCandlesResolutionResolution(resolution)
+    new_candles_df = get_candles(effective_symbol, resolution=resolution_param, from_ts=current_last_candle )
     full_df = union_and_sort([existing_df, new_candles_df], sort_by=["tz_start"])
     write(full_df, dataset_uri)
     write_dataset_meta(dataset_uri, symbol=effective_symbol, resolution=resolution)
     return full_df
 
-def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime | None = None, save_dir: str = ".", filetype_out: FileType = FileType.PARQUET):
+def get_candles(symbol, resolution: GetMarketSymbolCandlesResolutionResolution, from_ts: datetime, to_ts: datetime | None = None, save_dir: str = ".", filetype_out: FileType = FileType.PARQUET):
     
     client = Client("https://data.api.drift.trade")
     
@@ -326,7 +328,7 @@ def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime | None = 
         if resp.records:
             resp_as_dict = resp.to_dict()
             page = pd.DataFrame(resp_as_dict["records"])
-            clean = normalize_candles(page, venue="drift", resolution="60", keep_ts_start_unix=True, include_partial=False)
+            clean = normalize_candles(page, venue="drift", resolution=resolution, keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
             
@@ -368,253 +370,3 @@ def get_candles(symbol, resolution, from_ts: datetime, to_ts: datetime | None = 
     write_dataset_meta(dataset_uri, symbol=symbol, resolution=resolution)
     return single_df
 
-
-
-
-
-
-# For Posterity
-def old_fetch_drift_candles(
-    symbol: str = "SOL-PERP",
-    resolution: str | int = "1",
-    limit: Optional[int] = None,
-    start_time: Optional[int] = None,
-    end_time: Optional[int] = None,
-    session: Optional[requests.Session] = None,
-    timeout: float = 15.0,
-    *,
-    include_partial: bool = True,
-) -> pd.DataFrame:
-    """
-    Fetch a single page of candles from Drift.
-    Returns a normalized DataFrame via normalize_candles().
-    """
-    from .normalize import normalize_candles  # lazy import
-
-    sess = session or requests.Session()
-    res_tok = normalize_drift_resolution_token(resolution)
-    url = f"{DRIFT_BASE}/market/{symbol}/candles/{res_tok}"
-    params: Dict[str, Any] = {}
-    if limit:
-        params["limit"] = int(limit)
-    if start_time:
-        params["startTs"] = int(start_time)
-    if end_time:
-        params["endTs"] = int(end_time)
-
-    print(f"[drift] Fetching {symbol} {res_tok}: start={start_time} end={end_time} limit={limit or 'default'}")
-
-    r = sess.get(url, params=params, timeout=timeout)
-    r.raise_for_status()
-    payload = r.json()
-    records = payload.get("records", payload)
-    df = pd.DataFrame(records)
-    if df.empty:
-        return df
-
-    return normalize_candles(df, venue="drift", resolution=res_tok, include_partial=include_partial)
-
-
-def old_fetch_drift_candles_all(
-    symbol: str = "SOL-PERP",
-    resolution: str | int = "1",
-    *,
-    start_time: Optional[int | float | pd.Timestamp] = None,   # lower bound; if None we discover earliest
-    end_time: Optional[int | float | pd.Timestamp] = None,     # optional upper bound
-    chunk_limit: int = 1000,
-    session: Optional[requests.Session] = None,
-    timeout: float = 15.0,
-    include_partial: bool = True,
-    sleep_s: float = 0.15,
-    catalog_min_unix: int = 1668470400,  # documented global minimum; per-symbol may be later
-) -> pd.DataFrame:
-    """
-    Discover earliest data via binary search on endTs, then page FORWARD:
-
-      Discovery (limit=1):
-        - Binary search the smallest endTs that yields non-empty records.
-
-      Pagination:
-        - Use startTs=cursor and endTs=bound (now or provided) with limit=chunk_limit.
-        - Advance cursor by the last page's max tz_start + step.
-
-      Output:
-        - Sorted ascending by tz_start, deduped on tz_start.
-    """
-    from .normalize import normalize_candles  # lazy import
-
-    sess = session or requests.Session()
-    res_tok = normalize_drift_resolution_token(resolution)
-    step_sec = _step_seconds_for_token(res_tok) or 1
-
-    now_unix = int(time.time())
-    target_start = _unix_s(start_time) if start_time is not None else None
-    target_end = _unix_s(end_time) if end_time is not None else now_unix
-
-    # -------- Discover earliest available tz_start (unix) if needed --------
-    if target_start is None:
-        best = discover_earliest_candle_start(
-            session=sess,
-            symbol=symbol,
-            res_token=res_tok,
-            end_bound_unix=int(target_end),
-            catalog_min_unix=int(catalog_min_unix),
-            timeout=timeout,
-            include_partial=include_partial
-        )
-        if best is None:
-            # Nothing at/before end bound
-            return pd.DataFrame()
-        target_start = int(best)
-
-    # -------- Forward pagination from target_start to target_end --------
-    cursor = int(target_start)
-    end_bound = int(target_end)
-
-    pages: list[pd.DataFrame] = []
-    prev_last_start_ts: Optional[int] = None
-    stagnation_retries = 0
-    MAX_STAGNATION_RETRIES = 2
-
-    while True:
-        params: Dict[str, Any] = {
-            "limit": int(chunk_limit),
-            "startTs": int(cursor),
-            "endTs": int(end_bound),
-        }
-
-        log.info(f"[drift] Fetching {symbol} {res_tok} (forward): start={params['startTs']} end={params['endTs']} limit={chunk_limit}")
-
-        r = sess.get(f"{DRIFT_BASE}/market/{symbol}/candles/{res_tok}", params=params, timeout=timeout)
-        if r.status_code == 400 and chunk_limit > 500:
-            log.info("[drift] ⚠️ 400 Bad Request — reducing chunk_limit and retrying")
-            chunk_limit = 500
-            continue
-        r.raise_for_status()
-
-        payload = r.json()
-        records = payload.get("records", payload)
-        raw = pd.DataFrame(records)
-        if raw.empty:
-            log.info("[drift] (no more data)")
-            break
-
-        nd = normalize_candles(raw, venue="drift", resolution=res_tok, include_partial=include_partial)
-        if nd.empty:
-            log.info("[drift] (normalized page empty)")
-            break
-
-        nd = nd.sort_values("tz_start").reset_index(drop=True)
-        pages.append(nd)
-
-        last_start_ts = int(nd["tz_start"].max().timestamp())
-
-        # Stagnation guard
-        if prev_last_start_ts is not None and last_start_ts <= prev_last_start_ts:
-            stagnation_retries += 1
-            log.info(
-                f"[drift] ⚠️ Non-advancing page (last_start={last_start_ts} ≤ prev={prev_last_start_ts}); "
-                f"forcing advance ({stagnation_retries}/{MAX_STAGNATION_RETRIES})"
-            )
-            cursor = prev_last_start_ts + step_sec
-            if stagnation_retries > MAX_STAGNATION_RETRIES:
-                log.info("[drift] ⚠️ Stagnation persists — stopping to avoid loop.")
-                break
-        else:
-            stagnation_retries = 0
-            cursor = last_start_ts + step_sec
-
-        prev_last_start_ts = last_start_ts
-
-        if cursor >= end_bound:
-            break
-
-        time.sleep(sleep_s)
-
-    if not pages:
-        return pd.DataFrame()
-
-    out = (
-        pd.concat(pages, ignore_index=True)
-        .sort_values("tz_start")
-        .drop_duplicates(subset=["tz_start"], keep="last")
-        .reset_index(drop=True)
-    )
-
-    # Trim to bounds locally (in case first/last page overshot)
-    if target_start is not None:
-        out = out[out["tz_start"] >= pd.to_datetime(target_start, unit="s", utc=True)]
-    if target_end is not None:
-        out = out[out["tz_start"] <= pd.to_datetime(target_end, unit="s", utc=True)]
-
-    return out.reset_index(drop=True)
-
-def old_fetch_drift_candles_update_from_df(
-    existing: Optional[pd.DataFrame],
-    symbol: str = "SOL-PERP",
-    resolution: Optional[str | int] = None,
-    *,
-    session: Optional[requests.Session] = None,
-    timeout: float = 15.0,
-    include_partial: bool = True,
-    chunk_limit: int = 1000,
-    sleep_s: float = 0.15,
-) -> pd.DataFrame:
-    """
-    Incrementally update an existing candles DataFrame.
-    Uses last finalized candle (tz_end notna) as anchor.
-    """
-    sess = session or requests.Session()
-
-    if existing is None or existing.empty:
-        res_tok = normalize_drift_resolution_token(resolution or "1")
-        return fetch_drift_candles(
-            symbol=symbol,
-            resolution=res_tok,
-            session=sess,
-            timeout=timeout,
-            include_partial=include_partial,
-        )
-
-    if resolution is None:
-        res_tok = infer_drift_resolution_token_from_df(existing)
-    else:
-        res_tok = normalize_drift_resolution_token(resolution)
-
-    step_sec = _step_seconds_for_token(res_tok)
-    ex = existing.sort_values("tz_start").copy()
-    last_final_idx = ex["tz_end"].last_valid_index()
-    if last_final_idx is not None:
-        last_final_end = pd.to_datetime(ex.loc[last_final_idx, "tz_end"], utc=True)
-        start_time = int(last_final_end.timestamp())
-    else:
-        last_start = pd.to_datetime(ex["tz_start"].iloc[-1], utc=True)
-        start_time = int(last_start.timestamp()) + (step_sec or 1)
-
-    print(f"[drift] Updating {symbol} {res_tok}: from {start_time} → now")
-
-    new_df = fetch_drift_candles_all(
-        symbol=symbol,
-        resolution=res_tok,
-        start_time=start_time,   # forward mode
-        end_time=None,
-        chunk_limit=chunk_limit,
-        session=sess,
-        timeout=timeout,
-        include_partial=include_partial,
-        sleep_s=sleep_s,
-    )
-
-    if new_df.empty:
-        print("[drift] ✅ No new data.")
-        return ex.reset_index(drop=True)
-
-    merged = (
-        pd.concat([ex, new_df], ignore_index=True)
-        .sort_values("tz_start")
-        .drop_duplicates(subset=["tz_start"], keep="last")
-        .reset_index(drop=True)
-    )
-
-    print(f"[drift] ✅ Update complete — added {len(new_df)} rows, total {len(merged)}")
-    return merged

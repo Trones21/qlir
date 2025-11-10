@@ -4,7 +4,6 @@ from typing import Any, Dict, Literal, Optional
 import pandas as pd
 
 from qlir.data.candle_quality import validate_candles
-from qlir.data.drift_fill import backfill_gaps_drift
 
 FillMode = Literal["none", "fetch"]
 
