@@ -28,7 +28,10 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from .utils import ensure_utc, DEFAULT_TS_COL
+from qlir.time.constants import DEFAULT_TS_COL
+from qlir.time.ensure_utc import ensure_utc_df_strict
+
+
 
 
 def _add_session_label(df: pd.DataFrame, label: str) -> pd.DataFrame:
@@ -49,7 +52,7 @@ def in_session(
     """
     Generic session filter with wraparound support.
     """
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     local = df[col].dt.tz_convert(ZoneInfo(tz))
     local_time = local.dt.time
 
@@ -147,7 +150,7 @@ def tokyo_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: boo
 
 
 def london_newyork_overlap(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
 
     london_local = df[col].dt.tz_convert(ZoneInfo("Europe/London"))
     l_mask = (london_local.dt.time >= time(8, 0)) & (london_local.dt.time < time(16, 30))

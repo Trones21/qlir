@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 import pandas as pd
 import logging
-
+from qlir.time.ensure_utc import ensure_utc_series
 log = logging.getLogger(__name__)
 
 OHLCV_COLS = ["open", "high", "low", "close", "volume"]
@@ -25,24 +25,30 @@ class TimeFreq:
         symbol = {
             "second": "sec",
             "minute": "min",
-            "hour": "H",
+            "hour": "h",
             "day": "D",
         }.get(self.unit)
         return f"{self.count}{symbol}"
 
     def __str__(self) -> str:
-        return f"{self.count} {self.unit}{'s' if self.count != 1 else ''}"
+        return f"count: {self.count} unit: {self.unit} pandas_offset: {self.pandas_offset}"
 
+    def to_dict(self, include_offset: bool = False) -> dict:
+        """Convert to a dictionary representation.
 
-# -------------------------------------------------------------------
-#  UTC normalization
-# -------------------------------------------------------------------
-def _ensure_utc(s: pd.Series) -> pd.Series:
-    out = pd.to_datetime(s, utc=True, errors="coerce", format="%Y-%m-%d %H:%M:%S")
-    if out.isna().any():
-        raise ValueError("Invalid timestamps in tz_start/tz_end.")
-    return out
-
+        Parameters
+        ----------
+        include_offset : bool
+            Whether to include `pandas_offset` (which may not be JSON-serializable).
+        """
+        d = {
+            "count": self.count,
+            "unit": self.unit,
+            "as_pandas_str": self.as_pandas_str,
+        }
+        if include_offset and self.pandas_offset is not None:
+            d["pandas_offset"] = str(self.pandas_offset)
+        return d
 
 # -------------------------------------------------------------------
 #  Sorting & deduplication
@@ -53,7 +59,7 @@ def _sort_dedupe(df: pd.DataFrame, time_col: str = "tz_start") -> tuple[pd.DataF
         raise ValueError(f"Missing required time column '{time_col}'")
 
     out = df.copy()
-    out[time_col] = _ensure_utc(out[time_col])
+    out[time_col] = ensure_utc_series(out[time_col])
     out = out.sort_values(time_col)
 
     dup_mask = out.duplicated(subset=[time_col], keep=False)
@@ -182,7 +188,7 @@ def validate_candles(
     return fixed, report
 
 
-def ensure_homogeneous_timeframe(df: pd.DataFrame) -> None:
+def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
     """
     Raises ValueError if the DataFrame contains inconsistent candle spacing.
 

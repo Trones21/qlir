@@ -20,7 +20,8 @@ from typing import Any, Sequence, Mapping, Iterable
 
 import pandas as pd
 
-from .utils import ensure_utc, DEFAULT_TS_COL
+from qlir.time.constants import DEFAULT_TS_COL
+from qlir.time.ensure_utc import ensure_utc_df_strict
 
 
 def _as_utc(dt: datetime) -> datetime:
@@ -135,7 +136,7 @@ def around_anchors(
     event_label_prefix: str = "event_",
     ts_key: str = "ts",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ts = df[col]
 
     events = _normalize_events(anchors, ts_key=ts_key)
@@ -179,7 +180,7 @@ def before_anchors(
     add_event_id: bool = False,
     ts_key: str = "ts",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ts = df[col]
 
     events = _normalize_events(anchors, ts_key=ts_key)
@@ -214,7 +215,7 @@ def after_anchors(
     add_event_id: bool = False,
     ts_key: str = "ts",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ts = df[col]
 
     events = _normalize_events(anchors, ts_key=ts_key)

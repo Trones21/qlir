@@ -2,7 +2,7 @@
 from __future__ import annotations
 import numpy as np
 import pandas as pd
-from ..utils.time import session_floor
+from ..time.misc import session_floor
 from ..utils.df_ops import ensure_copy
 
 __all__ = ["add_vwap_cum_hlc3", "add_vwap_hlc3_session"]

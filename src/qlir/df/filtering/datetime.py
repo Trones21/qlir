@@ -5,8 +5,8 @@ from typing import Iterable
 
 import pandas as pd
 
-from .utils import ensure_utc, DEFAULT_TS_COL
-
+from qlir.time.ensure_utc import ensure_utc_df_strict
+from qlir.time.constants import DEFAULT_TS_COL
 
 def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
@@ -17,7 +17,7 @@ def _as_utc(dt: datetime) -> datetime:
 # ---------------- calendar-style ---------------- #
 
 def in_year(df: pd.DataFrame, year: int, col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     res = df[df[col].dt.year == year]
     return add_date_labels(res, col) if add_labels else res
 
@@ -25,33 +25,33 @@ def in_year(df: pd.DataFrame, year: int, col: str = DEFAULT_TS_COL, *, add_label
 def in_quarter(df: pd.DataFrame, year: int, quarter: int, col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
     if quarter not in (1, 2, 3, 4):
         raise ValueError("quarter must be 1..4")
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     q = ((df[col].dt.month - 1) // 3) + 1
     res = df[(df[col].dt.year == year) & (q == quarter)]
     return add_date_labels(res, col) if add_labels else res
 
 
 def in_month(df: pd.DataFrame, month: int, col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     res = df[df[col].dt.month == month]
     return add_date_labels(res, col) if add_labels else res
 
 
 def in_month_of_year(df: pd.DataFrame, year: int, month: int, col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     res = df[(df[col].dt.year == year) & (df[col].dt.month == month)]
     return add_date_labels(res, col) if add_labels else res
 
 
 def in_week_of_year(df: pd.DataFrame, year: int, week: int, col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     iso = df[col].dt.isocalendar()
     res = df[(iso.year == year) & (iso.week == week)]
     return add_date_labels(res, col) if add_labels else res
 
 
 def in_day_of_week(df: pd.DataFrame, dows: Iterable[int], col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     dows = set(dows)
     res = df[df[col].dt.dayofweek.isin(dows)]
     return add_date_labels(res, col) if add_labels else res
@@ -60,14 +60,14 @@ def in_day_of_week(df: pd.DataFrame, dows: Iterable[int], col: str = DEFAULT_TS_
 # ---------------- intraday ---------------- #
 
 def in_hour_of_day(df: pd.DataFrame, hours: Iterable[int], col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     hours = set(hours)
     res = df[df[col].dt.hour.isin(hours)]
     return add_date_labels(res, col) if add_labels else res
 
 
 def in_minute_of_hour(df: pd.DataFrame, minutes: Iterable[int], col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     minutes = set(minutes)
     res = df[df[col].dt.minute.isin(minutes)]
     return add_date_labels(res, col) if add_labels else res
@@ -76,7 +76,7 @@ def in_minute_of_hour(df: pd.DataFrame, minutes: Iterable[int], col: str = DEFAU
 # ---------------- ranges ---------------- #
 
 def between(df: pd.DataFrame, start: datetime | str, end: datetime | str, col: str = DEFAULT_TS_COL, *, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     start_dt = pd.to_datetime(start, utc=True) if isinstance(start, str) else _as_utc(start)
     end_dt = pd.to_datetime(end, utc=True) if isinstance(end, str) else _as_utc(end)
     res = df[(df[col] >= start_dt) & (df[col] < end_dt)]
@@ -84,7 +84,7 @@ def between(df: pd.DataFrame, start: datetime | str, end: datetime | str, col: s
 
 
 def last_n_days(df: pd.DataFrame, n: int, *, now: datetime | None = None, col: str = DEFAULT_TS_COL, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     if now is None:
         now = datetime.now(timezone.utc)
     else:
@@ -97,7 +97,7 @@ def last_n_days(df: pd.DataFrame, n: int, *, now: datetime | None = None, col: s
 # ---------------- convenience ---------------- #
 
 def year_to_date(df: pd.DataFrame, *, now: datetime | None = None, col: str = DEFAULT_TS_COL, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     if now is None:
         now = datetime.now(timezone.utc)
     else:
@@ -108,7 +108,7 @@ def year_to_date(df: pd.DataFrame, *, now: datetime | None = None, col: str = DE
 
 
 def month_to_date(df: pd.DataFrame, *, now: datetime | None = None, col: str = DEFAULT_TS_COL, add_labels: bool = False) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     if now is None:
         now = datetime.now(timezone.utc)
     else:
@@ -131,7 +131,7 @@ def add_date_labels(
     hour: bool = True,
     minute: bool = False,
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     out = df.copy()
     dt = out[col]
     if year:

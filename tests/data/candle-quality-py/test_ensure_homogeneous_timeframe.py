@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from qlir.data.candle_quality import ensure_homogeneous_timeframe
+from qlir.data.candle_quality import ensure_homogeneous_candle_size
 
 
 def test_homogeneous_passes_for_equal_intervals():
@@ -17,7 +17,7 @@ def test_homogeneous_passes_for_equal_intervals():
             )
         }
     )
-    ensure_homogeneous_timeframe(df)  # should not raise
+    ensure_homogeneous_candle_size(df)  # should not raise
 
 
 def test_homogeneous_raises_for_mixed_intervals():
@@ -34,9 +34,9 @@ def test_homogeneous_raises_for_mixed_intervals():
         }
     )
     with pytest.raises(ValueError):
-        ensure_homogeneous_timeframe(df)
+        ensure_homogeneous_candle_size(df)
 
 
 def test_homogeneous_allows_short_series():
     df = pd.DataFrame({"tz_start": ["2025-01-01 00:00:00"]})
-    ensure_homogeneous_timeframe(df)
+    ensure_homogeneous_candle_size(df)

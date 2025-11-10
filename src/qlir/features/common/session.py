@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pandas as pd
-from ...utils.time import session_floor
+from ...time.misc import session_floor
 
 __all__ = ["add_session_id"]
 

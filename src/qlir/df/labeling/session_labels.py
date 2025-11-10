@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .utils import ensure_utc, DEFAULT_TS_COL
 from qlir.df.filtering import session as fsession
+from qlir.time.constants import DEFAULT_TS_COL
+from qlir.time.ensure_utc import ensure_utc_df_strict
 
 
 def _left_mark(
@@ -42,7 +43,7 @@ def mark_ny_cash(
     Mark rows that are inside NY cash session (09:30–16:00 America/New_York).
     Uses filtering.session.ny_cash_session(...) under the hood.
     """
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ny_df = fsession.ny_cash_session(df, col=col, add_label=False)
     return _left_mark(df, ny_df, key=col, out_col=out_col, value=True)
 
@@ -52,7 +53,7 @@ def mark_ny_premarket(
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ny_premarket",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     pre_df = fsession.ny_premarket(df, col=col, add_label=False)
     return _left_mark(df, pre_df, key=col, out_col=out_col, value=True)
 
@@ -62,7 +63,7 @@ def mark_ny_afterhours(
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ny_afterhours",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     aft_df = fsession.ny_afterhours(df, col=col, add_label=False)
     return _left_mark(df, aft_df, key=col, out_col=out_col, value=True)
 
@@ -72,7 +73,7 @@ def mark_ny_extended(
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ny_extended",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ext_df = fsession.ny_extended(df, col=col, add_label=False)
     return _left_mark(df, ext_df, key=col, out_col=out_col, value=True)
 
@@ -82,7 +83,7 @@ def mark_london(
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_london_session",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ldn_df = fsession.london_session(df, col=col, add_label=False)
     return _left_mark(df, ldn_df, key=col, out_col=out_col, value=True)
 
@@ -92,7 +93,7 @@ def mark_frankfurt(
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_frankfurt_session",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ffm_df = fsession.frankfurt_session(df, col=col, add_label=False)
     return _left_mark(df, ffm_df, key=col, out_col=out_col, value=True)
 
@@ -102,7 +103,7 @@ def mark_london_ny_overlap(
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ldn_ny_overlap",
 ) -> pd.DataFrame:
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ov_df = fsession.london_newyork_overlap(df, col=col, add_label=False)
     return _left_mark(df, ov_df, key=col, out_col=out_col, value=True)
 

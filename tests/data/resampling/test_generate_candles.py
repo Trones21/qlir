@@ -1,0 +1,135 @@
+import pandas as pd
+import pytest
+
+from qlir.data.resampling.generate_candles import (
+    generate_candles_from_1m,
+    generate_candles,
+)
+from qlir.data.candle_quality import TimeFreq
+from qlir.utils.logdf import logdf
+
+def make_1m_df(n=10, start="2025-01-01 00:00:00Z"):
+    """Build a tiny homogeneous 1m dataframe with tz_start like your infer_freq expects."""
+    idx = pd.date_range(start=start, periods=n, freq="1min")  # 1-minute
+    df = pd.DataFrame(
+        {
+            "tz_start": idx,   # important for infer_freq
+            "open": 1.0,
+            "high": 2.0,
+            "low": 0.5,
+            "close": 1.5,
+            "volume": 100,
+        }
+    )
+    return df
+
+
+def test_generate_candles_from_1m_happy_path():
+    df = make_1m_df(n=60)  # 1 hour of 1m data
+
+    # we want 5m and 15m
+    out = generate_candles_from_1m(
+        df,
+        out_unit="minute",
+        counts=[5, 15],
+        dt_col="tz_start",
+    )
+
+    logdf(out["5min"])
+
+    assert "5min" in out
+    assert "15min" in out
+
+    five = out["5min"]
+    fifteen = out["15min"]
+
+    # 60 minutes → 12 bars of 5m
+    assert len(five) == 12
+    # 60 minutes → 4 bars of 15m
+    assert len(fifteen) == 4
+
+    # metadata present
+    assert "candle_freq" in five.columns
+    assert "inferred_input_freq" in five.columns
+    assert five["candle_freq"].iloc[0] == "5min"
+
+
+def test_generate_candles_from_1m_raises_on_gaps():
+    df = make_1m_df(n=10)
+    # drop one row to create a gap
+    df = df.drop(index=[3])
+
+    with pytest.raises(ValueError) as exc:
+        generate_candles_from_1m(
+            df,
+            out_unit="minute",
+            counts=[5],
+            dt_col="tz_start",
+        )
+
+    # optional: check the message payload
+    assert "gaps" in str(exc.value)
+
+
+def test_generate_candles_general_happy_path():
+    # make hourly data
+    idx = pd.date_range("2025-01-01 00:00:00Z", periods=24, freq="1h")
+    df = pd.DataFrame(
+        {
+            "tz_start": idx,
+            "open": 1.0,
+            "high": 2.0,
+            "low": 0.5,
+            "close": 1.5,
+            "volume": 10,
+        }
+    )
+
+    # in_unit is 1 hour, we want 2H and 4H
+    out = generate_candles(
+        df,
+        in_unit=TimeFreq(1, "hour"),
+        out_unit="hour",
+        counts=[2, 4],
+        dt_col="tz_start",
+    )
+
+    logdf(out["2h"])
+    
+    return
+
+    assert "2h" in out
+    assert "4H" in out
+
+    twoh = out["2H"]
+    fourh = out["4H"]
+
+    # 24h → 12 bars of 2h
+    assert len(twoh) == 12
+    # 24h → 6 bars of 4h
+    assert len(fourh) == 6
+
+
+def test_generate_candles_in_unit_mismatch_raises():
+    # we actually make 1H data
+    idx = pd.date_range("2025-01-01 00:00:00Z", periods=10, freq="1H")
+    df = pd.DataFrame(
+        {
+            "tz_start": idx,
+            "open": 1.0,
+            "high": 2.0,
+            "low": 0.5,
+            "close": 1.5,
+            "volume": 10,
+        }
+    )
+
+    # but we lie and say it's 1 minute
+    with pytest.raises(ValueError):
+        generate_candles(
+            df,
+            in_unit=TimeFreq(1, "minute"),
+            out_unit="hour",
+            counts=[2],
+            dt_col="tz_start",
+        )

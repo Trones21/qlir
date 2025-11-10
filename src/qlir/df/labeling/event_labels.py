@@ -5,8 +5,8 @@ from typing import Any, Sequence, Mapping
 
 import pandas as pd
 
-from .utils import ensure_utc, DEFAULT_TS_COL
-
+from qlir.time.constants import DEFAULT_TS_COL
+from qlir.time.ensure_utc import ensure_utc_df_strict
 
 def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
@@ -52,7 +52,7 @@ def mark_around_events(
     Add a boolean column marking rows within any event window.
     Optionally add event_id to say *which* event window matched first.
     """
-    df = ensure_utc(df, col)
+    df = ensure_utc_df_strict(df, col)
     ts = df[col]
 
     evs = _normalize_events(events)
