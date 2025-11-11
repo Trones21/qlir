@@ -1,5 +1,6 @@
 
-from qlir.time.timefreq import TimeFreq, ensure_utc_series, infer_freq, ensure_homogeneous_candle_size, detect_candle_gaps
+from qlir.time.timefreq import TimeFreq, TimeUnit 
+from qlir.data.candle_quality import infer_freq, ensure_homogeneous_candle_size, detect_candle_gaps
 import pandas as pd
 from typing import Iterable, Dict
 
@@ -19,8 +20,8 @@ def _generate(
     df: pd.DataFrame,
     *,
     dataset_tf: TimeFreq,
-    out_unit: str,
-    counts: Iterable[int],
+    out_unit: TimeUnit,
+    out_candle_sizes: Iterable[int],
     dt_col: str = "tz_start",
 ) -> Dict[str, pd.DataFrame]:
     """
@@ -33,7 +34,7 @@ def _generate(
         Input dataframe with homogeneous time-based rows.
     inferred_tf : TimeFreq
         Result of your infer_freq(df), describes the base cadence (e.g. 1 minute).
-    out_unit : str
+    out_unit : TimeUnit
         Target unit: "second" | "minute" | "hour" | "day".
     counts : iterable[int]
         Multipliers of the out_unit to generate.
@@ -70,13 +71,13 @@ def _generate(
         "day": "D",
     }
 
-    if out_unit not in unit_to_symbol:
-        raise ValueError(f"Unsupported out_unit: {out_unit}")
+    if out_unit.value not in unit_to_symbol:
+        raise ValueError(f"Unsupported out_unit: {out_unit.value}")
 
     out: Dict[str, pd.DataFrame] = {}
 
-    for count in counts:
-        freq_str = f"{count}{unit_to_symbol[out_unit]}"
+    for size in out_candle_sizes:
+        freq_str = f"{size}{unit_to_symbol[out_unit.value]}"
 
         candles = (
             df
@@ -103,19 +104,19 @@ def _generate(
 def generate_candles_from_1m(
     df,
     *,
-    out_unit: str,
-    counts: Iterable[int],
+    out_unit: TimeUnit,
+    out_agg_candle_sizes: Iterable[int],
     dt_col: str = "tz_start",
 ):
-    freq = infer_freq(df)
+    freq: TimeFreq | None = infer_freq(df)
 
     if freq is None:
         logdf(df=df, name="infer_freq_failure", level="critical")
         raise ValueError("candle_quality.infer_freq returned None, check the dataset you passed")
 
-    if freq.count != 1 or freq.unit != "minute":
+    if freq.count != 1 or freq.unit != TimeUnit.MINUTE:
         logdf(df=df, name="infer_freq_failure", level="critical")
-        raise ValueError(f"Incorrect dataset frequency. Expected 1 minute data, got {freq.to_dict()} ")
+        raise ValueError(f"Incorrect dataset frequency. Expected 1 minute data, got (freq.to_dict() here): {freq.to_dict()} ")
     
     gaps = detect_candle_gaps(df, freq)
     if gaps:
@@ -124,14 +125,14 @@ def generate_candles_from_1m(
 
     ensure_homogeneous_candle_size(df)
 
-    return _generate(df, dataset_tf=TimeFreq(1, "minute"), out_unit=out_unit, counts=counts, dt_col=dt_col)
+    return _generate(df, dataset_tf=TimeFreq(1, TimeUnit.MINUTE), out_unit=out_unit, out_candle_sizes=out_agg_candle_sizes, dt_col=dt_col)
 
 
 def generate_candles(
     df,
     *,
     in_unit: TimeFreq,
-    out_unit: str,
+    out_unit: TimeUnit,
     counts: Iterable[int],
     dt_col: str = "tz_start",
 ):
@@ -148,7 +149,7 @@ def generate_candles(
 
     gaps = detect_candle_gaps(df, freq)
     if gaps:
-        logdf(df=df, name="canlde_gaps_failure", level="critical")
+        logdf(df=df, name="candle_gaps_failure", level="critical")
         raise ValueError({"message":"Found gaps in {in_unit} data", "number_of_gaps": len(gaps), "gaps": gaps})
 
     # Final Data Quality Check - 
@@ -157,4 +158,4 @@ def generate_candles(
     # which isnt the best UX 
     ensure_homogeneous_candle_size(df)
 
-    return _generate(df, dataset_tf=in_unit, out_unit=out_unit, counts=counts, dt_col=dt_col)
+    return _generate(df, dataset_tf=in_unit, out_unit=out_unit, out_candle_sizes=counts, dt_col=dt_col)

@@ -5,7 +5,7 @@ from qlir.data.resampling.generate_candles import (
     generate_candles_from_1m,
     generate_candles,
 )
-from qlir.time.timefreq import TimeFreq
+from qlir.time.timefreq import TimeFreq, TimeUnit
 from qlir.utils.logdf import logdf
 
 import logging 
@@ -48,8 +48,8 @@ def test_generate_candles_from_1m_happy_path():
     # we want 5m and 15m
     out = generate_candles_from_1m(
         df,
-        out_unit="minute",
-        counts=[5, 15],
+        out_unit=TimeUnit.MINUTE,
+        out_agg_candle_sizes=[5, 15],
         dt_col="tz_start",
     )
 
@@ -86,13 +86,14 @@ def test_generate_candles_from_1m_raises_on_gaps():
     with pytest.raises(ValueError) as exc:
         generate_candles_from_1m(
             df,
-            out_unit="minute",
-            counts=[5],
+            out_unit=TimeUnit.MINUTE,
+            out_agg_candle_sizes=[5],
             dt_col="tz_start",
         )
 
     # optional: check the message payload
     assert "gaps" in str(exc.value)
+    log.info("✅ generate_candles raised ValueError, logged critical, and printed dataframe as expected")
 
 
 def test_generate_candles_general_happy_path():
@@ -112,21 +113,17 @@ def test_generate_candles_general_happy_path():
     # in_unit is 1 hour, we want 2H and 4H
     out = generate_candles(
         df,
-        in_unit=TimeFreq(1, "hour"),
-        out_unit="hour",
+        in_unit=TimeFreq(1, TimeUnit.HOUR),
+        out_unit=TimeUnit.HOUR,
         counts=[2, 4],
         dt_col="tz_start",
     )
 
-    logdf(out["2h"])
-    
-    return
-
     assert "2h" in out
-    assert "4H" in out
+    assert "4h" in out
 
-    twoh = out["2H"]
-    fourh = out["4H"]
+    twoh = out["2h"]
+    fourh = out["4h"]
 
     # 24h → 12 bars of 2h
     assert len(twoh) == 12
@@ -135,8 +132,8 @@ def test_generate_candles_general_happy_path():
 
 
 def test_generate_candles_in_unit_mismatch_raises():
-    # we actually make 1H data
-    idx = pd.date_range("2025-01-01 00:00:00Z", periods=10, freq="1H")
+    # we actually make 1h data
+    idx = pd.date_range("2025-01-01 00:00:00Z", periods=10, freq="1h")
     df = pd.DataFrame(
         {
             "tz_start": idx,
@@ -152,8 +149,9 @@ def test_generate_candles_in_unit_mismatch_raises():
     with pytest.raises(ValueError):
         generate_candles(
             df,
-            in_unit=TimeFreq(1, "minute"),
-            out_unit="hour",
+            in_unit=TimeFreq(1, TimeUnit.MINUTE),
+            out_unit=TimeUnit.HOUR,
             counts=[2],
             dt_col="tz_start",
         )
+    log.info("✅ generate_candles raised ValueError, logged critical, and printed dataframe as expected")

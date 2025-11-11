@@ -4,7 +4,8 @@ from drift_data_api_client.models import get_market_symbol_candles_resolution_re
 from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
-from qlir.time.timefreq import TimeFreq, validate_candles
+from qlir.time.timefreq import TimeFreq, TimeUnit
+from qlir.data.candle_quality import validate_candles
 from qlir.data.normalize import normalize_candles
 from qlir.utils.logdf import logdf
 from qlir.io.checkpoint import write_checkpoint, FileType
@@ -91,5 +92,5 @@ def test_loop_candles():
         write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname="tmp/SOL_1hr_partial_last")
 
     single_df = union_file_datasets("tmp") #note that this doesnt use read_candles but just read, could switch over later if we feel the need
-    validate_candles(single_df, TimeFreq(count=1, unit="hour"))
+    validate_candles(single_df, TimeFreq(count=1, unit=TimeUnit.HOUR))
 

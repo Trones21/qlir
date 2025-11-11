@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 OHLCV_COLS = ["open", "high", "low", "close", "volume"]
 
-from qlir.time.timefreq import TimeFreq
+from qlir.time.timefreq import TimeFreq, TimeUnit
 
 
 # -------------------------------------------------------------------
@@ -72,13 +72,13 @@ def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
 
     # detect major time units
     if seconds % 86400 == 0:
-        return TimeFreq(count=int(seconds // 86400), unit="day")
+        return TimeFreq(count=int(seconds // 86400), unit=TimeUnit.DAY)
     elif seconds % 3600 == 0:
-        return TimeFreq(count=int(seconds // 3600), unit="hour")
+        return TimeFreq(count=int(seconds // 3600), unit=TimeUnit.HOUR)
     elif seconds % 60 == 0:
-        return TimeFreq(count=int(seconds // 60), unit="minute")
+        return TimeFreq(count=int(seconds // 60), unit=TimeUnit.MINUTE)
     elif seconds >= 1:
-        return TimeFreq(count=int(seconds), unit="second")
+        return TimeFreq(count=int(seconds), unit=TimeUnit.SECOND)
     else:
         try:
             off = pd.tseries.frequencies.to_offset(delta)

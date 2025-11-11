@@ -1,9 +1,3 @@
-Here’s an updated `README.md` for your `resampling/` folder — rewritten to reflect the full picture:
-1-minute base data, `in_unit`/`out_unit` logic, offsets as a separate concern, and practical memory notes.
-
----
-
-````markdown
 # Resampling Utilities
 
 Utilities for generating custom candle data from high-resolution (typically 1-minute) datasets.
@@ -14,6 +8,8 @@ This module provides two complementary functions:
 - **`generate_offset_candles`** – Produce *phase-shifted* versions of a single candle size (e.g. all 7 possible alignments of a 7-minute candle).
 
 Both are intended for **in-memory research**, not long-term persistence.
+
+Note: `TimeFreq` now uses an enum, `TimeUnit` for the unit property, the following examples may not be exactly correct 
 
 ---
 
@@ -36,7 +32,7 @@ Generates higher-timeframe candles from a strictly 1-minute DataFrame.
 
 ### Example
 ```python
-frames = generate_candles_from_1m(df_1m, out_unit="minute", counts=[5, 7, 23, 55])
+frames = generate_candles_from_1m(df_1m, out_unit=TimeUnit.MINUTE, counts=[5, 7, 23, 55])
 candles_23m = frames["23min"]
 ````
 
