@@ -34,7 +34,6 @@ def add_vwap_hlc3_session(df, *, tz="UTC", price_cols=("high","low","close"), vo
     vol = out[volume_col].astype(float)
     hlc3 = ((out[h] + out[l] + out[c]) / 3.0).astype(float)
     
-    print(df)
     # Session = calendar day of ts_end in tz (index is ts_end, thanks to data layer)
     if isinstance(out.index, pd.DatetimeIndex):
         session = out.index.tz_convert(tz).floor("D")

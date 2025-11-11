@@ -42,7 +42,7 @@ from qlir.io.reader import read  # use built-in reader dispatcher
 
 # Optional data fetcher (CLI-backed real data source)
 try:
-    from qlir.data.drift import fetch_drift_candles
+    from qlir.data.sources.drift import get_candles_all
 except Exception:
     fetch_drift_candles = None
 

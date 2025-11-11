@@ -1,6 +1,6 @@
 import argparse, sys
 from qlir.data.load import load_ohlcv
-from qlir.data.drift import fetch_drift_candles
+from qlir.data.sources.drift import get_candles
 from qlir.io.writer import write 
 
 def main():
@@ -16,22 +16,26 @@ def main():
     p_fetch.add_argument("--limit", type=int)
     p_fetch.add_argument("--out", help="Optional path to save CSV (e.g. data/sol_perp.csv)")
 
-    args = p.parse_args()
-    if args.cmd == "csv":
-        df = load_ohlcv(args.path)
-        print(df.head(20).to_string(index=False))
-    elif args.cmd == "fetch":
-        df = fetch_drift_candles(symbol=args.symbol, resolution=args.res, include_partial=False)
-        print(df.tail().to_string(index=False))
-        if args.out:
-            path = write(
-                df,
-                args.out,
-                compression=args.compression if args.out.endswith(".parquet") else None,
-            )
-            print(f"\n✅ Saved {len(df)} rows → {path}")
-    else:
-        p.print_help(); sys.exit(2)
 
-if __name__ == "__main__":
-    main()
+## Need to rethink the cli, how its going to be used, etc.
+
+#     args = p.parse_args()
+#     if args.cmd == "csv":
+#         df = load_ohlcv(args.path)
+#         print(df.head(20).to_string(index=False))
+#     elif args.cmd == "fetch":
+#         df = fetch_drift_candles(symbol=args.symbol, resolution=args.res, include_partial=False)
+#         df = get_candles(symbol=args.symbol, resolution=args.res, )
+#         print(df.tail().to_string(index=False))
+#         if args.out:
+#             path = write(
+#                 df,
+#                 args.out,
+#                 compression=args.compression if args.out.endswith(".parquet") else None,
+#             )
+#             print(f"\n✅ Saved {len(df)} rows → {path}")
+#     else:
+#         p.print_help(); sys.exit(2)
+
+# if __name__ == "__main__":
+#     main()

@@ -1,7 +1,8 @@
 import pandas as pd
 import pytest
 
-from qlir.time.timefreq import TimeFreq, validate_candles, CandlesDQReport
+from qlir.data.candle_quality import validate_candles, CandlesDQReport
+from qlir.time.timefreq import TimeFreq, TimeUnit
 import logging
 
 from qlir.utils.logdf import logdf
@@ -26,7 +27,7 @@ def _make_df_with_gap():
 
 def test_validate_candles_reports_gap():
     df = _make_df_with_gap()
-    fixed, report = validate_candles(df, TimeFreq(1,"minute"))
+    fixed, report = validate_candles(df, TimeFreq(1, TimeUnit.MINUTE))
 
     # there was exactly 1 gap
     assert report.n_gaps == 1
@@ -51,7 +52,7 @@ def _make_df_with_exact_duplicate():
 
 def test_validate_candles_drop_exact_ohclv_duplicate():
     df = _make_df_with_exact_duplicate()
-    fixed, report = validate_candles(df, TimeFreq(1, "minute"))
+    fixed, report = validate_candles(df, TimeFreq(1, TimeUnit.MINUTE))
     assert report.n_dupes_dropped == 1  
 
 def test_validate_candles_raise_on_dup_dt_but_differing_candle():
@@ -61,5 +62,5 @@ def test_validate_candles_raise_on_dup_dt_but_differing_candle():
     df.loc[3, "open"] = 99
 
     with pytest.raises(ValueError):
-        fixed, report = validate_candles(df, TimeFreq(1, "minute"))
+        fixed, report = validate_candles(df, TimeFreq(1, TimeUnit.MINUTE))
     

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from qlir.core.pointwise import (
+from qlir.core.ops.pointwise import (
     add_diff,
     add_pct_change,
     add_log_return,

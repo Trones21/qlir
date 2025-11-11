@@ -140,9 +140,6 @@ def _unix_s(x: pd.Timestamp | int | float | None) -> Optional[int]:
 # Core fetchers
 # ---------------------------------------------------------
 
-
-
-
 def probe_candles_any_le(
     *,
     session: requests.Session,
@@ -158,7 +155,7 @@ def probe_candles_any_le(
     Returns:
         True if any record exists at start_unix, else None
     """
-    from .normalize import normalize_candles  # lazy import to avoid import cycles
+    from ..normalize import normalize_candles  # lazy import to avoid import cycles
     log.info("start_unix: %s", start_unix)
     params: Dict[str, Any] = {"limit": 1, "startTs": int(start_unix)}
     base_url = f"{DRIFT_BASE}/market/{symbol}/candles/{res_token}"

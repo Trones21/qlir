@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import pandas as pd
 import pytest
-from qlir.data.drift import add_new_candles_to_dataset
+from qlir.data.sources.drift import add_new_candles_to_dataset
 from qlir.io.writer import write, write_dataset_meta 
 from qlir.io.reader import read
 

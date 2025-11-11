@@ -11,6 +11,6 @@ def load_ohlcv(*args, **kwargs):
     return _impl(*args, **kwargs)
 
 
-from .drift import get_candles
+from .sources.drift import get_candles
 from .normalize import normalize_candles
 __all__ = ["normalize_candles", "get_candles"]
