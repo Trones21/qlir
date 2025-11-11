@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-
+import pytest
+pytestmark = pytest.mark.local
 from qlir.core.relations.comparators import (
     add_gt, add_ge, add_lt, add_le, add_eq, add_ne
 )

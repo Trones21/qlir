@@ -1,5 +1,9 @@
 import logging
 import pandas as pd
+import pytest
+pytestmark = pytest.mark.local
+
+from qlir.time.timefreq import TimeUnit
 log = logging.getLogger(__name__)
 
 from qlir.data.candle_quality import infer_freq, TimeFreq
@@ -14,7 +18,7 @@ def test_infer_freq_1min():
             ]
         }
     )
-    expected = TimeFreq(2, "minute")
+    expected = TimeFreq(2, TimeUnit.MINUTE)
     assert infer_freq(df) == expected
 
 def test_infer_freq_returns_none_for_insufficient_rows():

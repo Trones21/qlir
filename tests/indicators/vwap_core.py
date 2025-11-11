@@ -2,7 +2,9 @@
 import numpy as np
 import pandas as pd
 import pandas.testing as pdt
-from qlir.indicators.vwap import vwap_cum_hlc3
+from qlir.indicators.vwap import add_vwap_cum_hlc3
+import pytest
+pytestmark = pytest.mark.local
 
 def test_vwap_hlc3_basic_no_time():
     # Simple RangeIndex data (no timestamps, no tz)
@@ -12,7 +14,7 @@ def test_vwap_hlc3_basic_no_time():
         "close": [10, 10, 11, 12],
         "volume":[ 1,  2,  3,  4],
     })
-    out = vwap_cum_hlc3(df)
+    out = add_vwap_cum_hlc3(df)
     # Ground truth
     hlc3 = (df.high + df.low + df.close) / 3.0
     cum_vol = df.volume.cumsum()
@@ -26,7 +28,7 @@ def test_vwap_hlc3_zero_volume_no_time():
         "close": [10, 10, 11, 12, 13],
         "volume":[ 0,  2,  0,  3,  4],   # zeros sprinkled in
     })
-    out = vwap_cum_hlc3(df)
+    out = add_vwap_cum_hlc3(df)
     hlc3 = (df.high + df.low + df.close)/3.0
     cum_vol = df.volume.astype(float).cumsum()
     exp = (hlc3 * df.volume).cumsum() / cum_vol

@@ -1,5 +1,7 @@
-import pandas as pd
 import pytest
+pytestmark = pytest.mark.local
+
+import pandas as pd
 from pathlib import Path
 import logging
 

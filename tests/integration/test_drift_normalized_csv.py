@@ -5,9 +5,13 @@ log = logging.getLogger(__name__)
 import os
 import pandas as pd
 import pytest
+
 from qlir.io.writer import write
 from qlir.data.sources.drift import get_candles_all
 
+
+# @pytest.mark.integration
+# @pytest.mark.network
 # def test_data_roundtrip(tmp_path):
 #     """
 #     Integration test: fetch → normalize → write CSV → read → validate contract.

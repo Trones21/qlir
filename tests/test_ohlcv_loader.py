@@ -2,6 +2,8 @@
 import pandas as pd
 from qlir.data.load import load_ohlcv
 from qlir.io import write
+import pytest
+pytestmark = pytest.mark.local
 
 def _seed_df():
     return pd.DataFrame(

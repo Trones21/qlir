@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import pytest
+pytestmark = pytest.mark.local
 
 from qlir.core.relations.bar_relations import (
     add_higher_high,

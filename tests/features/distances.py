@@ -4,10 +4,12 @@ from qlir.features.common.distances import add_distance
 from qlir.utils.logdf import logdf
 import numpy as np
 import pandas as pd
-
+import pytest
+pytestmark = pytest.mark.local
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(message)s")
+
 
 def distance_ref(close, vwap):
     out = []

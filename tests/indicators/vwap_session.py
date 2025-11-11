@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from qlir.indicators.vwap import add_vwap_hlc3_session
+import pytest
+pytestmark = pytest.mark.local
 
 def test_vwap_hlc3_resets_each_session_minimal():
     # 3 bars on day 1 at ~10, 2 bars on day 2 at ~20

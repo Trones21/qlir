@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import pytest
+pytestmark = pytest.mark.local
 
 from qlir.core.ops.pointwise import (
     add_diff,

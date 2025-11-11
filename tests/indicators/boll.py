@@ -1,5 +1,8 @@
 from qlir.indicators.boll import add_bollinger
 from qlir.utils.logdf import logdf
+import pytest
+pytestmark = pytest.mark.local
+
 
 def test_boll_cols(static_data):
     out = add_bollinger(static_data)

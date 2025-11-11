@@ -1,5 +1,8 @@
-import pandas as pd
+
 import pytest
+pytestmark = pytest.mark.local
+
+import pandas as pd
 
 from qlir.data.resampling.generate_candles import (
     generate_candles_from_1m,
@@ -9,9 +12,7 @@ from qlir.time.timefreq import TimeFreq, TimeUnit
 from qlir.utils.logdf import logdf
 
 import logging 
-
 log = logging.getLogger(__name__)
-
 
 
 def make_1m_df(n=10, start="2025-01-01 00:00:00Z"):

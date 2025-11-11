@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+pytestmark = pytest.mark.local
 
 from qlir.data.candle_quality import _sort_dedupe
 

@@ -1,5 +1,7 @@
 import pandas as pd
 from qlir.features.vwap.block import add_vwap_feature_block
+import pytest
+pytestmark = pytest.mark.local
 
 EXPECTED_COLS = {
     "vwap", "relation",

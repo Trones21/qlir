@@ -8,6 +8,7 @@ from qlir.io.writer import write, write_dataset_meta
 from qlir.io.reader import read
 
 @pytest.mark.integration
+@pytest.mark.network
 def test_add_new_candles_to_dataset_grows_file(tmp_path: Path):
     """
     Real integration test.

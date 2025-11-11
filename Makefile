@@ -30,6 +30,11 @@ cli:  ## e.g. make cli ARGS="--help"
 test:
 	poetry run pytest
 
+test-network:
+	poetry run pytest -m network
+	
+test-local:
+	poetry run pytest -m local
 #file/func
 test-f:
 	@if [ -z "$(f)" ]; then echo "Filter tests to file or func Usage: make test-f f=path/to/test_file.py or make test-f f=path/to/test_file.py::test_func"; exit 1; fi

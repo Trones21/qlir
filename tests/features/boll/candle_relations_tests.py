@@ -5,8 +5,8 @@ import candle_relations_reference_implementations as ref_imp
 import logging
 log = logging.getLogger(__name__)
 import pytest
+pytestmark = pytest.mark.local
 
-@pytest.mark.skip
 def test_candle_line_relations(static_data):
     with_boll = add_bollinger(static_data)
     out = add_candle_line_relations(with_boll)
@@ -18,7 +18,6 @@ def test_candle_line_relations(static_data):
     assert False, "Assert not yet written"
 
 
-@pytest.mark.skip
 def test_candle_relation_mece(static_data):
     with_boll = add_bollinger(static_data)
     with_rel = add_candle_relation_mece(with_boll)
