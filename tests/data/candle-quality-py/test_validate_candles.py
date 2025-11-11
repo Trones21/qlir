@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from qlir.data.candle_quality import TimeFreq, validate_candles, CandlesDQReport
+from qlir.time.timefreq import TimeFreq, validate_candles, CandlesDQReport
 import logging
 
 from qlir.utils.logdf import logdf

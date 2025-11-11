@@ -1,5 +1,5 @@
 
-from qlir.data.candle_quality import TimeFreq, ensure_utc_series, infer_freq, ensure_homogeneous_candle_size, detect_candle_gaps
+from qlir.time.timefreq import TimeFreq, ensure_utc_series, infer_freq, ensure_homogeneous_candle_size, detect_candle_gaps
 import pandas as pd
 from typing import Iterable, Dict
 

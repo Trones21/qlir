@@ -5,7 +5,7 @@ from qlir.data.resampling.generate_candles import (
     generate_candles_from_1m,
     generate_candles,
 )
-from qlir.data.candle_quality import TimeFreq
+from qlir.time.timefreq import TimeFreq
 from qlir.utils.logdf import logdf
 
 import logging 
