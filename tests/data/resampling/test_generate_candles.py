@@ -8,6 +8,12 @@ from qlir.data.resampling.generate_candles import (
 from qlir.data.candle_quality import TimeFreq
 from qlir.utils.logdf import logdf
 
+import logging 
+
+log = logging.getLogger(__name__)
+
+
+
 def make_1m_df(n=10, start="2025-01-01 00:00:00Z"):
     """Build a tiny homogeneous 1m dataframe with tz_start like your infer_freq expects."""
     idx = pd.date_range(start=start, periods=n, freq="1min")  # 1-minute
@@ -27,6 +33,18 @@ def make_1m_df(n=10, start="2025-01-01 00:00:00Z"):
 def test_generate_candles_from_1m_happy_path():
     df = make_1m_df(n=60)  # 1 hour of 1m data
 
+    # Set some values that will end up on the new first row
+    expected_high_5m = 99
+    expected_low_5m = 0.1
+    expected_open_5m = 55
+    expected_close_5m = 33
+    df.loc[2, 'high'] = expected_high_5m
+    df.loc[1, 'low'] = expected_low_5m
+    df.loc[0, 'open'] = expected_open_5m
+    df.loc[4, 'close'] = expected_close_5m
+
+
+    # ---------- Act -----------
     # we want 5m and 15m
     out = generate_candles_from_1m(
         df,
@@ -35,23 +53,29 @@ def test_generate_candles_from_1m_happy_path():
         dt_col="tz_start",
     )
 
-    logdf(out["5min"])
-
+    # ---------- Assert -----------
+    ## Ensure both aggregations are there
     assert "5min" in out
     assert "15min" in out
 
     five = out["5min"]
     fifteen = out["15min"]
-
+    
     # 60 minutes → 12 bars of 5m
     assert len(five) == 12
     # 60 minutes → 4 bars of 15m
     assert len(fifteen) == 4
 
+    # Ensure the first row of 5min agg'd properly
+    row = five.iloc[0]
+    assert row['open'] == expected_open_5m
+    assert row['close'] == expected_close_5m
+    assert row['high'] == expected_high_5m
+    assert row['low'] == expected_low_5m    
+
     # metadata present
-    assert "candle_freq" in five.columns
-    assert "inferred_input_freq" in five.columns
-    assert five["candle_freq"].iloc[0] == "5min"
+    assert "meta__candle_freq" in five.columns
+    assert "meta__derived_from_freq" in five.columns
 
 
 def test_generate_candles_from_1m_raises_on_gaps():

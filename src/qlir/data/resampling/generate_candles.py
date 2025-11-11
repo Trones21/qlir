@@ -86,13 +86,14 @@ def _generate(
         )
 
         # materialize the timestamp column 
-        materialize_index(candles, dt_col)
+        candles = materialize_index(candles, dt_col)
         
         # add metadata columns so downstream knows what happened
         candles["meta__candle_freq"] = freq_str
-        move_column(candles, "meta__candle_freq", 0)
         candles["meta__derived_from_freq"] = dataset_tf.as_pandas_str  # e.g. "1min"
-        move_column(candles, "meta__derived_from_freq", 0)
+        
+        candles = move_column(candles, "meta__candle_freq", 0)
+        candles = move_column(candles, "meta__derived_from_freq", 0)
 
         out[freq_str] = candles
 

@@ -17,7 +17,7 @@ def union_and_sort(dfs: list[pd.DataFrame], sort_by: list[str] | None = None) ->
     return df
 
 
-def materialize_index(df, name: str = "tz_start") -> None:
+def materialize_index(df, name: str = "tz_start") -> pd.DataFrame:
     """
     Ensure the DataFrame's index is also available as a column,
     and move it to the first position (in-place).
@@ -42,10 +42,12 @@ def materialize_index(df, name: str = "tz_start") -> None:
         move_column(df, name, 0)
     else:
         df.insert(0, name, df.index)
+    
+    return df
 
 
 
-def move_column(df, col: str, to_idx: int = 0) -> None:
+def move_column(df, col: str, to_idx: int = 0) -> pd.DataFrame:
     """
     Move an existing column to a new ordinal position
     Note: This is basically just an verbosity reducer and its efficent b/c 
@@ -71,7 +73,9 @@ def move_column(df, col: str, to_idx: int = 0) -> None:
     s = df.pop(col)
     df.insert(to_idx, col, s)
 
-def insert_column(df, col: str, values, to_idx: int = 0) -> None:
+    return df
+
+def insert_column(df, col: str, values, to_idx: int = 0) -> pd.DataFrame:
     """
     Insert a new column at a given ordinal position (in-place).
     
@@ -96,3 +100,5 @@ def insert_column(df, col: str, values, to_idx: int = 0) -> None:
     - Existing columns at or after this position are shifted right.
     """
     df.insert(to_idx, col, values)
+
+    return df
