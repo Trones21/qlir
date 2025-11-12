@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from qlir.indicators.vwap import with_vwap_hlc3_session
 from qlir.features.vwap.relations import flag_relations
-
+import pytest
+pytestmark = pytest.mark.local
 
 def test_touch_eps_threshold():
     # Build two bars where close is nearly equal to vwap within tolerance

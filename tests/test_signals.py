@@ -2,7 +2,8 @@ from qlir.features.vwap.block import with_vwap_feature_block
 from qlir.features.rsi.block import with_rsi_feature_block
 from qlir.features.macd.block import with_macd_feature_block
 from qlir.signals import with_vwap_rejection_signal, with_combo_signal
-
+import pytest
+pytestmark = pytest.mark.local
 
 def test_signals_exist(ohlcv_1m_100):
     df = with_vwap_feature_block(ohlcv_1m_100, tz="UTC")
