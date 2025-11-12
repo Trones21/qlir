@@ -1,26 +1,26 @@
 from __future__ import annotations
 import pandas as pd
-from ...indicators.boll import add_bollinger
-from .candle_relations import add_candle_line_relations, add_candle_relation_mece
+from ...indicators.boll import with_bollinger
+from .candle_relations import with_candle_line_relations, with_candle_relation_mece
 from ..common import temporal, distances
-__all__ = ["add_boll_feature_block"]
+__all__ = ["with_boll_feature_block"]
 
 
-def add_boll_feature_block(
+def with_boll_feature_block(
     df: pd.DataFrame,
     *,
     close_col: str = "close",
     period: int = 20,
     k: float = 2.0,
 ) -> pd.DataFrame:
-    out = add_bollinger(df, close_col=close_col, period=period, k=k)
+    out = with_bollinger(df, close_col=close_col, period=period, k=k)
     
     ## Descriptive (non derivative)
-    out = distances.add_distance(out, from_="boll_lower", to_="boll_upper")
+    out = distances.with_distance(out, from_="boll_lower", to_="boll_upper")
 
     # Candle Relations
-    out = add_candle_relation_mece(out)
-    out = add_candle_line_relations(out)
+    out = with_candle_relation_mece(out)
+    out = with_candle_line_relations(out)
 
   
     # Derivatives

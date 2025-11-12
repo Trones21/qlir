@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pandas as pd
 
-__all__ = ["add_rsi_regime_flags"]
+__all__ = ["with_rsi_regime_flags"]
 
 
-def add_rsi_regime_flags(
+def with_rsi_regime_flags(
     df: pd.DataFrame,
     *,
     rsi_col: str = "rsi",

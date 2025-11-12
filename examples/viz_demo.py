@@ -36,8 +36,8 @@ from qlir.viz import render
 from qlir.viz.views.vwap import vwap_distance_view
 from qlir.viz.views.boll import boll_validation_view
 from qlir.features.vwap.block import add_distance_metrics
-from qlir.features.boll.block import add_bollinger
-from qlir.indicators.vwap import add_vwap_cum_hlc3
+from qlir.features.boll.block import with_bollinger
+from qlir.indicators.vwap import with_vwap_cum_hlc3
 from qlir.io.reader import read  # use built-in reader dispatcher
 
 # Optional data fetcher (CLI-backed real data source)
@@ -69,7 +69,7 @@ def make_synth(rows: int, seed: int = 42) -> pd.DataFrame:
         "volume": volume,
     }, index=idx)
 
-    df = add_vwap_cum_hlc3(df)
+    df = with_vwap_cum_hlc3(df)
     return df
 
 
@@ -84,7 +84,7 @@ def load_file(path: str) -> pd.DataFrame:
             raise ValueError("File must have datetime index or 'time' column.")
     # Ensure VWAP exists
     if "vwap" not in df.columns:
-        df = add_vwap_cum_hlc3(df)
+        df = with_vwap_cum_hlc3(df)
     return df
 
 
@@ -93,7 +93,7 @@ def fetch(symbol: str, resolution: str, limit: int) -> pd.DataFrame:
         raise RuntimeError("CLI fetch not available: qlir.data.drift.fetch_drift_candles not importable")
     df = fetch_drift_candles(symbol=symbol, resolution=resolution, limit=limit)
     if "vwap" not in df.columns:
-        df = add_vwap_cum_hlc3(df)
+        df = with_vwap_cum_hlc3(df)
     return df
 
 

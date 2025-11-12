@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pandas as pd
 
-__all__ = ["add_boll_touch_squeeze_flags"]
+__all__ = ["with_boll_touch_squeeze_flags"]
 
 
-def add_boll_touch_squeeze_flags(
+def with_boll_touch_squeeze_flags(
     df: pd.DataFrame,
     *,
     close_col: str = "close",

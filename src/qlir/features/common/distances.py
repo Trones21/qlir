@@ -3,12 +3,12 @@ import pandas as pd
 import numpy as np
 
 
-__all__ = ["add_zscore", "add_distance"]
+__all__ = ["with_zscore", "with_distance"]
 
 import numpy as np
 import pandas as pd
 
-def add_distance(
+def with_distance(
     df: pd.DataFrame,
     *,
     from_: str,   # baseline (e.g., 'vwap')
@@ -52,7 +52,7 @@ def add_distance(
 
 
 
-def add_zscore(
+def with_zscore(
     df: pd.DataFrame,
     *,
     col: str,

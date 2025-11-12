@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from qlir.indicators.vwap import add_vwap_hlc3_session
+from qlir.indicators.vwap import with_vwap_hlc3_session
 import pytest
 pytestmark = pytest.mark.local
 
@@ -18,7 +18,7 @@ def test_vwap_hlc3_resets_each_session_minimal():
         index=ts,
     )
     df = df.rename_axis("timestamp").reset_index()
-    out = add_vwap_hlc3_session(df, tz="UTC")  # this one uses time utils
+    out = with_vwap_hlc3_session(df, tz="UTC")  # this one uses time utils
     print(out)
     v = out["vwap"]
     assert np.allclose(v.iloc[:3], 10.0)
@@ -41,7 +41,7 @@ def test_vwap_session_midnight_end_semantics():
         },
         index=ts,
     )
-    out = add_vwap_hlc3_session(df, tz="UTC")
+    out = with_vwap_hlc3_session(df, tz="UTC")
     v = out["vwap"].to_numpy()
 
     # independent ground truth

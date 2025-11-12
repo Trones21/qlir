@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pandas as pd
 
-__all__ = ["add_combo_signal"]
+__all__ = ["with_combo_signal"]
 
 
-def add_combo_signal(
+def with_combo_signal(
     df: pd.DataFrame,
     *,
     out_col: str = "sig_combo",

@@ -1,5 +1,5 @@
-from .session import add_session_id
-from .running import add_counts_running, add_streaks
-from .distances import add_zscore
+from .session import with_session_id
+from .running import with_counts_running, with_streaks
+from .distances import with_zscore
 
-__all__ = ["add_session_id", "add_counts_running", "add_streaks", "add_zscore"]
+__all__ = ["with_session_id", "with_counts_running", "with_streaks", "with_zscore"]

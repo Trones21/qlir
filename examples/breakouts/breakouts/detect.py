@@ -26,7 +26,7 @@ def tag_breakouts_simple(
     raw = df if inplace else df.copy()
     
     suffix=f"pct_{lookback}"
-    with_pct_df = pt.add_pct_change(raw, "close", 20, suffix=suffix)
+    with_pct_df = pt.with_pct_change(raw, "close", 20, suffix=suffix)
     pct_col = f"{price_col}__{suffix}"
 
     #Rename and add breakout series 

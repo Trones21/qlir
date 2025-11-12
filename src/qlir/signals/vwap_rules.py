@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pandas as pd
 
-__all__ = ["add_vwap_rejection_signal"]
+__all__ = ["with_vwap_rejection_signal"]
 
 
-def add_vwap_rejection_signal(
+def with_vwap_rejection_signal(
     df: pd.DataFrame,
     *,
     need_slope_same_side: bool = True,

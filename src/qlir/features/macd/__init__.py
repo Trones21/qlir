@@ -1,4 +1,4 @@
-from .crosses import add_macd_cross_flags
-from .block import add_macd_feature_block
+from .crosses import with_macd_cross_flags
+from .block import with_macd_feature_block
 
-__all__ = ["add_macd_cross_flags", "add_macd_feature_block"]
+__all__ = ["with_macd_cross_flags", "with_macd_feature_block"]

@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 
 from qlir.core.counters.multivariate import (
-    add_running_true_all,
-    add_running_true_at_least,
-    add_bars_since_any_true,
+    with_running_true_all,
+    with_running_true_at_least,
+    with_bars_since_any_true,
 )
 
 def test_running_true_all_basic():
@@ -15,7 +15,7 @@ def test_running_true_all_basic():
         "c": [True,  False, True,  True,  True ],
     }).astype({"a": "boolean", "b": "boolean", "c": "boolean"})
 
-    out = add_running_true_all(df, ["a", "b", "c"])
+    out = with_running_true_all(df, ["a", "b", "c"])
     col = "all__run_true__a__b__c"
     assert col in out.columns
 
@@ -28,7 +28,7 @@ def test_running_true_all_inplace():
         "a": [True, False],
         "b": [True, True],
     }).astype({"a": "boolean", "b": "boolean"})
-    out = add_running_true_all(df, ["a", "b"], inplace=True)
+    out = with_running_true_all(df, ["a", "b"], inplace=True)
     assert out is df
     assert "all__run_true__a__b" in df.columns
 
@@ -41,7 +41,7 @@ def test_running_true_at_least_k_of_n():
     }).astype({"a": "boolean", "b": "boolean", "c": "boolean"})
 
     # k = 2 out of 3
-    out = add_running_true_at_least(df, ["a", "b", "c"], k=2)
+    out = with_running_true_at_least(df, ["a", "b", "c"], k=2)
     col = "atleast__2__run_true__a__b__c"
     assert col in out.columns
 
@@ -58,7 +58,7 @@ def test_running_true_at_least_inplace_and_errors():
         "b": [True, True],
         "c": [False, True],
     }).astype({"a": "boolean", "b": "boolean", "c": "boolean"})
-    out = add_running_true_at_least(df, ["a", "b", "c"], k=2, inplace=True)
+    out = with_running_true_at_least(df, ["a", "b", "c"], k=2, inplace=True)
     assert out is df
     assert "atleast__2__run_true__a__b__c" in df.columns
 
@@ -70,7 +70,7 @@ def test_bars_since_any_true_basic():
         "c": [False, False, False,  False, False, False],
     }).astype({"a": "boolean", "b": "boolean", "c": "boolean"})
 
-    out = add_bars_since_any_true(df, ["a", "b", "c"])
+    out = with_bars_since_any_true(df, ["a", "b", "c"])
     col = "any__bars_since_true__a__b__c"
     assert col in out.columns
 
@@ -88,6 +88,6 @@ def test_bars_since_any_true_inplace():
         "a": [False, True],
         "b": [False, False],
     }).astype({"a": "boolean", "b": "boolean"})
-    out = add_bars_since_any_true(df, ["a", "b"], inplace=True)
+    out = with_bars_since_any_true(df, ["a", "b"], inplace=True)
     assert out is df
     assert "any__bars_since_true__a__b" in df.columns

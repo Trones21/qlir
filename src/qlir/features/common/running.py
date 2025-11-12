@@ -2,10 +2,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-__all__ = ["add_counts_running", "add_streaks"]
+__all__ = ["with_counts_running", "with_streaks"]
 
 
-def add_counts_running(
+def with_counts_running(
     df: pd.DataFrame,
     *,
     session_col: str | None = "session",
@@ -24,7 +24,7 @@ def add_counts_running(
     return out
 
 
-def add_streaks(
+def with_streaks(
     df: pd.DataFrame,
     *,
     rel_col: str = "relation",

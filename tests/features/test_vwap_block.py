@@ -1,5 +1,5 @@
 import pandas as pd
-from qlir.features.vwap.block import add_vwap_feature_block
+from qlir.features.vwap.block import with_vwap_feature_block
 import pytest
 pytestmark = pytest.mark.local
 
@@ -21,7 +21,7 @@ def test_vwap_block_contract_columns_and_types():
     ])
 
     # Act
-    out = add_vwap_feature_block(df, tz="UTC")
+    out = with_vwap_feature_block(df, tz="UTC")
 
     # Assert
     assert EXPECTED_COLS.issubset(set(out.columns))
@@ -34,7 +34,7 @@ def test_vwap_block_contract_columns_and_types():
 
 
 # def test_vwap_block_contract(ohlcv_1m_100):
-#     out = add_vwap_feature_block(ohlcv_1m_100, tz="UTC")
+#     out = with_vwap_feature_block(ohlcv_1m_100, tz="UTC")
 #     expected = {"vwap", "relation", "cross_up", "cross_down", "reject_up", "reject_down", "session", "streak_len", "vwap_dist", "vwap_z"}
 #     assert expected.issubset(set(out.columns))
 #     # dtypes on flags
@@ -44,7 +44,7 @@ def test_vwap_block_contract_columns_and_types():
 
 # def test_vwap_block_dst(ohlcv_dst_boundary):
 #     df, tz = ohlcv_dst_boundary
-#     out = add_vwap_feature_block(df, tz=tz)
+#     out = with_vwap_feature_block(df, tz=tz)
 #     # session should split exactly at local midnight boundaries despite DST fallback
 #     assert "session" in out
 #     # There should be at least two distinct session values if the range crosses midnight

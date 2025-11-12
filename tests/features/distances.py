@@ -1,6 +1,6 @@
 import logging
-from qlir.indicators.vwap import add_vwap_cum_hlc3
-from qlir.features.common.distances import add_distance
+from qlir.indicators.vwap import with_vwap_cum_hlc3
+from qlir.features.common.distances import with_distance
 from qlir.utils.logdf import logdf
 import numpy as np
 import pandas as pd
@@ -19,10 +19,10 @@ def distance_ref(close, vwap):
 
 def test_distance_against_reference(static_data):
     # Arrange - Get vwap since we are going to use that 
-    df = add_vwap_cum_hlc3(static_data).head(50)
+    df = with_vwap_cum_hlc3(static_data).head(50)
 
     # Act
-    got = add_distance(df, from_="vwap", to_="close")
+    got = with_distance(df, from_="vwap", to_="close")
     
     # An implementation we know is correct
     ref = distance_ref(df["close"].tolist(), df["vwap"].tolist())

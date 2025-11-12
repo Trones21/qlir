@@ -39,7 +39,7 @@ def _safe_name(base: str, *parts: Union[str, int]) -> str:
 # Public API (pointwise ops)
 # ----------------------------
 
-def add_diff(
+def with_diff(
     df: pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
@@ -58,7 +58,7 @@ def add_diff(
     return out
 
 
-def add_pct_change(
+def with_pct_change(
     df: pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
@@ -89,7 +89,7 @@ def add_pct_change(
     return out
 
 
-def add_log_return(
+def with_log_return(
     df: pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
@@ -126,7 +126,7 @@ def add_log_return(
     return out
 
 
-def add_shift(
+def with_shift(
     df: pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
@@ -145,7 +145,7 @@ def add_shift(
     return out
 
 
-def add_sign(
+def with_sign(
     df: pd.DataFrame,
     cols: ColsLike = None,
     *,
@@ -169,7 +169,7 @@ def add_sign(
     return out
 
 
-def add_abs(
+def with_abs(
     df: pd.DataFrame,
     cols: ColsLike = None,
     *,
@@ -191,7 +191,7 @@ def add_abs(
 # Convenience: “bar-to-bar” aliases
 # ----------------------------
 
-def add_bar_direction(
+def with_bar_direction(
     df: pd.DataFrame,
     col: str,
     *,
@@ -203,8 +203,8 @@ def add_bar_direction(
     Direction of bar-to-bar change (sign of diff): {-1, 0, +1}
     Example: open_t vs open_{t-1} -> direction(open)
     """
-    out = add_diff(df, cols=[col], periods=periods, inplace=inplace)
+    out = with_diff(df, cols=[col], periods=periods, inplace=inplace)
     diff_col = _safe_name(col, f"diff_{periods}")
     # attach direction of that diff
-    out = add_sign(out, cols=[diff_col], suffix=suffix or "direction", inplace=True)
+    out = with_sign(out, cols=[diff_col], suffix=suffix or "direction", inplace=True)
     return out

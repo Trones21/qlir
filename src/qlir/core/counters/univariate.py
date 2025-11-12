@@ -31,7 +31,7 @@ def _consecutive_true(mask: pd.Series) -> pd.Series:
 # Public API
 # ----------------------------
 
-def add_running_true(
+def with_running_true(
     df: pd.DataFrame,
     col: str,
     *,
@@ -44,7 +44,7 @@ def add_running_true(
     out[name or _safe_name(col, "run_true")] = _consecutive_true(s)
     return out
 
-def add_bars_since_true(
+def with_bars_since_true(
     df: pd.DataFrame,
     col: str,
     *,

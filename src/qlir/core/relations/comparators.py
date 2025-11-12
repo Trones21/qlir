@@ -70,7 +70,7 @@ def _compare(
 # public API
 # ----------------------------
 
-def add_gt(
+def with_gt(
     df: pd.DataFrame,
     a: Union[str, Scalar],
     b: Union[str, Scalar],
@@ -84,7 +84,7 @@ def add_gt(
     out[colname] = _compare(out, a, b, op="gt", tol=tol)
     return out
 
-def add_ge(
+def with_ge(
     df: pd.DataFrame,
     a: Union[str, Scalar],
     b: Union[str, Scalar],
@@ -98,7 +98,7 @@ def add_ge(
     out[colname] = _compare(out, a, b, op="ge", tol=tol)
     return out
 
-def add_lt(
+def with_lt(
     df: pd.DataFrame,
     a: Union[str, Scalar],
     b: Union[str, Scalar],
@@ -112,7 +112,7 @@ def add_lt(
     out[colname] = _compare(out, a, b, op="lt", tol=tol)
     return out
 
-def add_le(
+def with_le(
     df: pd.DataFrame,
     a: Union[str, Scalar],
     b: Union[str, Scalar],
@@ -126,7 +126,7 @@ def add_le(
     out[colname] = _compare(out, a, b, op="le", tol=tol)
     return out
 
-def add_eq(
+def with_eq(
     df: pd.DataFrame,
     a: Union[str, Scalar],
     b: Union[str, Scalar],
@@ -140,7 +140,7 @@ def add_eq(
     out[colname] = _compare(out, a, b, op="eq", tol=tol)
     return out
 
-def add_ne(
+def with_ne(
     df: pd.DataFrame,
     a: Union[str, Scalar],
     b: Union[str, Scalar],

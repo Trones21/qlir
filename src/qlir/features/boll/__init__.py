@@ -1,4 +1,4 @@
-from .old_bands_touch import add_boll_touch_squeeze_flags
-from .block import add_boll_feature_block
+from .old_bands_touch import with_boll_touch_squeeze_flags
+from .block import with_boll_feature_block
 from .candle_relations import *
-__all__ = ["add_boll_touch_squeeze_flags", "add_boll_feature_block"]
+__all__ = ["with_boll_touch_squeeze_flags", "with_boll_feature_block"]

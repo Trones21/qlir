@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pandas as pd
 
-__all__ = ["add_macd_cross_flags"]
+__all__ = ["with_macd_cross_flags"]
 
 
-def add_macd_cross_flags(
+def with_macd_cross_flags(
     df: pd.DataFrame,
     *,
     macd_col: str = "macd",

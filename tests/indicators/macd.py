@@ -1,4 +1,4 @@
-from qlir.indicators.macd import add_macd
+from qlir.indicators.macd import with_macd
 import logging
 log = logging.getLogger(__name__)
 from qlir.utils.logdf import logdf
@@ -6,7 +6,7 @@ import pytest
 pytestmark = pytest.mark.local
 
 def test_macd_columns(static_data):
-    out = add_macd(static_data)
+    out = with_macd(static_data)
     logdf(out, 40, name="With MACD")
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from qlir.indicators.vwap import add_vwap_hlc3_session
+from qlir.indicators.vwap import with_vwap_hlc3_session
 from qlir.features.vwap.relations import flag_relations
 
 
@@ -15,7 +15,7 @@ def test_touch_eps_threshold():
         "close": [100, 100.01],
         "volume": [1000, 1000],
     })
-    df = add_vwap_hlc3_session(df, tz="UTC")
+    df = with_vwap_hlc3_session(df, tz="UTC")
     out = flag_relations(df, touch_eps=5e-4, touch_min_abs=0.02)  # 2 cents min abs
     # Since diff is 1 cent, with min abs 2 cents, second bar should be 'touch'
     assert out.loc[1, "relation"] == "touch"

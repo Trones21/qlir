@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pandas as pd
 
-__all__ = ["add_distance_metrics"]
+__all__ = ["with_distance_metrics"]
 
 
-def add_distance_metrics(
+def with_distance_metrics(
     df: pd.DataFrame,
     *,
     vwap_col: str = "vwap",

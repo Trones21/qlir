@@ -1,10 +1,10 @@
 from __future__ import annotations
 import pandas as pd
 
-__all__ = ["add_macd"]
+__all__ = ["with_macd"]
 
 
-def add_macd(
+def with_macd(
     df: pd.DataFrame,
     *,
     close_col: str = "close",

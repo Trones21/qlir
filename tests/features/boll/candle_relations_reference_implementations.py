@@ -5,7 +5,7 @@ log = logging.getLogger(__name__)
 from qlir.utils.pdtools import null_if
 from qlir.utils.logdf import logdf
 
-def ref_imp_add_candle_line_relations(
+def ref_imp_with_candle_line_relations(
     df: pd.DataFrame,
     *,
     high_col="high",
@@ -50,7 +50,7 @@ def ref_imp_add_candle_line_relations(
 
     return out
 
-def ref_imp_add_candle_relation_mece(
+def ref_imp_with_candle_relation_mece(
     df: pd.DataFrame,
     *,
     high_col="high",
@@ -106,7 +106,7 @@ def ref_imp_add_candle_relation_mece(
     -----
     - Rows where `boll_valid == False` are set to NA.
     - The output categorical is ordered logically from fully_below → fully_above.
-    - Designed to complement `add_candle_line_relations()`, which emits
+    - Designed to complement `with_candle_line_relations()`, which emits
       per-band 3-state columns (`below/touch/above`).
     """
     out = df.copy()

@@ -5,9 +5,9 @@ import pandas as pd
 from ..time.misc import session_floor
 from ..utils.df_ops import ensure_copy
 
-__all__ = ["add_vwap_cum_hlc3", "add_vwap_hlc3_session"]
+__all__ = ["with_vwap_cum_hlc3", "with_vwap_hlc3_session"]
 
-def add_vwap_cum_hlc3(
+def with_vwap_cum_hlc3(
     df: pd.DataFrame,
     *,
     price_cols=("high", "low", "close"),
@@ -28,7 +28,7 @@ def add_vwap_cum_hlc3(
 
 
 # indicators/vwap.py
-def add_vwap_hlc3_session(df, *, tz="UTC", price_cols=("high","low","close"), volume_col="volume", out_col="vwap"):
+def with_vwap_hlc3_session(df, *, tz="UTC", price_cols=("high","low","close"), volume_col="volume", out_col="vwap"):
     out = df.copy()
     h, l, c = price_cols
     vol = out[volume_col].astype(float)

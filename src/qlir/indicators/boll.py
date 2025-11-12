@@ -2,10 +2,10 @@ from __future__ import annotations
 import pandas as pd
 import numpy as np
 
-__all__ = ["add_bollinger"]
+__all__ = ["with_bollinger"]
 
 
-def add_bollinger(
+def with_bollinger(
     df: pd.DataFrame,
     *,
     close_col: str = "close",

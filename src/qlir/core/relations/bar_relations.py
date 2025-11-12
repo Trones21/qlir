@@ -35,7 +35,7 @@ def _safe_bool(s: pd.Series) -> pd.Series:
 # basic directional bar relations
 # ----------------------------
 
-def add_higher_high(
+def with_higher_high(
     df: pd.DataFrame,
     high_col: str = "high",
     *,
@@ -47,7 +47,7 @@ def add_higher_high(
     out[name or _safe_name(high_col, "higher_high")] = _safe_bool(h > _shift(h))
     return out
 
-def add_lower_low(
+def with_lower_low(
     df: pd.DataFrame,
     low_col: str = "low",
     *,
@@ -59,7 +59,7 @@ def add_lower_low(
     out[name or _safe_name(low_col, "lower_low")] = _safe_bool(l < _shift(l))
     return out
 
-def add_higher_close(
+def with_higher_close(
     df: pd.DataFrame,
     close_col: str = "close",
     *,
@@ -71,7 +71,7 @@ def add_higher_close(
     out[name or _safe_name(close_col, "higher_close")] = _safe_bool(c > _shift(c))
     return out
 
-def add_lower_close(
+def with_lower_close(
     df: pd.DataFrame,
     close_col: str = "close",
     *,
@@ -83,7 +83,7 @@ def add_lower_close(
     out[name or _safe_name(close_col, "lower_close")] = _safe_bool(c < _shift(c))
     return out
 
-def add_higher_open(
+def with_higher_open(
     df: pd.DataFrame,
     open_col: str = "open",
     *,
@@ -95,7 +95,7 @@ def add_higher_open(
     out[name or _safe_name(open_col, "higher_open")] = _safe_bool(o > _shift(o))
     return out
 
-def add_lower_open(
+def with_lower_open(
     df: pd.DataFrame,
     open_col: str = "open",
     *,
@@ -111,7 +111,7 @@ def add_lower_open(
 # inside / outside bars
 # ----------------------------
 
-def add_inside_bar(
+def with_inside_bar(
     df: pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
@@ -136,7 +136,7 @@ def add_inside_bar(
     out[name or _safe_name("inside_bar")] = _safe_bool(cond)
     return out
 
-def add_outside_bar(
+def with_outside_bar(
     df: pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
@@ -165,7 +165,7 @@ def add_outside_bar(
 # body / color and simple patterns
 # ----------------------------
 
-def add_bullish_bar(
+def with_bullish_bar(
     df: pd.DataFrame,
     open_col: str = "open",
     close_col: str = "close",
@@ -183,7 +183,7 @@ def add_bullish_bar(
     out[name or _safe_name("bullish_bar")] = _safe_bool(cond)
     return out
 
-def add_bearish_bar(
+def with_bearish_bar(
     df: pd.DataFrame,
     open_col: str = "open",
     close_col: str = "close",
@@ -205,7 +205,7 @@ def add_bearish_bar(
 # range / expansion utilities
 # ----------------------------
 
-def add_true_range(
+def with_true_range(
     df: pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
@@ -225,7 +225,7 @@ def add_true_range(
     out[name or _safe_name("true_range")] = tr
     return out
 
-def add_range_expansion_vs_prev(
+def with_range_expansion_vs_prev(
     df: pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
@@ -237,13 +237,13 @@ def add_range_expansion_vs_prev(
     """
     Range expansion vs previous bar:
     - method="highlow": (high-low)_t > (high-low)_{t-1}
-    - method="tr":      TR_t > TR_{t-1}   (uses add_true_range)
+    - method="tr":      TR_t > TR_{t-1}   (uses with_true_range)
     """
     out = _maybe_copy(df, inplace)
     if method == "highlow":
         rng = _as_series(out, high_col) - _as_series(out, low_col)
     elif method == "tr":
-        tmp = add_true_range(out, high_col=high_col, low_col=low_col, name="__TR__", inplace=False)
+        tmp = with_true_range(out, high_col=high_col, low_col=low_col, name="__TR__", inplace=False)
         rng = tmp["__TR__"]
     else:
         raise ValueError("method must be 'highlow' or 'tr'")

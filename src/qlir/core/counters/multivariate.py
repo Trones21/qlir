@@ -31,7 +31,7 @@ def _consecutive_true(mask: pd.Series) -> pd.Series:
 # Public API
 # ----------------------------
 
-def add_running_true_all(
+def with_running_true_all(
     df: pd.DataFrame,
     cols: Iterable[str],
     *,
@@ -49,7 +49,7 @@ def add_running_true_all(
     out[name or _safe_name("all", "run_true", *cols)] = _consecutive_true(mask)
     return out
 
-def add_running_true_at_least(
+def with_running_true_at_least(
     df: pd.DataFrame,
     cols: Iterable[str],
     k: int,
@@ -70,7 +70,7 @@ def add_running_true_at_least(
     out[name or _safe_name("atleast", k, "run_true", *cols)] = _consecutive_true(cond)
     return out
 
-def add_bars_since_any_true(
+def with_bars_since_any_true(
     df: pd.DataFrame,
     cols: Iterable[str],
     *,

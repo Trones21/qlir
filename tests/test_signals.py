@@ -1,15 +1,15 @@
-from qlir.features.vwap.block import add_vwap_feature_block
-from qlir.features.rsi.block import add_rsi_feature_block
-from qlir.features.macd.block import add_macd_feature_block
-from qlir.signals import add_vwap_rejection_signal, add_combo_signal
+from qlir.features.vwap.block import with_vwap_feature_block
+from qlir.features.rsi.block import with_rsi_feature_block
+from qlir.features.macd.block import with_macd_feature_block
+from qlir.signals import with_vwap_rejection_signal, with_combo_signal
 
 
 def test_signals_exist(ohlcv_1m_100):
-    df = add_vwap_feature_block(ohlcv_1m_100, tz="UTC")
-    df = add_rsi_feature_block(df)
-    df = add_macd_feature_block(df)
-    out = add_vwap_rejection_signal(df)
-    out = add_combo_signal(out)
+    df = with_vwap_feature_block(ohlcv_1m_100, tz="UTC")
+    df = with_rsi_feature_block(df)
+    df = with_macd_feature_block(df)
+    out = with_vwap_rejection_signal(df)
+    out = with_combo_signal(out)
     assert "sig_vwap_reject" in out
     assert "sig_combo" in out
     # signal column is int8

@@ -1,6 +1,6 @@
-from .vwap import add_vwap_hlc3_session, add_vwap_cum_hlc3
-from .rsi import add_rsi
-from .macd import add_macd
-from .boll import add_bollinger
+from .vwap import with_vwap_hlc3_session, with_vwap_cum_hlc3
+from .rsi import with_rsi
+from .macd import with_macd
+from .boll import with_bollinger
 
-__all__ = ["add_vwap_hlc3_session", "add_vwap_cum_hlc3", "add_rsi", "add_macd", "add_bollinger"]
+__all__ = ["with_vwap_hlc3_session", "with_vwap_cum_hlc3", "with_rsi", "with_macd", "with_bollinger"]
