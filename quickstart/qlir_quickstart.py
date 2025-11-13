@@ -2,6 +2,8 @@
 from pathlib import Path
 from textwrap import dedent
 import sys
+import re
+import keyword
 
 def write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -9,10 +11,10 @@ def write(path, content):
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: python qlir_quickstart.py <project_name>")
+        print("usage: python3 <relative or absolute path to qlir>/quickstart/qlir_quickstart.py <project_name>")
         sys.exit(1)
 
-    name = sys.argv[1]
+    name = validate_project_name(sys.argv[1])
     dest = Path(name)
     if dest.exists():
         sys.exit(f"❌ destination exists: {dest}")
@@ -35,13 +37,13 @@ def main():
         # qlir = {{ path = "../qlir", develop = true }}
 
         # Option B: use a git reference (edit as needed)
-        # qlir = {{ git = "https://github.com/your-org/qlir.git", rev = "main" }}
+        # qlir = {{ git = "https://github.com/Trones21/qlir.git", rev = "main" }}
         ```
 
         3. Install dependencies and run:
         ```bash
         poetry install
-        poetry run python {name}/main.py
+        poetry run python3 {name}/main.py
         ```
 
         ## 🧩 Structure
@@ -56,7 +58,7 @@ def main():
 
         ## 📊 Data & Outputs
 
-        When your workflow produces files under `outputs/`, consider including **metadata** about the dataset or parameters that generated them.
+        When your workflow produces files under `outputs/`, consider including **metadata** about the dataset or parameters that generated them
 
         Good practice:
         - Include a small `outputs/README.md` describing the data source and run context.
@@ -77,7 +79,7 @@ def main():
     name = "{name}"
     version = "0.1.0"
     description = "Starter project using QLIR"
-    requires-python = ">=3.10"
+    requires-python = ">=3.10, <4.0"
     readme = "README.md"
     dependencies = [
     "pandas>=2.2,<3.0",
@@ -85,11 +87,16 @@ def main():
     # Local path dependency
     "qlir @ file:///home/tjr/gh/qlir",
     # or use the Git version:
-    # "qlir @ git+https://github.com/your-org/qlir.git@main",
+    # "qlir @ git+https://github.com/Trones21/qlir.git@main",
     ]
+
+    packages = [{{ include = "{name}", from = "src" }}]
 
     [project.optional-dependencies]
     dev = ["pytest>=8.0"]
+
+    [tool.poetry.scripts]
+    analysis = "{name}.entrypoint:entrypoint"
 
     [build-system]
     requires = ["poetry-core>=1.8.0"]
@@ -97,21 +104,49 @@ def main():
     """)
 
     main_py = dedent("""\
-        import pandas as pd
-        # placeholder imports — will work once qlir path is set up
-        # import qlir.core.pointwise as pw
-        # import qlir.core.bar_relations as br
+    import pandas as pd
 
-        def run():
-            df = pd.DataFrame({
-                "open": [10,11,12,11,13],
-                "close":[10.5,11,11.5,10.8,13],
-            })
-            print("data ready:", df.shape)
-            print("✅ update pyproject.toml with your qlir path before running analysis")
+    def entrypoint():
+        print("Hello World!")
+        print("Welcome to your QLIR analysis project, time to get to work!")
+        return
+                     
+        # A typical pipeline
+        # 1. Get candles from disk or network
+        # df = load_candles_from_disk(...)  # or qlir.fetch_* helpers
 
-        if __name__ == "__main__":
-            run()
+        # 2. Update dataset on disk with new candles (if this study requires that)
+        # update_disk_dataset(df)
+
+        # 3. Resample data (custom OHLCV candles)
+        # df_resampled = build_custom_candles(df)
+
+        # 4. Enrich and analyze
+        # for now, assume df is ready:
+        df = ...  # TODO: integrate your real pipeline, if you have many, you might consider creating a pipelines folder/module instead of placing it all here 
+        main(df)
+
+
+    def main(df: pd.DataFrame):
+        \'''
+        Core analysis body.
+
+        - Add indicators / features / signals
+        - Join with other datasets
+        - Persist intermediate/final results
+        - Optionally produce dataviz-friendly tables, plots, etc.
+        \'''
+        # e.g.:
+        # df = add_sma_slope_features(df)
+        # df = compute_slope_persistence_stats(df)
+        # df.to_parquet("data/processed/slope_persistence.parquet")
+
+        return df  # useful for tests / notebooks
+
+
+    if __name__ == "__main__":
+        entrypoint()
+
     """)
 
     gitignore = """\
@@ -157,13 +192,44 @@ def main():
 
     write(dest / "README.md", readme)
     write(dest / "pyproject.toml", pyproject)
-    write(dest / name / "__init__.py", "")
-    write(dest / name / "main.py", main_py)
+    write(dest / "src" / name / "__init__.py", "")
+    write(dest / "src" / name / "main.py", main_py)
     write(dest / "tests" / "test_smoke.py", "def test_placeholder(): assert True\n")
 
     print(f"✅ Created starter project at {dest}")
     print("👉 Before installing, open pyproject.toml and update the qlir dependency path or git URL.")
-    print("Then run:\n  cd", name, "\n  poetry install\n  poetry run python", f"{name}/main.py")
+    print("Then run:\n  cd", name, "\n  poetry install\n  poetry run analysis (default script in pyproject.toml) or poetry run python3 ", f"{name}/main.py")
+
+
+
+def validate_project_name(name: str):
+    """
+    Validate the project name provided by the user.
+
+    Rules:
+    - Must be a valid Python package name.
+    - Lowercase letters, digits, and underscores only.
+    - Cannot start with a digit.
+    - Cannot contain hyphens.
+    - Cannot be a Python keyword.
+    """
+
+    if "-" in name:
+        sys.exit("❌ Project name cannot contain hyphens. Use underscores instead.")
+
+    if not re.match(r"^[a-z_][a-z0-9_]*$", name):
+        sys.exit(
+            "❌ Invalid project name.\n"
+            "Allowed pattern: ^[a-z_][a-z0-9_]*$\n"
+            "Use only lowercase letters, digits, and underscores."
+        )
+
+    if keyword.iskeyword(name):
+        sys.exit(f"❌ '{name}' is a reserved Python keyword. Choose a different name.")
+
+    # Passed all checks
+    return name
+
 
 if __name__ == "__main__":
     main()

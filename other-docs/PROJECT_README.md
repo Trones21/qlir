@@ -3,20 +3,7 @@
 ## 📁 Directory Layout
 
 ```
-qlir/
-├── pyproject.toml          # Project metadata, deps, CLI entry point
-├── Makefile                # Dev automation (setup, run, test, lint)
-├── src/
-│   └── qlir/
-│       ├── __init__.py
-│       ├── cli.py          # CLI entry point
-│       └── data/
-│           ├── __init__.py
-│           ├── csv.py      # Local CSV loader
-│           └── drift.py    # Drift candles fetcher
-├── tests/
-│   └── ...                 # pytest-based tests
-└── venv/                   # Local virtualenv (ignored by git)
+ToDo 
 ```
 
 ---
@@ -47,7 +34,7 @@ where = ["src"]
 
 ---
 
-## 🧩 Layer 2: CLI Entry Point (`src/qlir/cli.py`)
+## 🧩 CLI Entry Point (`src/qlir/cli.py`)
 
 ### Key role
 
@@ -97,24 +84,15 @@ qlir fetch --symbol SOL-PERP --limit 50
 
 ---
 
-## 🧰 Layer 3: Developer Automation (`Makefile`)
+## Developer Automation (`Makefile`)
 
 ### Key role
 
 Provides shortcuts for environment setup and maintenance.
 
-| Target                         | Purpose                         | Equivalent Command                                            |
-| ------------------------------ | ------------------------------- | ------------------------------------------------------------- |
-| `make dev`                     | Create venv + install deps      | `python -m venv venv && venv/bin/pip install -e ".[dev]"`     |
-| `make run ARGS="csv data.csv"` | Run the CLI                     | `venv/bin/python -m qlir.cli csv data.csv`                    |
-| `make cli ARGS="--help"`       | Run installed CLI entry point   | `venv/bin/qlir --help`                                        |
-| `make test`                    | Run tests                       | `venv/bin/pytest`                                             |
-| `make lint`                    | Run linter                      | `venv/bin/ruff check src tests`                               |
-| `make clean`                   | Delete caches + build artifacts | `rm -rf venv build dist *.egg-info .ruff_cache .pytest_cache` |
-
 ---
 
-## 🧠 Layer 4: Execution Flow
+## Execution Flow
 
 ### 1. Development setup
 
@@ -160,7 +138,7 @@ make lint
 
 ---
 
-## 🧭 Layer 6: Run Modes
+## 🧭 Run Modes
 
 | Mode                   | Command               | Context                                       |
 | ---------------------- | --------------------- | --------------------------------------------- |
