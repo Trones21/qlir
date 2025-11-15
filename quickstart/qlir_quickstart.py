@@ -96,7 +96,7 @@ def main():
     dev = ["pytest>=8.0"]
 
     [tool.poetry.scripts]
-    analysis = "{name}.entrypoint:entrypoint"
+    analysis = "{name}.main:entrypoint"
 
     [build-system]
     requires = ["poetry-core>=1.8.0"]
@@ -110,7 +110,8 @@ def main():
         print("Hello World!")
         print("Welcome to your QLIR analysis project, time to get to work!")
         return
-                     
+
+        ToDo - copy from sma_slope=_persistence when it fully works        
         # A typical pipeline
         # 1. Get candles from disk or network
         # df = load_candles_from_disk(...)  # or qlir.fetch_* helpers

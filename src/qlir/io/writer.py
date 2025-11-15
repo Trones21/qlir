@@ -1,7 +1,10 @@
 from __future__ import annotations
 import json
 from pathlib import Path
+from typing import Any, Optional
 import pandas as pd
+
+from qlir.data.core.naming import sidecar_metadata
 
 
 def _prep_path(path: str | Path) -> Path:
@@ -58,25 +61,57 @@ def write(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
     raise ValueError(f"Unsupported extension {suf!r}. Use .csv, .parquet, or .json.")
 
 
-def write_dataset_meta(dataset_path: str | Path, *, symbol: str, resolution: str, **extra: Any) -> None:
+def write_dataset_meta(
+    dataset_path: str | Path,
+    *,
+    instrument_id: str,
+    resolution: str,
+    datasource: Optional[str] = None,
+    upstream_symbol: Optional[str] = None,
+    qlir_version: Optional[str] = None,
+    **extra: Any,
+) -> None:
     """
-    Write a sidecar .meta.json next to the dataset.
+    Write a canonical sidecar .meta.json file next to a dataset.
 
-    dataset_path: path to the main data file (csv/parquet/json)
-    symbol: e.g. "SOL-PERP"
-    resolution: e.g. "1m"
-    extra: any additional fields you want to persist (venue="drift", source="api", etc.)
+    Parameters
+    ----------
+    dataset_path : str | Path
+        Path to the primary dataset file (e.g. .parquet, .csv, .json).
+    instrument_id : str
+        Canonical instrument ID (e.g. "sol-perp", "btc-perp").
+        This is the only required naming field.
+    resolution : str
+        Canonical resolution string (e.g. "1m", "5m", "1h", "1D").
+    datasource : str, optional
+        Name of the datasource that produced the dataset ("drift", "helius", ...).
+    upstream_symbol : str, optional
+        Venue-specific symbol used to fetch the data ("SOL-PERP", "SOL/USDC").
+    qlir_version : str, optional
+        Version tag for the QLIR data layout (optional future-proofing).
+    extra : Any
+        Additional key/value pairs that will be included in the metadata.
+
+    Notes
+    -----
+    - The resulting JSON always follows the canonical schema defined in
+      `data.core.naming.sidecar_metadata`.
+    - This function does *not* write parquet metadata — only the sidecar JSON.
     """
     if not isinstance(dataset_path, Path):
         dataset_path = Path(dataset_path)
 
     meta_path = dataset_path.with_suffix(".meta.json")
 
-    meta = {
-        "symbol": symbol,
-        "resolution": resolution,
-        **extra,
-    }
+    # Build metadata using canonical schema
+    meta_dict = sidecar_metadata(
+        instrument_id=instrument_id,
+        resolution=resolution,
+        datasource=datasource,
+        upstream_symbol=upstream_symbol,
+        qlir_version=qlir_version,
+        extra=extra or None,
+    )
 
-    # pretty-print so you can debug with your eyes
-    meta_path.write_text(json.dumps(meta, indent=2))
+    # Write pretty JSON (easier for debugging)
+    meta_path.write_text(json.dumps(meta_dict, indent=2))

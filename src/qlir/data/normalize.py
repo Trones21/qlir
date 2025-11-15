@@ -1,7 +1,7 @@
 # data/normalize.py
 from typing import Optional
 import pandas as pd
-from .registry import CandleSpec, REGISTRY
+from .loader.currently_unused.registry import CandleSpec, REGISTRY
 from collections import deque
 import logging
 log = logging.getLogger(__name__)

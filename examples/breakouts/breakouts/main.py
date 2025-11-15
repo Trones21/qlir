@@ -1,5 +1,5 @@
 from pandas import DataFrame
-from qlir.data.sources.drift import get_candles
+from qlir.data.sources.drift.to_refactor_away_drift import get_candles
 from breakouts.detect import tag_breakouts_simple
 from qlir.utils.logdf import logdf
 from qlir.io.writer import write_csv

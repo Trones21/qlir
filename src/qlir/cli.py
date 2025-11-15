@@ -1,6 +1,6 @@
 import argparse, sys
-from qlir.data.load import load_ohlcv
-from qlir.data.sources.drift import get_candles
+from qlir.data.loader.load import load_ohlcv
+from qlir.data.sources.drift.to_refactor_away_drift import get_candles
 from qlir.io.writer import write 
 
 def main():

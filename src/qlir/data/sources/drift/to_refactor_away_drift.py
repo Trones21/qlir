@@ -5,6 +5,8 @@ import requests
 import pandas as pd
 import logging
 log = logging.getLogger(__name__)
+from qlir.data.sources.base import DataSource
+from qlir.time.timefreq import TimeFreq, TimeUnit
 from qlir.utils.logdf import logdf
 from pathlib import Path
 from drift_data_api_client import Client
@@ -20,7 +22,7 @@ from qlir.io.checkpoint import write_checkpoint, FileType
 from qlir.io.union_files import union_file_datasets
 from qlir.io.writer import write, write_dataset_meta, _prep_path
 from qlir.io.reader import read
-from qlir.data.load import get_symbol
+from qlir.data.loader.load import get_symbol
 from qlir.df.utils import union_and_sort
 from datetime import datetime, timezone
 import math
@@ -155,7 +157,7 @@ def probe_candles_any_le(
     Returns:
         True if any record exists at start_unix, else None
     """
-    from ..normalize import normalize_candles  # lazy import to avoid import cycles
+    from ...normalize import normalize_candles  # lazy import to avoid import cycles
     log.info("start_unix: %s", start_unix)
     params: Dict[str, Any] = {"limit": 1, "startTs": int(start_unix)}
     base_url = f"{DRIFT_BASE}/market/{symbol}/candles/{res_token}"
@@ -252,8 +254,20 @@ def discover_earliest_candle_start(
 def get_candles_since():
     return
 
-def get_candles_all():
-    return
+def candles_from_disk_or_network(file_uri: Path | None = None, symbol: str, datasource: DataSource, base_resolution: TimeFreq | None = None):
+    
+    if file_uri is None:
+        log.info(f"Getting {symbol} candles from drift with a base resolution of {base_resolution}") 
+        get_candles()
+        return
+    
+    if file_uri.exists():
+        log.info(f"Loading files from: {file_uri} ") 
+        return read(file_uri)
+    else:
+        log.info(f"File not found at: {file_uri}")
+        return     
+
 
 def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None = None):
     dataset_uri = Path(existing_file)

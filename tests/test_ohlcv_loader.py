@@ -1,6 +1,6 @@
 # tests/test_ohlcv_loader.py
 import pandas as pd
-from qlir.data.load import load_ohlcv
+from qlir.data.loader.load import load_ohlcv
 from qlir.io import write
 import pytest
 pytestmark = pytest.mark.local

@@ -2,10 +2,60 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 import pandas as pd
-from .schema import validate_ohlcv, OhlcvContract
+from ..trash.currently_unused.schema import validate_ohlcv, OhlcvContract
 import pyarrow.parquet as pq
 import json
+import logging
+from qlir.data.sources.base import DataSource
+from qlir.time.timefreq import TimeFreq
 
+log = logging.getLogger(__name__)
+
+def candles_from_disk_or_network(
+    *,
+    file_uri: Path | None,
+    base_resolution: TimeFreq | None,
+    source: Optional[DataSource] = None,
+):
+    """
+    Load candles:
+
+    1. If file_uri exists → load from disk (fast path)
+    2. Else:
+        - If source is provided → fetch from network
+        - Else → raise error instructing user to specify a datasource
+    """
+
+    # ----- 1. Disk fast path --------------------------------------------------
+    if file_uri is not None and file_uri.exists():
+        log.info(f"Loading candles from disk: {file_uri}")
+        return read(file_uri)
+
+    # ----- 2. Disk missed, user must specify a network source ----------------
+    if source is None:
+        raise ValueError(
+            f"File not found at {file_uri}. "
+            f"You must specify a datasource (e.g. source=DataSource.DRIFT)."
+        )
+
+    # ----- 3. Fetch from network ---------------------------------------------
+    if source is DataSource.DRIFT:
+        log.info(f"Fetching candles from Drift base_resolution={base_resolution}")
+        return get_candles_from_drift(base_resolution)
+
+    if source is DataSource.KAIKO:
+        log.info("Fetching candles from Kaiko")
+        return get_kaiko_candles(...)
+
+    if source is DataSource.HELIUS:
+        log.info("Fetching candles from Helius")
+        return get_helius_candles(...)
+
+    if source is DataSource.MOCK:
+        log.info("Returning mock candles")
+        return get_mock_candles()
+
+    raise ValueError(f"Unknown datasource: {source}")
 
 
 
