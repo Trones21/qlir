@@ -2,6 +2,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 import pandas as pd
+
+from qlir import io
+from qlir.data.core.instruments import CanonicalInstrument
 from ..trash.currently_unused.schema import validate_ohlcv, OhlcvContract
 import pyarrow.parquet as pq
 import json
@@ -9,11 +12,14 @@ import logging
 from qlir.data.sources.base import DataSource
 from qlir.time.timefreq import TimeFreq
 
+from qlir.data.sources.drift.fetch import get_all_candles
+
 log = logging.getLogger(__name__)
 
 def candles_from_disk_or_network(
     *,
     file_uri: Path | None,
+    symbol: CanonicalInstrument | None,
     base_resolution: TimeFreq | None,
     source: Optional[DataSource] = None,
 ):
@@ -29,7 +35,7 @@ def candles_from_disk_or_network(
     # ----- 1. Disk fast path --------------------------------------------------
     if file_uri is not None and file_uri.exists():
         log.info(f"Loading candles from disk: {file_uri}")
-        return read(file_uri)
+        return io.read(file_uri)
 
     # ----- 2. Disk missed, user must specify a network source ----------------
     if source is None:
@@ -41,19 +47,20 @@ def candles_from_disk_or_network(
     # ----- 3. Fetch from network ---------------------------------------------
     if source is DataSource.DRIFT:
         log.info(f"Fetching candles from Drift base_resolution={base_resolution}")
-        return get_candles_from_drift(base_resolution)
+        
+        return get_all_candles(symbol)
 
     if source is DataSource.KAIKO:
         log.info("Fetching candles from Kaiko")
-        return get_kaiko_candles(...)
+        raise NotImplementedError("TODO: implement this")
 
     if source is DataSource.HELIUS:
         log.info("Fetching candles from Helius")
-        return get_helius_candles(...)
+        raise NotImplementedError("TODO: implement this")
 
     if source is DataSource.MOCK:
         log.info("Returning mock candles")
-        return get_mock_candles()
+        raise NotImplementedError("TODO: implement this")
 
     raise ValueError(f"Unknown datasource: {source}")
 

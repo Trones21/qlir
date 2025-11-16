@@ -10,7 +10,7 @@ from drift_data_api_client.models import GetMarketSymbolCandlesResolutionRespons
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
 import pytest
 import requests
-from qlir.data.sources.drift.to_refactor_away_drift import discover_earliest_candle_start
+from qlir.data.sources.drift.fetch import discover_earliest_candle_start
 import logging
 log = logging.getLogger(__name__)
 

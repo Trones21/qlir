@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from qlir.io.writer import write
-from qlir.data.sources.drift.to_refactor_away_drift import get_candles_all
+from qlir.data.sources.drift.fetch import get_candles_all
 
 
 # @pytest.mark.integration

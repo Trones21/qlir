@@ -22,7 +22,7 @@ from typing import Optional, TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     # Adjust import path if your TimeFreq lives somewhere else
-    from qlir.timefreq import TimeFreq
+    from qlir.time.timefreq import TimeFreq
 
 
 # Default extension for canonical candle datasets on disk.
