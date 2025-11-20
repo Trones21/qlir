@@ -52,13 +52,15 @@ def main() -> None:
     readme = render_template("README.md.tpl", substitutions)
     pyproject = render_template("pyproject.toml.tpl", substitutions)
     main_py = render_template("main.py.tpl", substitutions)
-
+    logging_setup = render_template("logging_setup.py.tpl", substitutions)
+    
     # --- write files
     write(dest / ".gitignore", gitignore)
     write(dest / "README.md", readme)
     write(dest / "pyproject.toml", pyproject)
     write(dest / "src" / name / "__init__.py", "")
     write(dest / "src" / name / "main.py", main_py)
+    write(dest / "src" / name / "logging_setup.py", logging_setup)
     write(dest / "tests" / "test_smoke.py", "def test_placeholder(): assert True\n")
 
     print(f"✅ Created starter project at {dest}")
