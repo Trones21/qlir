@@ -58,10 +58,10 @@ def timefreq_to_driftres_typed(timefreq: TimeFreq) -> GetMarketSymbolCandlesReso
     if timefreq.count != 1:
         "QLIR currently only supports 1min, 1hour, 1day timefreq pulls from drift"
     
-    if TimeFreq.unit is TimeUnit.MINUTE:
+    if timefreq.unit is TimeUnit.MINUTE:
         return GetMarketSymbolCandlesResolutionResolution.VALUE_0
     
-    if TimeFreq.unit is TimeUnit.DAY:
+    if timefreq.unit is TimeUnit.DAY:
         return GetMarketSymbolCandlesResolutionResolution.D
     
     raise( ValueError("QLIR currently only supports 1min, 1day timefreq pulls from drift") )
@@ -70,10 +70,10 @@ def timefreq_to_driftres_string(timefreq: TimeFreq) -> str:
     if timefreq.count != 1:
         "QLIR currently only supports 1min, 1hour, 1day timefreq pulls from drift"
     
-    if TimeFreq.unit is TimeUnit.MINUTE:
+    if timefreq.unit is TimeUnit.MINUTE:
         return GetMarketSymbolCandlesResolutionResolution.VALUE_0.value
     
-    if TimeFreq.unit is TimeUnit.DAY:
+    if timefreq.unit is TimeUnit.DAY:
         return GetMarketSymbolCandlesResolutionResolution.D.value
     
     raise( ValueError("QLIR currently only supports 1min, 1day timefreq pulls from drift") )

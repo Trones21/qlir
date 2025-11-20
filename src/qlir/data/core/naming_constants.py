@@ -1,5 +1,5 @@
 # Default extension for canonical candle datasets on disk.
-from qlir.time.timefreq import TimeUnit
+from qlir.time.timeunit import TimeUnit
 
 
 DEFAULT_CANDLES_EXT: str = ".parquet"

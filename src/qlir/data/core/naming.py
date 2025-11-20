@@ -1,8 +1,6 @@
 # data/core/naming.py
 from __future__ import annotations
 
-from qlir.time.timefreq import TimeUnit
-
 """
 Canonical naming rules for on-disk candle datasets.
 
@@ -21,7 +19,7 @@ It does NOT know:
 """
 
 from typing import Optional, TYPE_CHECKING, Tuple
-from .naming_constants import DEFAULT_CANDLES_EXT, 
+from .naming_constants import DEFAULT_CANDLES_EXT 
 if TYPE_CHECKING:
     # Adjust import path if your TimeFreq lives somewhere else
     from qlir.time.timefreq import TimeFreq

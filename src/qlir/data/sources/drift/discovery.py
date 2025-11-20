@@ -4,7 +4,6 @@ import pandas as pd
 import requests
 import logging
 log = logging.getLogger(__name__)
-
 from .constants import DRIFT_BASE_URI, DRIFT_ALLOWED_RESOLUTIONS
 
 def list_markets():
@@ -25,7 +24,6 @@ def probe_candles_any_le(
     Returns:
         True if any record exists at start_unix, else None
     """
-    from ...normalize import normalize_candles  # lazy import to avoid import cycles
     log.info("start_unix: %s", start_unix)
     params: Dict[str, Any] = {"limit": 1, "startTs": int(start_unix)}
     base_url = f"{DRIFT_BASE_URI}/market/{symbol}/candles/{resolution}"

@@ -8,24 +8,7 @@ from typing import Optional
 import pandas as pd
 
 from qlir.data.core.naming_constants import CANONICAL_RESOLUTION_UNIT_MAP, REVERSE_CANONICAL_RESOLUTION_UNIT_MAP
-
-
-class TimeUnit(Enum):
-    SECOND = "second"
-    MINUTE = "minute"
-    HOUR = "hour"
-    DAY = "day"
-
-    @property
-    def pandas_symbol(self) -> str:
-        """Return the pandas frequency symbol for this time unit."""
-        return {
-            TimeUnit.SECOND: "sec",
-            TimeUnit.MINUTE: "min",
-            TimeUnit.HOUR: "h",
-            TimeUnit.DAY: "D",
-        }[self]
-
+from qlir.time.timeunit import TimeUnit
 
 @dataclass
 class TimeFreq:

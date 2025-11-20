@@ -1,6 +1,5 @@
 # data/core/infer.py
 from __future__ import annotations
-from qlir.time.timefreq import TimeFreq
 import logging
 log = logging.getLogger(__name__)
 

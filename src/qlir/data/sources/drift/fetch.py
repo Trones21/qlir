@@ -21,7 +21,7 @@ from drift_data_api_client.models.get_market_symbol_candles_resolution_resolutio
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
 from qlir.data.candle_quality import validate_candles
-from qlir.data.normalize import normalize_candles
+from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles
 from qlir.io.checkpoint import write_checkpoint, FileType
 from qlir.io.union_files import union_file_datasets
 from qlir.io.reader import read
@@ -39,7 +39,6 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     client = Client(DRIFT_BASE_URI)
     drift_res = timefreq_to_driftres_typed(base_resolution)
     
-
     intended_first_unix, intended_final_unix = to_drift_valid_unix_timerange(drift_symbol, drift_res)
     
     temp_folder = f"tmp/{drift_symbol}_{drift_res}/"
@@ -61,7 +60,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
         if resp.records:
             resp_as_dict = resp.to_dict()
             page = pd.DataFrame(resp_as_dict["records"])
-            clean = normalize_candles(page, venue="drift", resolution=drift_res, keep_ts_start_unix=True, include_partial=False)
+            clean = normalize_drift_candles(page, resolution=drift_res, keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
             
