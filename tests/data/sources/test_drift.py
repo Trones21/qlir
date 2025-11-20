@@ -30,7 +30,7 @@ def test_discover_earliest_candle_start_real():
     result = discover_earliest_candle_start(
         session=session,
         symbol=symbol,
-        res_token=res_token,
+        resolution=res_token,
         end_bound_unix=end_bound_unix,
         catalog_min_unix=catalog_min_unix,
         timeout=15.0,

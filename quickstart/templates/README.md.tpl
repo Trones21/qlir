@@ -6,16 +6,18 @@ This is a starter layout for a project that will use the QLIR library.
 
 ## ⚙️ Setup
 
-1. Clone or install QLIR somewhere accessible.
-2. Update the QLIR dependency in `pyproject.toml` before running install.
+0. Clone qlir if using local dep (the ironic thing is that to use quickstart.py you already cloned, so you just need the path that you cloned to)
+1. Update the QLIR dependency in `pyproject.toml` before running install.
 
 ```toml
-# Option A: use local sibling path (edit as needed)
-# qlir = { path = "../qlir", develop = true }
+  # Local path dependency (edit as needed)
+  # "qlir @ file:///<absolute_path_to_cloned_qlir>/qlir",
 
-# Option B: use a git reference (edit as needed)
-# qlir = { git = "https://github.com/Trones21/qlir.git", rev = "main" }
+  # Or use the Git version:
+  # "qlir @ git+https://github.com/Trones21/qlir.git@main",
 ````
+
+`See the py.project.toml for instructions on how to use an editable version of qlir, this requires some python/poetry knowledge and is not recommended for beginners`
 
 3. Install dependencies and run:
 

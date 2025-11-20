@@ -8,10 +8,45 @@ dependencies = [
   "pandas>=2.2,<3.0",
   "numpy>=1.26,<2.0",
   # Local path dependency (edit as needed)
-  "qlir @ file:///home/tjr/gh/qlir",
+  # "qlir @ file:///home/tjr/gh/qlir",
   # Or use the Git version:
   # "qlir @ git+https://github.com/Trones21/qlir.git@main",
 ]
+
+# ------------- 🔥 Editable qlir installation (advanced) ------------------
+# 1. Comment out the qlir line in [project].dependencies above.
+# 2. Run:    poetry install
+# 3. Then:   poetry run pip install -e <absolute_path_to>/qlir
+#
+# This installs qlir in *editable mode* inside the same Poetry virtualenv.
+# WARNING: Any edits you make to qlir’s source files (at the location you cloned it)
+# will immediately affect this project, because Python imports directly from that path.
+
+# To confirm that qlir is installed in editable mode:
+#   poetry run python -c "import qlir; print(qlir.__file__)"
+#
+# Expected output (example):
+#   <absolute_path_to_qlir>/qlir/src/qlir/__init__.py
+
+# NOTE:
+# In an editable install, you'll still see "qlir-<version>.dist-info" in site-packages,
+# but there will NOT be a copied "qlir/" package directory there.
+# Python resolves qlir imports directly from your local source tree.
+#
+# All those *.dist-info directories in site-packages are only metadata for installed packages
+# (including qlir and its dependencies).
+
+# ------------- Non-editable qlir installation ---------------------------
+# If you do NOT want editable mode, but you want changes to your local qlir clone
+# to be picked up occasionally:
+#
+# - keep qlir listed in [project].dependencies (normal PEP 508 syntax)
+# - and whenever you update your local qlir clone, do:
+#       poetry run pip uninstall qlir
+#       poetry install
+#
+# This reinstalls qlir as a regular (non-editable) dependency from the path/URL you specified.
+
 
 packages = [{ include = "__PACKAGE_NAME__", from = "src" }]
 

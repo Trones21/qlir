@@ -123,6 +123,8 @@ class CandlesDQReport:
     n_dupes_dropped: int
     n_gaps: int
     missing_starts: List[pd.Timestamp]
+    first_ts: pd.Timestamp
+    final_ts: pd.Timestamp
 
 
 def validate_candles(
@@ -137,14 +139,18 @@ def validate_candles(
 
     We do **not** infer frequency here (that could return unintended results since infer freq is a simple df[1]["tz_start"] - df[0]["tz_start"])
     """
-    fixed, deduped = _sort_dedupe(df)
+    fixed, count_dups_removed = _sort_dedupe(df)
     missing = detect_candle_gaps(fixed, freq=freq)
+    first_candle = fixed["tz_start"].min()
+    last_candle = fixed["tz_start"].max()
     report = CandlesDQReport(
         freq=freq,
         n_rows=len(fixed),
-        n_dupes_dropped=deduped,
+        n_dupes_dropped=count_dups_removed,
         n_gaps=len(missing),
         missing_starts=missing,
+        first_ts=first_candle,
+        final_ts=last_candle
     )
     return fixed, report
 
