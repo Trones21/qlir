@@ -54,8 +54,8 @@ packages = [{ include = "__PACKAGE_NAME__", from = "src" }]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
-analysis = "__PACKAGE_NAME__.main:entrypoint"
-
+main = "__PACKAGE_NAME__.main:entrypoint"
+get_data = "__PACKAGE_NAME__.get_data:main"
 [build-system]
 requires = ["poetry-core>=1.8.0"]
 build-backend = "poetry.core.masonry.api"

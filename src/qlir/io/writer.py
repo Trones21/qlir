@@ -115,3 +115,4 @@ def write_dataset_meta(
 
     # Write pretty JSON (easier for debugging)
     meta_path.write_text(json.dumps(meta_dict, indent=2))
+    print(f"Wrote sidecar metadata to {meta_path}")

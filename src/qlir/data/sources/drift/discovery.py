@@ -24,7 +24,7 @@ def probe_candles_any_le(
     Returns:
         True if any record exists at start_unix, else None
     """
-    log.info("start_unix: %s", start_unix)
+    log.debug("start_unix: %s", start_unix)
     params: Dict[str, Any] = {"limit": 1, "startTs": int(start_unix)}
     base_url = f"{DRIFT_BASE_URI}/market/{symbol}/candles/{resolution}"
     r = session.get(
@@ -33,7 +33,7 @@ def probe_candles_any_le(
         timeout=timeout,
     )
     if r.status_code == 400:
-        log.info("400 res")
+        log.debug("400 res")
         return None
 
     r.raise_for_status()
@@ -80,7 +80,9 @@ def discover_earliest_candle_start(
     best: Optional[int] = None
 
 
-    log.info(f"[drift] Discovering earliest start (via startTs) for {symbol} {resolution} in [{lo}, {hi}]")
+    log.info(f"""
+            [drift] Discovering earliest start (via startTs) for {symbol} {resolution} in [{lo}, {hi}]
+            This may take a minute, pass LogProfile.ALL_DEBUG or LogProfile.QLIR_DEBUG for more granular logging""")
 
     while lo <= hi:
         mid = (lo + hi) // 2
@@ -92,7 +94,7 @@ def discover_earliest_candle_start(
             timeout=timeout,
             include_partial=include_partial,
         )
-        log.info(
+        log.debug(
             f"[drift] probe startTs={mid} -> {'hit' if got_data is not None else 'empty'}"
         )
         

@@ -91,9 +91,9 @@ def candles_from_network(source, symbol, base_resolution):
 
     # ----- 3. Fetch from network ---------------------------------------------
     if source is DataSource.DRIFT:
-        drift_symbol: str = DriftSymbolMap().to_venue(symbol)
+
         log.info(f"Fetching candles from Drift base_resolution={base_resolution}")
-        return get_all_candles(drift_symbol, base_resolution)
+        return get_all_candles(symbol, base_resolution)
 
     if source is DataSource.KAIKO:
         log.info("Fetching candles from Kaiko")

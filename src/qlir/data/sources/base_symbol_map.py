@@ -20,6 +20,10 @@ class BaseSymbolMap(ABC):
 
     FORWARD_MAP: Dict[CanonicalInstrument, Any] = {}
 
+    def __new__(cls, *args, **kwargs):
+        """Prevent instantiation (python doesnt have true static classes)"""
+        raise TypeError(f"{cls.__name__} may not be instantiated")
+
     # ---- Required for reverse map construction ------------------------------
 
     @classmethod

@@ -51,12 +51,17 @@ class TimeFreq:
 
     def to_canonical_resolution_str(self) -> str:
         """
-        Return the canonical frequency representation used in filenames, 
+        Return the canonical frequency representation used in filenames,
         network requests, and cache keys (e.g. '1m', '5m', '1h', '1D').
-        """
-        symbol = CANONICAL_RESOLUTION_UNIT_MAP[self.unit]
-        return f"{self.count}{symbol}"
 
+        Uses CANONICAL_RESOLUTION_UNIT_MAP, which is keyed by TimeUnit.
+        """
+        try:
+            # NOTE: map is keyed by TimeUnit, not by the underlying string value.
+            unit_str = CANONICAL_RESOLUTION_UNIT_MAP[self.unit]
+        except KeyError as exc:
+            raise ValueError(f"Unsupported TimeUnit for canonical resolution: {self.unit!r}") from exc
+        return f"{self.count}{unit_str}"
 
     
     @staticmethod

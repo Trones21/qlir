@@ -1,6 +1,7 @@
 # data/core/naming.py
 from __future__ import annotations
-
+import logging
+log = logging.getLogger(__name__)
 """
 Canonical naming rules for on-disk candle datasets.
 
@@ -20,9 +21,7 @@ It does NOT know:
 
 from typing import Optional, TYPE_CHECKING, Tuple
 from .naming_constants import DEFAULT_CANDLES_EXT 
-if TYPE_CHECKING:
-    # Adjust import path if your TimeFreq lives somewhere else
-    from qlir.time.timefreq import TimeFreq
+from qlir.time.timefreq import TimeFreq
 
 
 # ---------------------------------------------------------------------------
@@ -56,14 +55,15 @@ def candle_filename(
 
     # Zero tolerance for whitespace / empty IDs at this layer.
     instrument_id = instrument_id.strip()
-    canonical_resolution = TimeFreq.to_canonical_resolution_str(resolution)
+    canonical_resolution = resolution.to_canonical_resolution_str()
 
     if not instrument_id:
         raise ValueError("instrument_id must be a non-empty string.")
     if not resolution:
         raise ValueError("resolution must be a non-empty string.")
-
-    return f"{instrument_id}_{canonical_resolution}{ext}"
+    filename = f"{instrument_id}_{canonical_resolution}{ext}"
+    log.debug(f"candle_filename() (without dir) produced: {filename}")
+    return filename
 
 
 # ---------------------------------------------------------------------------

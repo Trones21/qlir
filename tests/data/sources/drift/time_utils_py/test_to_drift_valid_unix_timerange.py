@@ -1,16 +1,18 @@
 import time
 from qlir.data.core.instruments import CanonicalInstrument
 from qlir.data.sources.drift.symbol_map import DriftSymbolMap
-from qlir.data.sources.drift.time_utils import timefreq_to_driftres_string, to_drift_valid_unix_timerange
+from qlir.data.sources.drift.time_utils import to_drift_valid_unix_timerange
+from qlir.data.sources.drift.resolution_helpers import timefreq_to_driftres_string
 from qlir.time.timefreq import TimeFreq
 from qlir.time.timeunit import TimeUnit
+
 import logging 
 log = logging.getLogger(__name__)
 
 def test_to_drift_valid_unix_timerange():
     # Arrange
     instrument = CanonicalInstrument.SOL_PERP
-    drift_symbol = DriftSymbolMap().to_venue(instrument)
+    drift_symbol = DriftSymbolMap.to_venue(instrument)
     res = TimeFreq(count=1, unit=TimeUnit.MINUTE)
     drift_res = timefreq_to_driftres_string(res)
 

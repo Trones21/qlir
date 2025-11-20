@@ -43,6 +43,15 @@ def read(path: str | Path, **kwargs) -> pd.DataFrame:
     Extra kwargs are forwarded to the specific reader.
     """
     p = _as_path(path)
+
+    # --- Safety check: path must be a file, not a directory ---
+    if p.is_dir():
+        raise ValueError(f"Expected a file, got directory instead: {p}")
+
+    if not p.is_file():
+        raise FileNotFoundError(f"No file found at: {p}")
+    # -----------------------------------------------------------
+
     suf = p.suffix.lower()
     if suf == ".csv":
         return read_csv(p, **kwargs)
@@ -54,7 +63,10 @@ def read(path: str | Path, **kwargs) -> pd.DataFrame:
     if suf == ".test_csv":
         return read_csv(p, **kwargs)
     
-    raise ValueError(f"Unsupported extension {suf!r}. Use .csv, .parquet, or .json.")
+    raise ValueError(f"""
+                     Unsupported extension: {suf} 
+                     Use .csv, .parquet, or .json.
+                     """)
 
 def read_candles(
     path: str | Path,

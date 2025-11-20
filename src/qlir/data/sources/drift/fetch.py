@@ -1,15 +1,20 @@
 from __future__ import annotations
+import shutil
 from typing import Any, Dict, Optional
-import time
-import requests
+from httpx import Response
 import pandas as pd
 import logging
+
+from qlir.data.core.exponential_backoff import backoff_step
+from qlir.data.sources.drift.resolution_helpers import driftres_typed_to_string, timefreq_to_driftres_typed
+from qlir.io.writer import _prep_path
+log = logging.getLogger(__name__)
 
 from qlir.data.core.infer import infer_dataset_identity
 
 from qlir.data.sources.drift.symbol_map import DriftSymbolMap
-from qlir.data.sources.drift.time_utils import timefreq_to_driftres_typed, to_drift_valid_unix_timerange
-log = logging.getLogger(__name__)
+from qlir.data.sources.drift.time_utils import to_drift_valid_unix_timerange
+
 from qlir.data.core.instruments import CanonicalInstrument
 from qlir.time.timefreq import TimeFreq
 from qlir.utils.logdf import logdf
@@ -38,29 +43,40 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     drift_symbol = DriftSymbolMap.to_venue(symbol)
     client = Client(DRIFT_BASE_URI)
     drift_res = timefreq_to_driftres_typed(base_resolution)
-    
+    drift_res_str = driftres_typed_to_string(drift_res)
+
     intended_first_unix, intended_final_unix = to_drift_valid_unix_timerange(drift_symbol, drift_res)
     
     temp_folder = f"tmp/{drift_symbol}_{drift_res}/"
 
     next_call_unix = intended_final_unix # seed for FIRST call only
-
     log.info("Paginiating backwards from: %s", datetime.fromtimestamp(intended_final_unix, timezone.utc))
     
     pages: list[pd.DataFrame] = [] 
-    earliest_got_ts = int(math.inf)
+    earliest_got_ts = math.inf
+    current_backoff = 1
+    current_retries = 0
     while earliest_got_ts > intended_first_unix:
         #log.info(f"earliest_got_ts: {earliest_got_ts} > anchor_ts: {math.floor(time.time())}")
-        resp = get_market_symbol_candles_resolution.sync(drift_symbol, client=client, resolution=GetMarketSymbolCandlesResolutionResolution(drift_res), limit=20, start_ts=next_call_unix-1)
-        
-        if resp is None:
-            log.info("Empty Response, trying again")
+        resp: Response = get_market_symbol_candles_resolution.sync_detailed(drift_symbol, client=client, resolution=GetMarketSymbolCandlesResolutionResolution(drift_res), limit=20, start_ts=next_call_unix-1)
+        print(resp)
+        if resp.status_code != 200:
+            log.warning(f"""
+                     Request returned status code: {resp.status_code}
+                     Exponential Backoff is: {current_backoff}
+                     Currently used retries: {current_retries}
+                     Max_retries: {100} 
+                     """)
+            
+            backoff_step(current_backoff=current_backoff, current_try=current_retries+1, max_retries=100)
+            current_retries += 1
             continue
 
+        current_retries = 0
         if resp.records:
             resp_as_dict = resp.to_dict()
             page = pd.DataFrame(resp_as_dict["records"])
-            clean = normalize_drift_candles(page, resolution=drift_res, keep_ts_start_unix=True, include_partial=False)
+            clean = normalize_drift_candles(page, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
             
@@ -68,10 +84,9 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
             first_row = sorted.iloc[0]
             last_row =  sorted.iloc[-1]
             log.info(f"Retrieved bars starting with: {first_row['tz_start']} to {last_row['tz_start']}")
-            # logdf(sorted, 25)
             earliest_got_ts = first_row['ts_start_unix']
             next_call_unix = earliest_got_ts - 1 # remove 1 second to avoid duplicating a row
-            if len(pages) > 2:
+            if len(pages) > 50:
                 data = (
                     pd.concat(pages, ignore_index=True)
                     .sort_values("tz_start")
@@ -90,7 +105,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
         )
         write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname=temp_folder)
 
-    single_df = union_file_datasets("tmp") #note that this doesnt use read_candles but just read, could switch over later if we feel the need
+    single_df = union_file_datasets(temp_folder) #note that this doesnt use read_candles but just read, could switch over later if we feel the need
     clean_df, dq_report = validate_candles(single_df, base_resolution)
 
     # We should verify the range 
@@ -99,8 +114,11 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     
     log.info("First Candle: %s", dq_report.first_ts)
     log.info("Last Candle: %s", dq_report.final_ts)
-
+    
     writedf_and_metadata(clean_df, base_resolution, symbol, save_dir_override)
+    
+    print(f"Clearing temp files at {temp_folder}")
+    shutil.rmtree(_prep_path(temp_folder))
     
     return clean_df
 

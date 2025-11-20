@@ -1,6 +1,8 @@
 # data/core/paths.py
 from __future__ import annotations
 
+from qlir.time.timefreq import TimeFreq
+
 """
 Canonical disk layout for QLIR datasets.
 
@@ -94,7 +96,7 @@ def ensure_dir(path: Path) -> None:
 def candles_path(
     *,
     instrument_id: str,
-    resolution: str,
+    resolution: TimeFreq,
     datasource: str,
     user_root: Optional[Path | str] = None,
     ext: str = ".parquet",
@@ -109,8 +111,7 @@ def candles_path(
     ----------
     instrument_id : str
         Canonical instrument identifier (e.g. "sol-perp", "btc-perp")
-    resolution : str
-        Canonical resolution string ("1m", "5m", "1h", ...)
+    resolution : TimeFreq
     datasource : str
         Name of the datasource (e.g. "drift", "helius", "kaiko")
     user_root : Path | str | None

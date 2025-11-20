@@ -4,14 +4,12 @@
 DriftSymbolMap
 ==============
 
-This class defines Drift's instrument → venue-ID mappings.
+This class defines canonical_instrument to drift API string mappings.
 
 Important:
     - All behavior (to_venue, to_canonical, reverse_map, all_*) is implemented
       in BaseSymbolMap.
-    - This subclass only provides the `FORWARD_MAP`.
-    - If Drift ever requires custom mapping logic (e.g., structured IDs),
-      override the relevant methods here.
+    - This subclass only needs to provide the `FORWARD_MAP` (CanonicalInstrument -> API string)
 
 See:
     qlir.data.sources.base_symbol_map.BaseSymbolMap

@@ -7,6 +7,7 @@ from qlir.data.sources.drift.discovery import discover_earliest_candle_start
 from qlir.time.timefreq import TimeFreq, TimeUnit
 from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
 
+
 def _unix_s(x: pd.Timestamp | int | float | None) -> Optional[int]:
     if x is None:
         return None
@@ -48,34 +49,5 @@ def to_drift_valid_unix_timerange(drift_symbol: str, drift_res: str , from_ts: d
     # -------
 
     return intended_first_unix, intended_final_unix
-
-#### ToDo:
-# These are a work in progress, we currently have resolution mapping stored all over the place
-# constants.DRIFT_ALLOWED_RESOLUTIONS
-# DriftCandleSpec has some values in registry.py
-# GetMarketSymbolCandlesResolutionResolution contains strings from the drift sdk
-def timefreq_to_driftres_typed(timefreq: TimeFreq) -> GetMarketSymbolCandlesResolutionResolution:
-    if timefreq.count != 1:
-        "QLIR currently only supports 1min, 1hour, 1day timefreq pulls from drift"
-    
-    if timefreq.unit is TimeUnit.MINUTE:
-        return GetMarketSymbolCandlesResolutionResolution.VALUE_0
-    
-    if timefreq.unit is TimeUnit.DAY:
-        return GetMarketSymbolCandlesResolutionResolution.D
-    
-    raise( ValueError("QLIR currently only supports 1min, 1day timefreq pulls from drift") )
-
-def timefreq_to_driftres_string(timefreq: TimeFreq) -> str:
-    if timefreq.count != 1:
-        "QLIR currently only supports 1min, 1hour, 1day timefreq pulls from drift"
-    
-    if timefreq.unit is TimeUnit.MINUTE:
-        return GetMarketSymbolCandlesResolutionResolution.VALUE_0.value
-    
-    if timefreq.unit is TimeUnit.DAY:
-        return GetMarketSymbolCandlesResolutionResolution.D.value
-    
-    raise( ValueError("QLIR currently only supports 1min, 1day timefreq pulls from drift") )
 
 

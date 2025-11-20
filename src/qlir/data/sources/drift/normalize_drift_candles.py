@@ -14,10 +14,10 @@ log = logging.getLogger(__name__)
 
 # Column name candidates used by Drift responses
 _TS_FIELDS = ["ts", "timestamp", "time"]
-_OPEN_FIELDS = ["o", "open"]
-_HIGH_FIELDS = ["h", "high"]
-_LOW_FIELDS = ["l", "low"]
-_CLOSE_FIELDS = ["c", "close"]
+_OPEN_FIELDS = ["o", "fillOpen", "open"]
+_HIGH_FIELDS = ["h", "fillHigh", "high"]
+_LOW_FIELDS = ["l",  "fillLow", "low"]
+_CLOSE_FIELDS = ["c", "fillClose", "close"]
 _BASE_VOLUME_FIELDS = ["vol", "volume", "base_volume"]
 _QUOTE_VOLUME_FIELDS = ["quote_volume", "notional"]
 
@@ -35,6 +35,7 @@ _RESOLUTION_SIZES: dict[str, str] = {
     "4h": "240min",
     "1D": "1D",
     "1d": "1D",
+    "D": "1D"
 }
 
 # Do Drift timestamps represent the bar start or end?
@@ -114,11 +115,11 @@ def normalize_drift_candles(
         )
 
     # ---- OHLCV field remap ----
-    ts_col = _pick(df, _TS_FIELDS) or "timestamp"
-    o_col = _pick(df, _OPEN_FIELDS) or "open"
-    h_col = _pick(df, _HIGH_FIELDS) or "high"
-    l_col = _pick(df, _LOW_FIELDS) or "low"
-    c_col = _pick(df, _CLOSE_FIELDS) or "close"
+    ts_col = _pick(df, _TS_FIELDS)
+    o_col = _pick(df, _OPEN_FIELDS)
+    h_col = _pick(df, _HIGH_FIELDS)
+    l_col = _pick(df, _LOW_FIELDS)
+    c_col = _pick(df, _CLOSE_FIELDS)
 
     v_col = _pick(df, _BASE_VOLUME_FIELDS) or _pick(df, _QUOTE_VOLUME_FIELDS)
 

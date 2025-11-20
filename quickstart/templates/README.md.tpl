@@ -23,10 +23,22 @@ This is a starter layout for a project that will use the QLIR library.
 
 ```bash
 poetry install
-poetry run analysis
+
+# Just to verify that the install worked 
+poetry run main
 # or
 poetry run python -m __PROJECT_NAME__.main
 ```
+
+4. Get Data and store it to the qlir canonical file location
+```bash
+poetry run get_data
+```
+
+5. 
+
+6. Edit main.py 
+
 
 ## 🧩 Project Structure
 
