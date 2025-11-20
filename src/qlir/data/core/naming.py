@@ -1,6 +1,8 @@
 # data/core/naming.py
 from __future__ import annotations
 
+from qlir.time.timefreq import TimeUnit
+
 """
 Canonical naming rules for on-disk candle datasets.
 
@@ -19,45 +21,17 @@ It does NOT know:
 """
 
 from typing import Optional, TYPE_CHECKING, Tuple
-
+from .naming_constants import DEFAULT_CANDLES_EXT, 
 if TYPE_CHECKING:
     # Adjust import path if your TimeFreq lives somewhere else
     from qlir.time.timefreq import TimeFreq
-
-
-# Default extension for canonical candle datasets on disk.
-DEFAULT_CANDLES_EXT: str = ".parquet"
 
 
 # ---------------------------------------------------------------------------
 # Resolution string mapping
 # ---------------------------------------------------------------------------
 
-def resolution_str(freq: "TimeFreq") -> str:
-    """
-    Convert a TimeFreq into the canonical resolution string used in filenames
-    and metadata (e.g. "1m", "5m", "1h", "1D").
-
-    This is the ONLY place that should define how TimeFreq renders to a
-    filesystem/metadata-friendly resolution code.
-
-    Examples of desired outputs (conceptual):
-        TimeFreq._1min  -> "1m"
-        TimeFreq._5min  -> "5m"
-        TimeFreq._1h    -> "1h"
-        TimeFreq._1D    -> "1D"
-
-    Implementation notes
-    --------------------
-    - Wire this up to your actual TimeFreq abstraction.
-    - If TimeFreq already has something like `.as_pandas_str()` or
-      `.code`, this function should delegate to that and, if necessary,
-      normalize into the shorter "1m"/"5m"/"1h"/"1D" forms.
-    """
-    # Intentionally left for the concrete implementation in your codebase.
-    # Keeping this as a stub avoids guessing about your TimeFreq API.
-    raise NotImplementedError("Implement resolution_str(...) for your TimeFreq type.")
-
+# See qlir.time.timefreq.TimeFreq for conversions: canonical_resolution_string <-> TimeFreq
 
 # ---------------------------------------------------------------------------
 # Canonical filename construction
@@ -65,7 +39,7 @@ def resolution_str(freq: "TimeFreq") -> str:
 
 def candle_filename(
     instrument_id: str,
-    resolution: str,
+    resolution: TimeFreq,
     ext: str = DEFAULT_CANDLES_EXT,
 ) -> str:
     """
@@ -75,29 +49,23 @@ def candle_filename(
         <instrument_id>_<resolution><ext>
 
     Where:
-        instrument_id : canonical instrument identifier
-                        e.g. "sol-perp", "btc-perp"
-        resolution    : canonical resolution string
-                        e.g. "1m", "5m", "1h", "1D"
+        instrument_id : canonical instrument identifier e.g. "sol-perp", "btc-perp"
+        resolution    : TimeFreq
         ext           : file extension (default: ".parquet")
-
-    Examples:
-        candle_filename("sol-perp", "1m")   -> "sol-perp_1m.parquet"
-        candle_filename("btc-perp", "5m")   -> "btc-perp_5m.parquet"
     """
     if not ext.startswith("."):
         raise ValueError(f"Extension must start with '.', got {ext!r}")
 
     # Zero tolerance for whitespace / empty IDs at this layer.
     instrument_id = instrument_id.strip()
-    resolution = resolution.strip()
+    canonical_resolution = TimeFreq.to_canonical_resolution_str(resolution)
 
     if not instrument_id:
         raise ValueError("instrument_id must be a non-empty string.")
     if not resolution:
         raise ValueError("resolution must be a non-empty string.")
 
-    return f"{instrument_id}_{resolution}{ext}"
+    return f"{instrument_id}_{canonical_resolution}{ext}"
 
 
 # ---------------------------------------------------------------------------

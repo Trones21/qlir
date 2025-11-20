@@ -75,7 +75,7 @@ def candles_from_disk_or_network(
    
     if disk_or_network is DiskOrNetwork.NETWORK:
         
-        if any([symbol, base_resolution, datasource]) is None:
+        if any(x is None for x in [symbol, base_resolution, datasource]):
             log.info(f"Symbol (CanonicalInstrument), base_resolution (TimeFreq), and datasource (Datasource) must be passed when fetching from network")
 
         return candles_from_network(symbol=symbol, base_resolution=base_resolution, source=datasource)

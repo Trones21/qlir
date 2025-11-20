@@ -1,5 +1,8 @@
 # data/core/infer.py
 from __future__ import annotations
+from qlir.time.timefreq import TimeFreq
+import logging
+log = logging.getLogger(__name__)
 
 """
 Helpers for *inferring* dataset identity from existing files.
@@ -166,6 +169,17 @@ def infer_resolution(file_path: str | Path) -> Optional[str]:
 
     return None
 
+
+
+# def inferred_resolution_to_timefreq(inferred_resolution: str) -> TimeFreq:
+#     # Quick type check in case pylance is off / type:ingore
+#     if type(inferred_resolution) != str:
+#         log.warning(f" Non-string value was passed to inferred_resolution_to_timefreq. Passed type is: {type(inferred_resolution)}")
+#     if is_canonical_resolution_str(inferred_resolution):
+#         TimeFreq.from_canonical_resolution_str()
+#         return 
+    
+#     raise(ValueError(f"{inferred_resolution} is not a canonical resolution string, conversion failed (non-canonical conversion not implemented)"))
 
 # ---------------------------------------------------------------------------
 # Datasource / upstream symbol inference (optional)

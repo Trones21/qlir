@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 import logging
 
+from qlir.data.core.infer import infer_dataset_identity, inferred_resolution_to_timefreq
 from qlir.data.core.naming import resolution_str
 from qlir.data.core.paths import candles_path
 from qlir.data.sources.drift.symbol_map import DriftSymbolMap
@@ -33,34 +34,7 @@ from qlir.df.utils import union_and_sort
 from datetime import datetime, timezone
 import math
 
-
-# ---------------------------------------------------------
-# Resolution Helpers
-# ---------------------------------------------------------
-
-
-# ---------------------------------------------------------
-# Time helpers
-# ---------------------------------------------------------
-
-def _unix_s(x: pd.Timestamp | int | float | None) -> Optional[int]:
-    if x is None:
-        return None
-    if isinstance(x, pd.Timestamp):
-        return int(x.tz_convert("UTC").timestamp())
-    x = float(x)
-    return int(x / 1000.0) if x > 1_000_000_000_000 else int(x)
-
-
-# ---------------------------------------------------------
-# Core fetchers
-# ---------------------------------------------------------
-
-
-
-
-
-def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts: datetime, to_ts: datetime | None = None, save_dir: str = ".", filetype_out: FileType = FileType.PARQUET):
+def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts: datetime | None = None, to_ts: datetime | None = None, save_dir: str = ".", filetype_out: FileType = FileType.PARQUET):
     
     drift_symbol = DriftSymbolMap.to_venue(symbol)
     client = Client(DRIFT_BASE_URI)
@@ -127,7 +101,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     
     log.info("First Candle: %s", dq_report.first_ts)
     log.info("Last Candle: %s", dq_report.final_ts)
-    
+
     # Write the single file
     clean_dirpath = _prep_path(save_dir)
     canonical_resolution_str = resolution_str(base_resolution)
@@ -141,31 +115,42 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     return clean_df
 
 
-def get_all_candles(symbol: CanonicalInstrument,  base_resolution: TimeFreq): 
-    get_candles(symbol, base_resolution, )
-
+## This was written 
 def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None = None):
     dataset_uri = Path(existing_file)
     existing_df = read(dataset_uri)
     
-    log.info("Currently using infer_freq only, not a full data quality check - may later change to full candle_quality func")
-    resolution = infer_freq(existing_df)
-    log.info 
+    log.info("Currently using infer_freq only, not a full data quality check")
+
+    dataset_identity = infer_dataset_identity(dataset_uri)
+
     current_last_candle = existing_df["tz_start"].max()
-    
-    #Try to get symbol 
-    symbol: str | None = get_symbol(dataset_uri)    
-    if symbol is None and symbol_override is None:
+    drift_symbol = dataset_identity["upstream_symbol"]
+    resolution_str = dataset_identity["resolution"]
+
+    if any(x is None for x in [drift_symbol, resolution_str]):
+        raise ValueError(f"Drift symbol and resolution_str cannot be None: drift_symbol: {type(drift_symbol)}  resolution_str: {type(resolution_str)}")
+
+    if drift_symbol is None and symbol_override is None:
         raise Exception("Symbol cannot be inferred from existing_file or associated .meta.json and no symbol_override was passed, we therefore do not know which symbol to retrieve data for")
-    if symbol is None:
+    if drift_symbol is None:
         effective_symbol = symbol_override
     else:
-        effective_symbol = symbol
+        effective_symbol = drift_symbol
 
-    log.info(f"Getting new {resolution} {effective_symbol} candles since {current_last_candle}")
-    resolution_param = GetMarketSymbolCandlesResolutionResolution(resolution)
-    new_candles_df = get_candles(effective_symbol, resolution=resolution_param, from_ts=current_last_candle )
+    # Cast.convert to types that get_candles func needs 
+    canoncial_instr = DriftSymbolMap.to_canonical(effective_symbol)
+    timefreq = TimeFreq.from_canonical_resolution_str(resolution_str) #type: ignore - pylance just isnt very good at understanding if any(x is None for x in [drift_symbol, resolution_str]):
+    
+    log.info(f"Getting new {resolution_str} {effective_symbol} candles since {current_last_candle}")
+    
+    new_candles_df = get_candles(canoncial_instr, base_resolution=timefreq, from_ts=current_last_candle )
     full_df = union_and_sort([existing_df, new_candles_df], sort_by=["tz_start"])
     write(full_df, dataset_uri)
-    write_dataset_meta(dataset_uri, symbol=effective_symbol, resolution=resolution)
+    canonical_resolution = timefreq.to_canonical_resolution_str()
+    write_dataset_meta(dataset_uri, instrument_id=canoncial_instr.value, resolution=canonical_resolution)
     return full_df
+
+
+def get_all_candles(symbol: CanonicalInstrument,  base_resolution: TimeFreq): 
+    return get_candles(symbol, base_resolution)

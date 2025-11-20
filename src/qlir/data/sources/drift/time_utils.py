@@ -1,9 +1,19 @@
 from datetime import datetime, timezone
+from typing import Optional
 
+import pandas as pd
 import requests
 from qlir.data.sources.drift.discovery import discover_earliest_candle_start
 from qlir.time.timefreq import TimeFreq, TimeUnit
 from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
+
+def _unix_s(x: pd.Timestamp | int | float | None) -> Optional[int]:
+    if x is None:
+        return None
+    if isinstance(x, pd.Timestamp):
+        return int(x.tz_convert("UTC").timestamp())
+    x = float(x)
+    return int(x / 1000.0) if x > 1_000_000_000_000 else int(x)
 
 
 def to_drift_valid_unix_timerange(drift_symbol: str, drift_res: str , from_ts: datetime | None = None, to_ts: datetime | None = None):

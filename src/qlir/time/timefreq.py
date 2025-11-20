@@ -7,6 +7,8 @@ from typing import Optional
 
 import pandas as pd
 
+from qlir.data.core.naming_constants import CANONICAL_RESOLUTION_UNIT_MAP, REVERSE_CANONICAL_RESOLUTION_UNIT_MAP
+
 
 class TimeUnit(Enum):
     SECOND = "second"
@@ -62,3 +64,40 @@ class TimeFreq:
         if include_offset and self.pandas_offset is not None:
             d["pandas_offset"] = str(self.pandas_offset)
         return d
+
+
+    def to_canonical_resolution_str(self) -> str:
+        """
+        Return the canonical frequency representation used in filenames, 
+        network requests, and cache keys (e.g. '1m', '5m', '1h', '1D').
+        """
+        symbol = CANONICAL_RESOLUTION_UNIT_MAP[self.unit]
+        return f"{self.count}{symbol}"
+
+
+    
+    @staticmethod
+    def from_canonical_resolution_str(s: str) -> "TimeFreq":
+        """
+        Parse canonical resolution strings ('1m', '5m', '1h', '1D') into TimeFreq objects.
+        """
+        if not isinstance(s, str) or len(s) < 2:
+            raise ValueError(f"Invalid canonical resolution string: {s}")
+
+        # Identify numeric prefix
+        i = 0
+        while i < len(s) and s[i].isdigit():
+            i += 1
+
+        if i == 0:
+            raise ValueError(f"Missing count in canonical resolution string: {s}")
+
+        count = int(s[:i])
+        unit_symbol = s[i:]
+
+        if unit_symbol not in REVERSE_CANONICAL_RESOLUTION_UNIT_MAP:
+            raise ValueError(f"Unknown unit '{unit_symbol}' in canonical resolution string: {s}")
+
+        unit = REVERSE_CANONICAL_RESOLUTION_UNIT_MAP[unit_symbol]
+
+        return TimeFreq(count=count, unit=unit)
