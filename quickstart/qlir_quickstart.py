@@ -53,7 +53,9 @@ def main() -> None:
     pyproject = render_template("pyproject.toml.tpl", substitutions)
     main_py = render_template("main.py.tpl", substitutions)
     logging_setup = render_template("logging_setup.py.tpl", substitutions)
-    
+    fetch_initial_data = render_template("fetch_initial_data.py.tpl", substitutions)
+    fetch_and_append_new_data = render_template("fetch_and_append_new_data.py.tpl", substitutions)
+
     # --- write files
     write(dest / ".gitignore", gitignore)
     write(dest / "README.md", readme)
@@ -61,6 +63,8 @@ def main() -> None:
     write(dest / "src" / name / "__init__.py", "")
     write(dest / "src" / name / "main.py", main_py)
     write(dest / "src" / name / "logging_setup.py", logging_setup)
+    write(dest / "src" / name / "fetch_initial_data.py", fetch_initial_data)
+    write(dest / "src" / name / "fetch_and_append_new_data.py", fetch_and_append_new_data)
     write(dest / "tests" / "test_smoke.py", "def test_placeholder(): assert True\n")
 
     print(f"✅ Created starter project at {dest}")

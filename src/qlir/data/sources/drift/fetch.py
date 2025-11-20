@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import shutil
 from typing import Any, Dict, Optional
 from httpx import Response
@@ -58,11 +59,10 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     current_retries = 0
     while earliest_got_ts > intended_first_unix:
         #log.info(f"earliest_got_ts: {earliest_got_ts} > anchor_ts: {math.floor(time.time())}")
-        resp: Response = get_market_symbol_candles_resolution.sync_detailed(drift_symbol, client=client, resolution=GetMarketSymbolCandlesResolutionResolution(drift_res), limit=20, start_ts=next_call_unix-1)
-        print(resp)
-        if resp.status_code != 200:
+        response: Response = get_market_symbol_candles_resolution.sync_detailed(drift_symbol, client=client, resolution=GetMarketSymbolCandlesResolutionResolution(drift_res), limit=1000, start_ts=next_call_unix-1)
+        if response.status_code != 200:
             log.warning(f"""
-                     Request returned status code: {resp.status_code}
+                     Request returned status code: {response.status_code}
                      Exponential Backoff is: {current_backoff}
                      Currently used retries: {current_retries}
                      Max_retries: {100} 
@@ -73,9 +73,9 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
             continue
 
         current_retries = 0
-        if resp.records:
-            resp_as_dict = resp.to_dict()
-            page = pd.DataFrame(resp_as_dict["records"])
+        if response.content:
+            data = json.loads(response.content.decode())
+            page = pd.DataFrame(data["records"])
             clean = normalize_drift_candles(page, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
@@ -83,7 +83,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
             # currently going to paginate backward from final_ts
             first_row = sorted.iloc[0]
             last_row =  sorted.iloc[-1]
-            log.info(f"Retrieved bars starting with: {first_row['tz_start']} to {last_row['tz_start']}")
+            log.info(f"Retrieved {drift_res_str} {symbol.value} candles. from: {first_row['tz_start']} to {last_row['tz_start']}")
             earliest_got_ts = first_row['ts_start_unix']
             next_call_unix = earliest_got_ts - 1 # remove 1 second to avoid duplicating a row
             if len(pages) > 50:
@@ -96,6 +96,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
                 write_checkpoint(data, file_type=FileType.CSV, static_part_of_pathname=temp_folder)
                 pages = []
 
+    # Gather up any extra pages that didnt make it into the last checkpoint
     if pages:
         data = (
             pd.concat(pages, ignore_index=True)
@@ -111,7 +112,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     # We should verify the range 
     if dq_report.n_gaps > 0:
         log.warning("Candle Data has gaps, saving to file anyway, please run fill candle gaps") 
-    
+
     log.info("First Candle: %s", dq_report.first_ts)
     log.info("Last Candle: %s", dq_report.final_ts)
     
