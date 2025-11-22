@@ -1,3 +1,4 @@
+import time
 from qlir.data.sources.load import candles_from_disk_or_network, DiskOrNetwork
 from qlir.data.core.datasource import DataSource
 from qlir.data.core.instruments import CanonicalInstrument
@@ -11,7 +12,9 @@ setup_logging(profile=LogProfile.QLIR_INFO)
 
 def main():
     print("Fetching data and storing it to the canonical location")
-    
+    print("With the current dataset (SOL, BTC, ETH) (1Day, 1Minute) this takes roughly 20 minutes to run")
+    print("Starting in 15 seconds...")
+    time.sleep(15)
     sol = CanonicalInstrument.SOL_PERP 
     btc = CanonicalInstrument.BTC_PERP
     eth = CanonicalInstrument.ETH_PERP

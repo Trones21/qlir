@@ -58,21 +58,9 @@ def candles_from_disk_or_network(
         If required parameters for the selected mode are missing.
     """
 
-    if disk_or_network is DiskOrNetwork.DISK:
+    if disk_or_network is DiskOrNetwork.DISK:    
+        return candles_from_disk_via_explicit_filepath(file_uri)
 
-        if file_uri is None:
-            raise ValueError(
-                f"file_uri param must be passed when fetching from disk"
-            )
-        if file_uri.exists() == False:
-            raise ValueError(
-                f"File not found at {file_uri}. "
-            )
-    
-        return candles_from_disk(file_uri)
-
-    
-   
     if disk_or_network is DiskOrNetwork.NETWORK:
         
         if any(x is None for x in [symbol, base_resolution, datasource]):
@@ -81,8 +69,24 @@ def candles_from_disk_or_network(
         return candles_from_network(symbol=symbol, base_resolution=base_resolution, source=datasource)
 
 
+def candles_from_disk_via_built_filepath( symbol: CanonicalInstrument,
+    base_resolution: TimeFreq,
+    datasource: Optional[DataSource]):
+    raise NotImplementedError()
 
-def candles_from_disk(file_uri):
+def candles_from_disk_via_explicit_filepath(file_uri: str | Path):
+    # A little safety check in case pylance isnt on
+    if file_uri is None:
+        raise ValueError(
+            f"file_uri param must be passed when fetching from disk"
+        )
+    
+    file_uri = io.writer._prep_path(file_uri)
+    
+    if file_uri.exists() == False:
+        raise ValueError(
+            f"File not found at {file_uri}. "
+        )
     log.info(f"Loading candles from disk: {file_uri}")
     return io.read(file_uri) 
 

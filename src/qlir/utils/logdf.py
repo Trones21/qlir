@@ -31,12 +31,30 @@ def _fmt_df(df: pd.DataFrame, rows: int = 10, max_width: int = 120) -> str:
     else:
         return df_head.to_string(index=False)
 
-def ensure_logging():
-    import logging
-    logger = logging.getLogger()
-    if not logger.hasHandlers():
-        logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-        print("[init] Logging configured (default INFO)")
+
+def ensure_logging() -> None:
+    """
+    Ensure there is *some* logging configuration so logdf
+    doesn't silently drop messages in ad-hoc scripts / notebooks.
+
+    Priority:
+      1. If the qlir logger has handlers, trust that setup.
+      2. Else if root has handlers, trust that.
+      3. Else configure a simple root handler at INFO.
+    """
+    root = logging.getLogger()
+    qlir_logger = logging.getLogger("qlir")
+
+    # If either qlir or root already has handlers, don't touch config.
+    if qlir_logger.hasHandlers() or root.hasHandlers():
+        return
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+    print("[init] Logging configured (default INFO)")
+
 
 def logdf(
     df: pd.DataFrame,
@@ -44,11 +62,16 @@ def logdf(
     level: str = "info",
     name: str | None = None,
     max_width: int = 200,
-):
+) -> None:
     """
-    Log or print a DataFrame with aligned columns, truncated to fit max_width.
-    Falls back to print() if logging is not configured.
-    
+    Log a DataFrame via the qlir logger tree.
+
+    Behavior:
+      - Messages go to `qlir.logdf` so they use the same handlers/levels
+        configured by setup_logging(LogProfile.*).
+      - If no logging is configured at all, ensure_logging() installs a basic
+        root handler so output is still visible.
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -63,8 +86,13 @@ def logdf(
         Max character width before truncating columns.
     """
     ensure_logging()
-    logger = logging.getLogger()
-    emit = getattr(logger, level, logger.info)
+
+    # Use a child logger under the qlir namespace so it picks up qlir handlers.
+    logger = logging.getLogger("qlir.logdf")
+
+    # Map level string → log method with a safe default.
+    level_str = (level or "info").lower()
+    emit = getattr(logger, level_str, logger.info)
 
     if df is None or df.empty:
         emit(f"{name or 'DataFrame'} is empty.")

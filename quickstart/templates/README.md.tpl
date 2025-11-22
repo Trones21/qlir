@@ -32,12 +32,16 @@ poetry run python -m __PROJECT_NAME__.main
 
 4. Get Data and store it to the qlir canonical file location
 ```bash
-poetry run get_data
+poetry run fetch_initial_data
 ```
 
-5. 
+5. Edit main.py 
 
-6. Edit main.py 
+
+6. (At a later date) Update the dataset on disk 
+```bash
+poetry run fetch_and_append_new_data
+```
 
 
 ## 🧩 Project Structure

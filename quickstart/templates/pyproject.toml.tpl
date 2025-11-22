@@ -55,7 +55,8 @@ dev = ["pytest>=8.0"]
 
 [project.scripts]
 main = "__PACKAGE_NAME__.main:entrypoint"
-get_data = "__PACKAGE_NAME__.get_data:main"
+fetch_initial_data = "__PACKAGE_NAME__.fetch_initial_data:main"
+fetch_and_append_new_data = "__PACKAGE_NAME__.fetch_and_append_new_data:main"
 [build-system]
 requires = ["poetry-core>=1.8.0"]
 build-backend = "poetry.core.masonry.api"
