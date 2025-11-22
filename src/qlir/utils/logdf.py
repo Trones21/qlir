@@ -11,6 +11,64 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+
+def _filter_df_by_row_idx(
+    df: pd.DataFrame,
+    start_incl: int,
+    end_excl: int,
+) -> pd.DataFrame:
+    """
+    Slice a DataFrame by *positional* row indices, safely.
+
+    Rules:
+      - Negative indices behave like Python slicing.
+      - Out-of-bounds indices are clamped to [0, len(df)].
+      - If start >= end, return an empty DataFrame.
+      - Original index is preserved (no reset_index).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to slice.
+    start_incl : int
+        Start index, inclusive.
+    end_excl : int
+        End index, exclusive.
+
+    Returns
+    -------
+    pd.DataFrame
+        The sliced DataFrame (possibly empty).
+    """
+    if df is None or len(df) == 0:
+        return df.iloc[0:0]
+
+    n = len(df)
+
+    # Normalize Python-style negative indices
+    if start_incl < 0:
+        start = max(0, n + start_incl)
+    else:
+        start = start_incl
+
+    if end_excl < 0:
+        end = max(0, n + end_excl)
+    else:
+        end = end_excl
+
+    # Clamp to valid boundaries
+    start = max(0, min(start, n))
+    end   = max(0, min(end, n))
+
+    # Empty slice if invalid range
+    if start >= end:
+        return df.iloc[0:0]
+
+    # Use positional slicing
+    return df.iloc[start:end]
+
+
+
 def _fmt_df(df: pd.DataFrame, rows: int = 10, max_width: int = 120) -> str:
     """
     Formats a DataFrame into a human-readable table that fits within max_width.
@@ -58,7 +116,8 @@ def ensure_logging() -> None:
 
 def logdf(
     df: pd.DataFrame,
-    rows: int = 10,
+    from_row_idx: int = 0,
+    max_rows: int = 10,
     level: str = "info",
     name: str | None = None,
     max_width: int = 200,
@@ -66,7 +125,8 @@ def logdf(
     """
     Log a DataFrame via the qlir logger tree.
 
-    Behavior:
+    Behavior
+    --------
       - Messages go to `qlir.logdf` so they use the same handlers/levels
         configured by setup_logging(LogProfile.*).
       - If no logging is configured at all, ensure_logging() installs a basic
@@ -76,8 +136,10 @@ def logdf(
     ----------
     df : pd.DataFrame
         DataFrame to display.
-    rows : int
-        Number of rows to include (default 10).
+    from_row_idx : int
+        Zero-based starting row index (inclusive) in positional terms.
+    max_rows : int
+        Maximum number of rows to include (default 10).
     level : str
         Logging level ("info", "debug", etc.).
     name : str, optional
@@ -99,5 +161,7 @@ def logdf(
         return
 
     header = f"\n📊 {name or 'DataFrame'} (shape={df.shape}):"
-    table = _fmt_df(df, rows=rows, max_width=max_width)
+    excl_idx = from_row_idx + max_rows
+    filtered_df = _filter_df_by_row_idx(df, start_incl=from_row_idx, end_excl=excl_idx) # converts to using row indices if the dataframe has an index of a different type
+    table = _fmt_df(filtered_df, max_width=max_width)
     emit(f"{header}\n{table}")

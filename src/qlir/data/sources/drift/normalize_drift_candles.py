@@ -11,15 +11,10 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 # ---- Drift-specific config -------------------------------------------------
-
-# Column name candidates used by Drift responses
-_TS_FIELDS = ["ts", "timestamp", "time"]
-_OPEN_FIELDS = ["o", "fillOpen", "open"]
-_HIGH_FIELDS = ["h", "fillHigh", "high"]
-_LOW_FIELDS = ["l",  "fillLow", "low"]
-_CLOSE_FIELDS = ["c", "fillClose", "close"]
-_BASE_VOLUME_FIELDS = ["vol", "volume", "base_volume"]
-_QUOTE_VOLUME_FIELDS = ["quote_volume", "notional"]
+ _QUOTE_VOLUME = 'quoteVolume'
+ _BASE_VOLUME = 'baseVolume'
+_FILLS_OHLC_COLS = ['fillOpen', 'fillHigh', 'fillLow', 'fillClose']
+_ORACLE_OHLC_COLS = ['oracleOpen', 'oracleHigh', 'oracleLow', 'oracleClose']
 
 # How far each resolution extends in time.
 _RESOLUTION_SIZES: dict[str, str] = {
@@ -48,16 +43,6 @@ _ROLLING_LAST_CLOSE: bool = True
 
 # ---- Small helpers ---------------------------------------------------------
 
-def _pick(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
-    """Return the first matching column from candidates (case-insensitive)."""
-    lower = {c.lower(): c for c in df.columns}
-    for k in candidates:
-        c = lower.get(k.lower())
-        if c is not None:
-            return c
-    return None
-
-
 def _get_candle_size(resolution: str) -> pd.Timedelta:
     key = _RESOLUTION_SIZES.get(str(resolution))
     
@@ -71,6 +56,10 @@ def _get_candle_size(resolution: str) -> pd.Timedelta:
         return off
     return off[0]   # e.g., if off is a TimedeltaIndex of length 1
 
+def rename_by_index(df: pd.DataFrame, old_cols, new_cols):
+    if len(old_cols) != len(new_cols):
+        raise ValueError("old_cols and new_cols must be same length")
+    return df.rename(columns=dict(zip(old_cols, new_cols)))
 
 # ---- Public API ------------------------------------------------------------
 
@@ -78,6 +67,8 @@ def normalize_drift_candles(
     df: pd.DataFrame,
     *,
     resolution: str,
+    keep_oracle: bool,
+    keep_fills: bool,
     keep_ts_start_unix: bool = False,
     include_partial: bool = True,
 ) -> pd.DataFrame:
@@ -87,8 +78,7 @@ def normalize_drift_candles(
     Canonical columns:
       - tz_start (UTC)
       - tz_end (UTC or NaT for partial last candle)
-      - open, high, low, close
-      - volume (optional, if present)
+      - open, high, low, close (or not renamed if both oracle and fills are kept)
       - ts_start_unix (optional, if keep_ts_start_unix=True)
 
     Parameters
@@ -114,26 +104,8 @@ def normalize_drift_candles(
             list(df.columns),
         )
 
-    # ---- OHLCV field remap ----
-    ts_col = _pick(df, _TS_FIELDS)
-    o_col = _pick(df, _OPEN_FIELDS)
-    h_col = _pick(df, _HIGH_FIELDS)
-    l_col = _pick(df, _LOW_FIELDS)
-    c_col = _pick(df, _CLOSE_FIELDS)
 
-    v_col = _pick(df, _BASE_VOLUME_FIELDS) or _pick(df, _QUOTE_VOLUME_FIELDS)
-
-    out = df.rename(
-        columns={
-            ts_col: "timestamp",
-            o_col: "open",
-            h_col: "high",
-            l_col: "low",
-            c_col: "close",
-        }
-    )
-    if v_col:
-        out = out.rename(columns={v_col: "volume"})
+    out = df
 
     if keep_ts_start_unix:
         out["ts_start_unix"] = out["timestamp"]
@@ -159,22 +131,35 @@ def normalize_drift_candles(
         out["tz_start"] = out["timestamp"] - candle_size
 
     # Mark partial last candle if tz_end in future (rolling)
-    if _ROLLING_LAST_CLOSE:
-        now = pd.Timestamp.now(tz="UTC")
-        mask_future = out["tz_end"] > now
-        out.loc[mask_future, "tz_end"] = pd.NaT
-        # enforce: partials must have close = NaN (prevents accidental use)
-        out.loc[out["tz_end"].isna(), "close"] = pd.NA
+    # if _ROLLING_LAST_CLOSE:
+    #     now = pd.Timestamp.now(tz="UTC")
+    #     mask_future = out["tz_end"] > now
+    #     out.loc[mask_future, "tz_end"] = pd.NaT
+    #     # enforce: partials must have close = NaN (prevents accidental use)
+    #     out.loc[out["tz_end"].isna(), "close"] = pd.NA
 
     if not include_partial:
         out = out[out["tz_end"].notna()]
 
-    # ---- Final canonical order ----
-    cols = deque(["tz_start", "tz_end", "open", "high", "low", "close"])
-    if "volume" in out:
-        cols.append("volume")
+   
+    cols = deque(["tz_start", "tz_end"])
     if keep_ts_start_unix:
-        cols.appendleft("ts_start_unix")
+        cols.appendleft("ts_start_unix") 
+    
+    if keep_oracle and keep_fills:
+        # we are keeping both fills and oracle so we arent doing any renaming
+        cols.extend(_FILLS_OHLC_COLS)
+        cols.extend(_ORACLE_OHLC_COLS)
+    else:
+        ohlc_canonical = ['open', 'high', 'low', 'close']
+        # rename oracle or fills ohlc cols to canonical ohlc
+        if keep_oracle:
+            out = rename_by_index(out, _ORACLE_OHLC_COLS, ohlc_canonical)
+            cols.extend(ohlc_canonical)
+        if keep_fills:
+            out = rename_by_index(out, _FILLS_OHLC_COLS, ohlc_canonical)
+            cols.extend(ohlc_canonical)
 
+    # this will filter out any unwanted cols 
     out = out[list(cols)].reset_index(drop=True)
     return out

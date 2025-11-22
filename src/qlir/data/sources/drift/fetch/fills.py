@@ -27,7 +27,7 @@ from drift_data_api_client.models.get_market_symbol_candles_resolution_resolutio
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
 from qlir.data.quality.candles import validate_candles
-from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles
+from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles, normalize_drift_fills_candles
 from qlir.io.checkpoint import write_checkpoint, FileType
 from qlir.io.union_files import union_file_datasets
 from qlir.io.reader import read
@@ -76,7 +76,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
         if response.content:
             data = json.loads(response.content.decode())
             page = pd.DataFrame(data["records"])
-            clean = normalize_drift_candles(page, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
+            clean = normalize_drift_candles(page, keep_fills= True, keep_oracle= False, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
             

@@ -1,13 +1,22 @@
+## Data Integrations
+
+- Drift 
+     - store oracle data to DRIFT/candles/oracle
+     - store fill data to DRIFT/candles/fills
+     - store raw data to DRIFT/raw/   
+
+- Binance candles (klines) and (kulines)
+    - need to clarify the exact difference docs just say that the one is candlestick friendly (maybe holding those invariants)
+
+- Kraken candles 
+
+
+
 ### Ta-lib integration
 
 
 
 ### Refactoring:
-
-Refactoring indicators, features, and signals from add_ → with_:
-- Improves readability and semantics.
-- Fits pandas’ functional style.
-- Encodes immutability-by-convention.
 
 
 

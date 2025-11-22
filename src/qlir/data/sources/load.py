@@ -19,6 +19,13 @@ log = logging.getLogger(__name__)
 
 from enum import Enum, auto
 
+from qlir.data.quality.candles import (
+    run_candle_quality,
+    log_candle_dq_issues,
+    CandlesDQReport,
+)
+
+
 class DiskOrNetwork(Enum):
     DISK = auto()
     NETWORK = auto()
@@ -69,26 +76,75 @@ def candles_from_disk_or_network(
         return candles_from_network(symbol=symbol, base_resolution=base_resolution, source=datasource)
 
 
-def candles_from_disk_via_built_filepath( symbol: CanonicalInstrument,
+def candles_from_disk_via_built_filepath(
+    symbol: CanonicalInstrument,
     base_resolution: TimeFreq,
-    datasource: Optional[DataSource]):
+    datasource: Optional[DataSource],
+    *,
+    max_abs_range: float | None = None,
+    max_rel_range: float | None = None,
+):
     raise NotImplementedError()
+    # Your internal path-builder (whatever you already use)
+    file_uri = build_candle_path(symbol, base_resolution, datasource)
 
-def candles_from_disk_via_explicit_filepath(file_uri: str | Path):
-    # A little safety check in case pylance isnt on
-    if file_uri is None:
-        raise ValueError(
-            f"file_uri param must be passed when fetching from disk"
-        )
-    
+    return candles_from_disk_validated(
+        file_uri=file_uri,
+        freq=base_resolution,
+        max_abs_range=max_abs_range,
+        max_rel_range=max_rel_range,
+    )
+
+
+def candles_from_disk_via_explicit_filepath(
+    file_uri: str | Path,
+    freq: TimeFreq,
+    *,
+    max_abs_range: float | None = None,
+    max_rel_range: float | None = None,
+):
+    return candles_from_disk_validated(
+        file_uri=file_uri,
+        freq=freq,
+        max_abs_range=max_abs_range,
+        max_rel_range=max_rel_range,
+    )
+
+def candles_from_disk_validated(
+    file_uri: str | Path,
+    freq: TimeFreq,
+    *,
+    max_abs_range: float | None = None,
+    max_rel_range: float | None = None,
+):
+    """
+    Load + validate + log candle DQ in one place.
+    """
+
+    # --- normalize input
     file_uri = io.writer._prep_path(file_uri)
-    
-    if file_uri.exists() == False:
-        raise ValueError(
-            f"File not found at {file_uri}. "
-        )
-    log.info(f"Loading candles from disk: {file_uri}")
-    return io.read(file_uri) 
+    if not file_uri.exists():
+        raise ValueError(f"File not found at {file_uri}")
+
+    # --- load raw
+    log.info("Loading candles from disk: %s", file_uri)
+    raw_df = io.read(file_uri)
+
+    # --- run DQ
+    clean_df, report, issues = run_candle_quality(
+        raw_df,
+        freq=freq,
+        max_abs_range=max_abs_range,
+        max_rel_range=max_rel_range,
+    )
+
+    # --- log everything
+    log_candle_dq_issues(
+        report,
+        context=f"file:{file_uri}",
+    )
+
+    return clean_df, report, issues
 
 
 def candles_from_network(source, symbol, base_resolution):
@@ -114,8 +170,7 @@ def candles_from_network(source, symbol, base_resolution):
     raise ValueError(f"Unknown datasource: {source}")
 
 
-
-def load_ohlcv(
+def old_load_ohlcv(
     path: str | Path,
     *,
     require_volume: bool = False,

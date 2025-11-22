@@ -1,14 +1,17 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, List
-import pandas as pd
 import logging
+
+import numpy as np
+import pandas as pd
+
 from qlir.time.ensure_utc import ensure_utc_series
+from qlir.time.timefreq import TimeFreq, TimeUnit
+
 log = logging.getLogger(__name__)
 
 OHLCV_COLS = ["open", "high", "low", "close", "volume"]
-
-from qlir.time.timefreq import TimeFreq, TimeUnit
 
 
 # -------------------------------------------------------------------
@@ -26,7 +29,7 @@ def _sort_dedupe(df: pd.DataFrame, time_col: str = "tz_start") -> tuple[pd.DataF
     dup_mask = out.duplicated(subset=[time_col], keep=False)
     if dup_mask.any():
         dup_df = out[dup_mask]
-        to_drop_idx = []
+        to_drop_idx: list[int] = []
 
         for ts, group in dup_df.groupby(time_col, sort=False):
             present_cols = [c for c in OHLCV_COLS if c in group.columns]
@@ -70,7 +73,6 @@ def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
     delta = s.iloc[1] - s.iloc[0]
     seconds = delta.total_seconds()
 
-    # detect major time units
     if seconds % 86400 == 0:
         return TimeFreq(count=int(seconds // 86400), unit=TimeUnit.DAY)
     elif seconds % 3600 == 0:
@@ -114,7 +116,103 @@ def detect_candle_gaps(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> lis
 
 
 # -------------------------------------------------------------------
-#  Candle validation
+#  Value-level checks
+# -------------------------------------------------------------------
+def find_ohlc_zeros(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Return rows where ANY of open/high/low/close is exactly 0.
+    """
+    req = {"open", "high", "low", "close"}
+    miss = req - set(df.columns)
+    if miss:
+        raise ValueError(f"Missing required columns for OHLC zero check: {sorted(miss)}")
+
+    mask = (df[["open", "high", "low", "close"]] == 0).any(axis=1)
+    return df.loc[mask].copy()
+
+
+def find_unrealistic_ranges(
+    df: pd.DataFrame,
+    *,
+    max_abs_range: float | None = None,
+    max_rel_range: float | None = None,
+) -> pd.DataFrame:
+    """
+    Return rows where the candle range (high-low) looks unrealistically large.
+
+    - If max_abs_range is provided, flag rows where (high - low) > max_abs_range.
+    - If max_rel_range is provided, flag rows where (high - low) / mid > max_rel_range,
+      where mid = 0.5 * (high + low).
+
+    At least one of max_abs_range or max_rel_range must be provided.
+    """
+    if max_abs_range is None and max_rel_range is None:
+        raise ValueError("Provide at least one of max_abs_range or max_rel_range")
+
+    req = {"high", "low"}
+    miss = req - set(df.columns)
+    if miss:
+        raise ValueError(f"Missing required columns for range check: {sorted(miss)}")
+
+    high = df["high"].astype(float)
+    low = df["low"].astype(float)
+    _range = high - low
+
+    mask = pd.Series(False, index=df.index)
+
+    if max_abs_range is not None:
+        mask |= _range > max_abs_range
+
+    if max_rel_range is not None:
+        mid = 0.5 * (high + low)
+        # avoid div-by-zero if someone sends nonsense data
+        rel = _range / np.where(mid == 0.0, np.nan, mid)
+        mask |= rel > max_rel_range
+
+    return df.loc[mask].copy()
+
+
+def find_ohlc_inconsistencies(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Return rows that violate basic OHLC ordering rules:
+
+        low <= open <= high
+        low <= close <= high
+        high >= low
+    """
+    req = {"open", "high", "low", "close"}
+    miss = req - set(df.columns)
+    if miss:
+        raise ValueError(f"Missing required columns: {sorted(miss)}")
+
+    o = df["open"].astype(float)
+    h = df["high"].astype(float)
+    l = df["low"].astype(float)
+    c = df["close"].astype(float)
+
+    # Identify invalid rows
+    mask_invalid = ~((l <= o) & (o <= h) &
+                     (l <= c) & (c <= h) &
+                     (h >= l))
+
+    bad = df.loc[mask_invalid].copy()
+
+    if bad.empty:
+        return bad  # nothing to annotate
+
+    # Add diagnostics
+    bad["viol_open_lt_low"]   = o.loc[bad.index] < l.loc[bad.index]
+    bad["viol_open_gt_high"]  = o.loc[bad.index] > h.loc[bad.index]
+    bad["viol_close_lt_low"]  = c.loc[bad.index] < l.loc[bad.index]
+    bad["viol_close_gt_high"] = c.loc[bad.index] > h.loc[bad.index]
+    bad["viol_high_lt_low"]   = h.loc[bad.index] < l.loc[bad.index]
+
+    return bad
+
+
+
+# -------------------------------------------------------------------
+#  Candle validation & report
 # -------------------------------------------------------------------
 @dataclass
 class CandlesDQReport:
@@ -126,23 +224,52 @@ class CandlesDQReport:
     first_ts: pd.Timestamp
     final_ts: pd.Timestamp
 
+    ohlc_zeros: Optional[pd.DataFrame] = None
+    n_ohlc_zeros: int = 0
+
+    ohlc_inconsistencies: Optional[pd.DataFrame] = None
+    n_ohlc_inconsistencies: int = 0
+
+    large_ranges: Optional[pd.DataFrame] = None
+    n_large_ranges: int = 0
+
 
 def validate_candles(
     df: pd.DataFrame,
     freq: TimeFreq,
+    *,
+    max_abs_range: float | None = None,
+    max_rel_range: float | None = None,
 ) -> tuple[pd.DataFrame, CandlesDQReport]:
     """
     Validate candles for a *known* frequency.
 
     - sort + dedupe (strict OHLCV match on dupes)
     - detect gaps using the provided `freq`
+    - flag:
+        * rows with OHLC zeros
+        * rows with inconsistent OHLC ordering
+        * rows with unrealistically large ranges (if thresholds provided)
 
-    We do **not** infer frequency here (that could return unintended results since infer freq is a simple df[1]["tz_start"] - df[0]["tz_start"])
+    We do **not** infer frequency here.
     """
     fixed, count_dups_removed = _sort_dedupe(df)
     missing = detect_candle_gaps(fixed, freq=freq)
+
+    # value-level diagnostics
+    zeros_df = find_ohlc_zeros(fixed)
+    inconsist_df = find_ohlc_inconsistencies(fixed)
+    large_ranges_df: Optional[pd.DataFrame] = None
+    if max_abs_range is not None or max_rel_range is not None:
+        large_ranges_df = find_unrealistic_ranges(
+            fixed,
+            max_abs_range=max_abs_range,
+            max_rel_range=max_rel_range,
+        )
+
     first_candle = fixed["tz_start"].min()
     last_candle = fixed["tz_start"].max()
+
     report = CandlesDQReport(
         freq=freq,
         n_rows=len(fixed),
@@ -150,7 +277,13 @@ def validate_candles(
         n_gaps=len(missing),
         missing_starts=missing,
         first_ts=first_candle,
-        final_ts=last_candle
+        final_ts=last_candle,
+        ohlc_zeros=zeros_df if not zeros_df.empty else None,
+        n_ohlc_zeros=len(zeros_df),
+        ohlc_inconsistencies=inconsist_df if not inconsist_df.empty else None,
+        n_ohlc_inconsistencies=len(inconsist_df),
+        large_ranges=large_ranges_df if (large_ranges_df is not None and not large_ranges_df.empty) else None,
+        n_large_ranges=0 if large_ranges_df is None else len(large_ranges_df),
     )
     return fixed, report
 
@@ -161,6 +294,9 @@ def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
 
     This version is strict — *all* deltas between consecutive tz_start
     timestamps must be exactly equal. Any deviation is considered invalid.
+    
+    This is not part of the candles dq report because missing data would show up as non-homogenous sizes
+
     """
     if df.empty:
         return
@@ -174,8 +310,125 @@ def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
 
     deltas = s.diff().dropna()
 
-    # check if all deltas are identical
     if not deltas.eq(deltas.iloc[0]).all():
         raise ValueError(
             f"Heterogeneous candle spacing detected: {len(deltas.unique())} unique deltas found."
         )
+
+
+def run_candle_quality(
+    df: pd.DataFrame,
+    freq: TimeFreq,
+    *,
+    max_abs_range: float | None = None,
+    max_rel_range: float | None = None,
+):
+    """
+    High-level 'one call does all' data-quality validation for candles.
+
+    Returns
+    -------
+    clean_df : pd.DataFrame
+        Sorted, deduped, frequency-consistent candle data.
+    report : CandlesDQReport
+        Full summary of diagnostics.
+    issues : dict[str, Optional[pd.DataFrame]]
+        Dictionary mapping issue name → filtered DataFrame of affected rows
+        (or None if no such issue).
+    """
+
+    # Run the full validator (dedupe + gaps + all OHLC checks)
+    clean_df, report = validate_candles(
+        df,
+        freq=freq,
+        max_abs_range=max_abs_range,
+        max_rel_range=max_rel_range
+    )
+
+    # Construct the issues dictionary
+    issues = {
+        "ohlc_zeros": report.ohlc_zeros,
+        "ohlc_inconsistencies": report.ohlc_inconsistencies,
+        "large_ranges": report.large_ranges,
+        "missing_candles": pd.DataFrame({"tz_start": report.missing_starts})
+            if report.n_gaps > 0 else None,
+        "deduped_rows": None,  # optional: populate if needed
+    }
+
+    return clean_df, report, issues
+
+
+def log_candle_dq_issues(
+    report: CandlesDQReport,
+    *,
+    context: str = "",
+) -> None:
+    """
+    Log a summary of candle data-quality issues.
+
+    `context` is something like:
+        "BINANCE:BTCUSDT:1m"
+        "file:/path/to/file.parquet"
+    so logs are easy to attribute.
+    """
+    ctx = f"[{context}] " if context else ""
+
+    # Always log a basic summary
+    log.info(
+        "%sCandles DQ: n_rows=%d freq=%s range=[%s -> %s]",
+        ctx,
+        report.n_rows,
+        report.freq,
+        report.first_ts,
+        report.final_ts,
+    )
+
+    # Issues → warnings
+    if report.n_dupes_dropped:
+        log.warning(
+            "%sDropped %d duplicate candles",
+            ctx,
+            report.n_dupes_dropped,
+        )
+
+    if report.n_gaps:
+        first_miss = report.missing_starts[0]
+        last_miss = report.missing_starts[-1]
+        log.warning(
+            "%sDetected %d missing candles (first_missing=%s, last_missing=%s)",
+            ctx,
+            report.n_gaps,
+            first_miss,
+            last_miss,
+        )
+
+    if report.n_ohlc_zeros:
+        log.warning(
+            "%sFound %d candles with OHLC zeros",
+            ctx,
+            report.n_ohlc_zeros,
+        )
+
+    if report.n_ohlc_inconsistencies:
+        log.warning(
+            "%sFound %d candles with OHLC ordering inconsistencies",
+            ctx,
+            report.n_ohlc_inconsistencies,
+        )
+
+    if report.n_large_ranges:
+        log.warning(
+            "%sFound %d candles with unrealistically large ranges",
+            ctx,
+            report.n_large_ranges,
+        )
+
+    # If nothing bad was found, say so explicitly
+    if (
+        report.n_dupes_dropped == 0
+        and report.n_gaps == 0
+        and report.n_ohlc_zeros == 0
+        and report.n_ohlc_inconsistencies == 0
+        and report.n_large_ranges == 0
+    ):
+        log.info("%sCandles passed all DQ checks", ctx)
