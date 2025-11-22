@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 pytestmark = pytest.mark.local
 
-from qlir.data.candle_quality import _sort_dedupe
+from qlir.data.quality.candles import _sort_dedupe
 
 def test_sort_dedupe_sorts_and_drops_identical_dupe_on_default_col():
     df = pd.DataFrame(

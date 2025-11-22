@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 pytestmark = pytest.mark.local
 
-from qlir.data.candle_quality import detect_candle_gaps, TimeFreq
+from qlir.data.quality.candles import detect_candle_gaps, TimeFreq
 import logging
 from qlir.time.timefreq import TimeUnit
 

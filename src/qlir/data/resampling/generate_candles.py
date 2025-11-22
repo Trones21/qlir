@@ -1,6 +1,6 @@
 
 from qlir.time.timefreq import TimeFreq, TimeUnit 
-from qlir.data.candle_quality import infer_freq, ensure_homogeneous_candle_size, detect_candle_gaps
+from qlir.data.quality.candles import infer_freq, ensure_homogeneous_candle_size, detect_candle_gaps
 import pandas as pd
 from typing import Iterable, Dict
 

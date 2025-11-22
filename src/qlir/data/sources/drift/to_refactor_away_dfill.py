@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional, List, Tuple
 import pandas as pd
 
-from qlir.data.candle_quality import detect_candle_gaps
+from qlir.data.quality.candles import detect_candle_gaps
 
 # map Drift tokens to step seconds
 _STEP_SEC = {"1":60,"5":300,"15":900,"60":3600,"240":14400}
