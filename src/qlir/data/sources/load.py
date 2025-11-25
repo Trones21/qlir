@@ -69,7 +69,7 @@ def candles_from_disk_or_network(
     """
 
     if disk_or_network is DiskOrNetwork.DISK:    
-        return candles_from_disk_via_explicit_filepath(file_uri, freq=base_resolution)
+        return candles_from_disk_via_explicit_filepath(file_uri, freq=base_resolution, oracle_or_fill=oracle_or_fill)
 
     if disk_or_network is DiskOrNetwork.NETWORK:
         
@@ -102,6 +102,7 @@ def candles_from_disk_via_built_filepath(
 def candles_from_disk_via_explicit_filepath(
     file_uri: str | Path,
     freq: TimeFreq,
+    oracle_or_fill: OracleOrFill,
     *,
     max_abs_range: float | None = None,
     max_rel_range: float | None = None,
@@ -109,6 +110,7 @@ def candles_from_disk_via_explicit_filepath(
     return candles_from_disk_validated(
         file_uri=file_uri,
         freq=freq,
+        oracle_or_fill=oracle_or_fill,
         max_abs_range=max_abs_range,
         max_rel_range=max_rel_range,
     )
@@ -117,6 +119,7 @@ def candles_from_disk_validated(
     file_uri: str | Path,
     freq: TimeFreq,
     *,
+    oracle_or_fill: OracleOrFill,
     max_abs_range: float | None = None,
     max_rel_range: float | None = None,
 ):
@@ -124,6 +127,7 @@ def candles_from_disk_validated(
     Load + validate + log candle DQ in one place.
     """
 
+    return NotImplementedError("Need to introduce logic to detemrine whether fill candles or orcale candles are read")
     # --- normalize input
     file_uri = io.writer._prep_path(file_uri)
     if not file_uri.exists():
@@ -154,17 +158,16 @@ def candles_from_network(source, symbol, base_resolution, oracle_or_fill: Oracle
 
     # ----- 3. Fetch from network ---------------------------------------------
     if source is DataSource.DRIFT:
-        # Oracle or fill param has been decided, im juts calling different funcs depending on the value of the param passed
-        if OracleOrFill is OracleOrFill.oracle:
+        # Oracle or fill param has been decided, im just calling different funcs depending on the value of the param passed
+        if oracle_or_fill is OracleOrFill.oracle:
             log.info(f"Fetching oracle candles from Drift base_resolution={base_resolution}")
             return get_all_oracle_candles(symbol=symbol, base_resolution=base_resolution, oracle_or_fill=oracle_or_fill)
         
-        if OracleOrFill is OracleOrFill.fill:
+        if oracle_or_fill is OracleOrFill.fill:
             log.info(f"Fetching fill candles from Drift base_resolution={base_resolution}")
             return get_all_fill_candles(symbol=symbol, base_resolution=base_resolution, oracle_or_fill=oracle_or_fill)
         
-
-        return get_all_candles(symbol, base_resolution)
+        raise ValueError("Oracle or Fill was not passed to candles_from_network, therefore we do not know what type of data to get")
 
     if source is DataSource.KAIKO:
         log.info("Fetching candles from Kaiko")

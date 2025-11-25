@@ -9,9 +9,11 @@ import logging
 from qlir.data.core.exponential_backoff import backoff_step
 from qlir.data.sources.drift.resolution_helpers import driftres_typed_to_string, timefreq_to_driftres_typed
 from qlir.io.writer import _prep_path
+
 log = logging.getLogger(__name__)
 
 from qlir.data.core.infer import infer_dataset_identity
+from qlir.data.core.paths import from_canonical_data_root
 
 from qlir.data.sources.drift.symbol_map import DriftSymbolMap
 from qlir.data.sources.drift.time_utils import to_drift_valid_unix_timerange
@@ -27,7 +29,7 @@ from drift_data_api_client.models.get_market_symbol_candles_resolution_resolutio
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
 from qlir.data.quality.candles import validate_candles
-from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles, normalize_drift_fills_candles
+from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles
 from qlir.io.checkpoint import write_checkpoint, FileType
 from qlir.io.union_files import union_file_datasets
 from qlir.io.reader import read
@@ -39,7 +41,7 @@ from qlir.data.sources.drift.write_wrappers import writedf_and_metadata
 
 import math
 
-def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts: datetime | None = None, to_ts: datetime | None = None, save_dir_override: Path | None = None, filetype_out: FileType = FileType.PARQUET):
+def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill, base_resolution: TimeFreq, from_ts: datetime | None = None, to_ts: datetime | None = None, save_dir_override: Path | None = None, filetype_out: FileType = FileType.PARQUET):
 
 
     drift_symbol = DriftSymbolMap.to_venue(symbol)
@@ -49,10 +51,11 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
 
     intended_first_unix, intended_final_unix = to_drift_valid_unix_timerange(drift_symbol, drift_res)
     
-    temp_folder = f"tmp/{drift_symbol}_{drift_res}/"
+    save_folder = f"{oracle_or_fill.value}/{drift_symbol}_{drift_res}/"
+    temp_folder = f"tmp/{save_folder}"
 
     next_call_unix = intended_final_unix # seed for FIRST call only
-    log.info("Paginiating backwards from: %s", datetime.fromtimestamp(intended_final_unix, timezone.utc))
+    log.info("Paginating backwards from: %s", datetime.fromtimestamp(intended_final_unix, timezone.utc))
     
     pages: list[pd.DataFrame] = [] 
     earliest_got_ts = math.inf
@@ -79,7 +82,8 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
             page = pd.DataFrame(data["records"])
 
             # Just for clarification that OracleOrFill is fill, therfore we are using the fill version of normalize drift candles... maybe i"ll refactor later so there are not two implementations of get_candles
-            oracle_or_fill = OracleOrFill.fill
+            if oracle_or_fill != OracleOrFill.fill:
+                raise ValueError("fills.py get_candles was called, but OracleOrFill.fills was not passed. You either forgot to pass the param or you may be invoking a function you didnt expect (check imports on the caller)")
             clean = normalize_drift_candles(page, keep_fills= True, keep_oracle= False, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
@@ -120,7 +124,16 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
     log.info("First Candle: %s", dq_report.first_ts)
     log.info("Last Candle: %s", dq_report.final_ts)
     
-    writedf_and_metadata(clean_df, base_resolution, symbol, save_dir_override)
+
+    if save_dir_override:
+        raise NotImplementedError("Save dir override currently needs to be refactored (writedf and metadata now takes a suffix str rather than a path)")
+        log.info("save_dir_override was passed to get candles, therefore the data wont be saved to the canonical path, but rather to: %s", save_dir_override)
+        writedf_and_metadata(clean_df, base_resolution, symbol, )
+    else: 
+        suffix_str = f"/{oracle_or_fill.value}/candles/"
+        writedf_and_metadata(clean_df, base_resolution, symbol, suffix_str)
+
+    
     
     print(f"Clearing temp files at {temp_folder}")
     shutil.rmtree(_prep_path(temp_folder))
@@ -157,7 +170,7 @@ def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None =
    
     log.info(f"Getting new {resolution_str} {effective_symbol} candles since {current_last_candle}")
     
-    new_candles_df = get_candles(canoncial_instr, base_resolution=timefreq, from_ts=current_last_candle )
+    new_candles_df = _get_candles(canoncial_instr, base_resolution=timefreq, from_ts=current_last_candle, oracle_or_fill=OracleOrFill.fill)
     full_df = union_and_sort([existing_df, new_candles_df], sort_by=["tz_start"])
     
     writedf_and_metadata(full_df, symbol=canoncial_instr, base_resolution=timefreq)
@@ -167,4 +180,4 @@ def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None =
 
 def get_all_candles(symbol: CanonicalInstrument,  base_resolution: TimeFreq, oracle_or_fill: OracleOrFill): 
     # oracle_or_fill is not passed b/c we are importing from fills.py, so the actual func being called is the one that is imported 
-    return get_candles(symbol, base_resolution)
+    return _get_candles(symbol=symbol, base_resolution=base_resolution, oracle_or_fill=oracle_or_fill)

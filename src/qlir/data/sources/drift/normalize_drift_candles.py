@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import deque
 from typing import Optional
 import logging
-
+from qlir.utils.logdf import logdf
 import pandas as pd
 
 log = logging.getLogger(__name__)
@@ -108,27 +108,27 @@ def normalize_drift_candles(
     out = df
 
     if keep_ts_start_unix:
-        out["ts_start_unix"] = out["timestamp"]
+        out["ts_start_unix"] = out["ts"]
 
     # ---- Timestamp → UTC-aware ----
-    ts = out["timestamp"]
+    ts = out["ts"]
     if pd.api.types.is_numeric_dtype(ts):
         # crude but effective heuristic: < 1e11 ≈ seconds, else ms
         unit = "s" if float(ts.max()) < 1e11 else "ms"
         ts = pd.to_datetime(ts, unit=unit, utc=True, errors="coerce")
     else:
         ts = pd.to_datetime(ts, utc=True, errors="coerce")
-    out["timestamp"] = ts
+    out["ts"] = ts
 
     # ---- Bounds from semantics ----
     candle_size = _get_candle_size(resolution)
 
     if _LABEL == "start":
-        out["tz_start"] = out["timestamp"]
-        out["tz_end"] = out["timestamp"] + candle_size # type: ignore[operator]
+        out["tz_start"] = out["ts"]
+        out["tz_end"] = out["ts"] + candle_size # type: ignore[operator]
     else:  # "end"
-        out["tz_end"] = out["timestamp"]
-        out["tz_start"] = out["timestamp"] - candle_size
+        out["tz_end"] = out["ts"]
+        out["tz_start"] = out["ts"] - candle_size
 
     # Mark partial last candle if tz_end in future (rolling)
     # if _ROLLING_LAST_CLOSE:

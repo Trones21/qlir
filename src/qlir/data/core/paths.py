@@ -1,5 +1,7 @@
 # data/core/paths.py
 from __future__ import annotations
+import logging
+log = logging.getLogger(__name__)
 
 from qlir.time.timefreq import TimeFreq
 
@@ -63,6 +65,35 @@ def get_data_root(user_root: Optional[Path | str] = None) -> Path:
 # Directory helpers
 # ---------------------------------------------------------------------------
 
+def from_canonical_data_root(path_ext: Optional[str | Path] = None,
+                              user_root: Optional[str | Path] = None) -> Path:
+    """
+    Return an absolute path rooted under the canonical data root.
+
+    If `path_ext` is absolute, it is returned unchanged.
+    If relative, it becomes: get_data_root(user_root) / path_ext
+    """
+    root = get_data_root(user_root)
+
+    if path_ext is None:
+        log.info(
+        "from_canonical_data_root. path_ext param was none, therefore returning root: %s", root)
+        return root
+
+    p = Path(path_ext)
+
+    log.info(
+        "from_canonical_data_root: root=%s, ext=%s, final=%s",
+        root,
+        path_ext,
+        p
+    )
+    if p.is_absolute():
+        return p
+
+    return root / p
+
+
 def datasource_dir(
     datasource: str,
     *,
@@ -98,6 +129,7 @@ def candles_path(
     instrument_id: str,
     resolution: TimeFreq,
     datasource: str,
+    dir_suffix_str: str, 
     user_root: Optional[Path | str] = None,
     ext: str = ".parquet",
 ) -> Path:
@@ -114,6 +146,8 @@ def candles_path(
     resolution : TimeFreq
     datasource : str
         Name of the datasource (e.g. "drift", "helius", "kaiko")
+    dir_suffix_str:
+        This is the full dir path -- so if you want the file at /DRIFT/candles/oracle/, you would pass /candles/oracle/ (DRIFT portion is arleady taken care of via datsource param )
     user_root : Path | str | None
         Overrides the data root. If None, `get_data_root` is used.
     ext : str
@@ -124,7 +158,11 @@ def candles_path(
     Path
         Full canonical path to the dataset file.
     """
-    ds_dir = datasource_dir(datasource, user_root=user_root)
+    if len(dir_suffix_str) > 0:
+        if not (dir_suffix_str.startswith("/") and dir_suffix_str.endswith("/")):
+            raise ValueError("dir_suffix_str should be wrapped in /. got %s", dir_suffix_str)
+    dir_from_root = datasource + dir_suffix_str
+    ds_dir = datasource_dir(dir_from_root, user_root=user_root)
     filename = candle_filename(instrument_id, resolution, ext=ext)
     return ds_dir / filename
 
