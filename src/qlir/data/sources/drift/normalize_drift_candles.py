@@ -11,8 +11,8 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 # ---- Drift-specific config -------------------------------------------------
- _QUOTE_VOLUME = 'quoteVolume'
- _BASE_VOLUME = 'baseVolume'
+_QUOTE_VOLUME = 'quoteVolume'
+_BASE_VOLUME = 'baseVolume'
 _FILLS_OHLC_COLS = ['fillOpen', 'fillHigh', 'fillLow', 'fillClose']
 _ORACLE_OHLC_COLS = ['oracleOpen', 'oracleHigh', 'oracleLow', 'oracleClose']
 

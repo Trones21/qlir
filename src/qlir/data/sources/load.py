@@ -5,6 +5,7 @@ import pandas as pd
 
 from qlir import io
 from qlir.data.core.instruments import CanonicalInstrument
+from qlir.data.sources.drift.fetch.oracleorfill import OracleOrFill
 from qlir.data.sources.drift.symbol_map import DriftSymbolMap
 from ..trash.currently_unused.schema import validate_ohlcv, OhlcvContract
 import pyarrow.parquet as pq
@@ -13,7 +14,8 @@ import logging
 from qlir.data.core.datasource import DataSource
 from qlir.time.timefreq import TimeFreq
 
-from qlir.data.sources.drift.fetch import get_all_candles
+from qlir.data.sources.drift.fetch.fills import get_all_candles as get_all_fill_candles
+from qlir.data.sources.drift.fetch.oracle import get_all_candles as get_all_oracle_candles
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +39,7 @@ def candles_from_disk_or_network(
     symbol: CanonicalInstrument | None,
     base_resolution: TimeFreq | None,
     datasource: Optional[DataSource] = None,
+    oracle_or_fill: OracleOrFill
 ):
     """
     Load candles either from a local file or from an external datasource.
@@ -66,14 +69,14 @@ def candles_from_disk_or_network(
     """
 
     if disk_or_network is DiskOrNetwork.DISK:    
-        return candles_from_disk_via_explicit_filepath(file_uri)
+        return candles_from_disk_via_explicit_filepath(file_uri, freq=base_resolution)
 
     if disk_or_network is DiskOrNetwork.NETWORK:
         
         if any(x is None for x in [symbol, base_resolution, datasource]):
             log.info(f"Symbol (CanonicalInstrument), base_resolution (TimeFreq), and datasource (Datasource) must be passed when fetching from network")
 
-        return candles_from_network(symbol=symbol, base_resolution=base_resolution, source=datasource)
+        return candles_from_network(symbol=symbol, base_resolution=base_resolution, source=datasource, oracle_or_fill=oracle_or_fill)
 
 
 def candles_from_disk_via_built_filepath(
@@ -147,12 +150,20 @@ def candles_from_disk_validated(
     return clean_df, report, issues
 
 
-def candles_from_network(source, symbol, base_resolution):
+def candles_from_network(source, symbol, base_resolution, oracle_or_fill: OracleOrFill):
 
     # ----- 3. Fetch from network ---------------------------------------------
     if source is DataSource.DRIFT:
+        # Oracle or fill param has been decided, im juts calling different funcs depending on the value of the param passed
+        if OracleOrFill is OracleOrFill.oracle:
+            log.info(f"Fetching oracle candles from Drift base_resolution={base_resolution}")
+            return get_all_oracle_candles(symbol=symbol, base_resolution=base_resolution, oracle_or_fill=oracle_or_fill)
+        
+        if OracleOrFill is OracleOrFill.fill:
+            log.info(f"Fetching fill candles from Drift base_resolution={base_resolution}")
+            return get_all_fill_candles(symbol=symbol, base_resolution=base_resolution, oracle_or_fill=oracle_or_fill)
+        
 
-        log.info(f"Fetching candles from Drift base_resolution={base_resolution}")
         return get_all_candles(symbol, base_resolution)
 
     if source is DataSource.KAIKO:

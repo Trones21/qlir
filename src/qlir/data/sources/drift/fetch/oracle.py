@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import Enum
 import json
 import shutil
 from typing import Any, Dict, Optional
@@ -7,6 +8,7 @@ import pandas as pd
 import logging
 
 from qlir.data.core.exponential_backoff import backoff_step
+from qlir.data.sources.drift.fetch.oracleorfill import OracleOrFill
 from qlir.data.sources.drift.resolution_helpers import driftres_typed_to_string, timefreq_to_driftres_typed
 from qlir.io.writer import _prep_path
 log = logging.getLogger(__name__)
@@ -39,7 +41,8 @@ from qlir.data.sources.drift.write_wrappers import writedf_and_metadata
 
 import math
 
-def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts: datetime | None = None, to_ts: datetime | None = None, save_dir_override: Path | None = None, filetype_out: FileType = FileType.PARQUET):
+
+def get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill,  base_resolution: TimeFreq, from_ts: datetime | None = None, to_ts: datetime | None = None, save_dir_override: Path | None = None, filetype_out: FileType = FileType.PARQUET):
     
     drift_symbol = DriftSymbolMap.to_venue(symbol)
     client = Client(DRIFT_BASE_URI)
@@ -48,7 +51,7 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
 
     intended_first_unix, intended_final_unix = to_drift_valid_unix_timerange(drift_symbol, drift_res)
     
-    temp_folder = f"tmp/{drift_symbol}_{drift_res}/"
+    temp_folder = f"tmp/{oracle_or_fill}/{drift_symbol}_{drift_res}/"
 
     next_call_unix = intended_final_unix # seed for FIRST call only
     log.info("Paginiating backwards from: %s", datetime.fromtimestamp(intended_final_unix, timezone.utc))
@@ -76,7 +79,12 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
         if response.content:
             data = json.loads(response.content.decode())
             page = pd.DataFrame(data["records"])
-            clean = normalize_drift_candles(page, keep_fills= True, keep_oracle= False, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
+            if oracle_or_fill == OracleOrFill.oracle:
+                clean = normalize_drift_candles(page, keep_fills= False, keep_oracle= True, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
+            if oracle_or_fill == OracleOrFill.fill:
+                clean = normalize_drift_candles(page, keep_fills= True, keep_oracle= False, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
+            if oracle_or_fill != OracleOrFill.oracle and oracle_or_fill != OracleOrFill.fill:
+                raise ValueError("Unexpected OracleOrFill value passed to get_candles: %s", oracle_or_fill)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
             
@@ -161,5 +169,5 @@ def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None =
     return full_df
 
 
-def get_all_candles(symbol: CanonicalInstrument,  base_resolution: TimeFreq): 
-    return get_candles(symbol, base_resolution)
+def get_all_candles(symbol: CanonicalInstrument,  base_resolution: TimeFreq, oracle_or_fill: OracleOrFill): 
+    return get_candles(symbol, base_resolution, oracle_or_fill=oracle_or_fill)

@@ -34,13 +34,14 @@ from qlir.io.reader import read
 from qlir.data.sources.drift.constants import DRIFT_BASE_URI, DRIFT_ALLOWED_RESOLUTIONS
 from qlir.df.utils import union_and_sort
 from datetime import datetime, timezone
-
+from .oracleorfill import OracleOrFill
 from qlir.data.sources.drift.write_wrappers import writedf_and_metadata
 
 import math
 
 def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts: datetime | None = None, to_ts: datetime | None = None, save_dir_override: Path | None = None, filetype_out: FileType = FileType.PARQUET):
-    
+
+
     drift_symbol = DriftSymbolMap.to_venue(symbol)
     client = Client(DRIFT_BASE_URI)
     drift_res = timefreq_to_driftres_typed(base_resolution)
@@ -76,6 +77,9 @@ def get_candles(symbol: CanonicalInstrument, base_resolution: TimeFreq, from_ts:
         if response.content:
             data = json.loads(response.content.decode())
             page = pd.DataFrame(data["records"])
+
+            # Just for clarification that OracleOrFill is fill, therfore we are using the fill version of normalize drift candles... maybe i"ll refactor later so there are not two implementations of get_candles
+            oracle_or_fill = OracleOrFill.fill
             clean = normalize_drift_candles(page, keep_fills= True, keep_oracle= False, resolution=drift_res_str, keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
@@ -161,5 +165,6 @@ def add_new_candles_to_dataset(existing_file: str, symbol_override: str | None =
     return full_df
 
 
-def get_all_candles(symbol: CanonicalInstrument,  base_resolution: TimeFreq): 
+def get_all_candles(symbol: CanonicalInstrument,  base_resolution: TimeFreq, oracle_or_fill: OracleOrFill): 
+    # oracle_or_fill is not passed b/c we are importing from fills.py, so the actual func being called is the one that is imported 
     return get_candles(symbol, base_resolution)
