@@ -93,7 +93,8 @@ def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill,  base
             # currently going to paginate backward from final_ts
             first_row = sorted.iloc[0]
             last_row =  sorted.iloc[-1]
-            log.info(f"Retrieved {drift_res_str} {symbol.value} candles. from: {first_row['tz_start']} to {last_row['tz_start']}")
+
+            log.info(f"Retrieved {len(sorted)} {drift_res_str}_{base_resolution.unit.value} {symbol.value} candles. from: {first_row['tz_start']} to {last_row['tz_start']}")
             earliest_got_ts = first_row['ts_start_unix']
             next_call_unix = earliest_got_ts - 1 # remove 1 second to avoid duplicating a row
             if len(pages) > 50:
