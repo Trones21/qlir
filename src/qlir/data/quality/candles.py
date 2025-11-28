@@ -17,7 +17,17 @@ OHLCV_COLS = ["open", "high", "low", "close", "volume"]
 # -------------------------------------------------------------------
 #  Sorting & deduplication
 # -------------------------------------------------------------------
-def _sort_dedupe(df: pd.DataFrame, time_col: str = "tz_start") -> tuple[pd.DataFrame, int]:
+
+def _sort_dedupe(
+    df: pd.DataFrame,
+    time_col: str = "tz_start",
+) -> tuple[pd.DataFrame, int, Optional[pd.DataFrame]]:
+    """
+    Returns:
+        out: de-duplicated df
+        n_dropped: number of rows dropped
+        conflicts: df of conflicting duplicates, or None if none
+    """
     before = len(df)
     if time_col not in df.columns:
         raise ValueError(f"Missing required time column '{time_col}'")
@@ -25,6 +35,8 @@ def _sort_dedupe(df: pd.DataFrame, time_col: str = "tz_start") -> tuple[pd.DataF
     out = df.copy()
     out[time_col] = ensure_utc_series(out[time_col])
     out = out.sort_values(time_col)
+
+    conflicts: list[pd.DataFrame] = []
 
     dup_mask = out.duplicated(subset=[time_col], keep=False)
     if dup_mask.any():
@@ -35,29 +47,98 @@ def _sort_dedupe(df: pd.DataFrame, time_col: str = "tz_start") -> tuple[pd.DataF
             present_cols = [c for c in OHLCV_COLS if c in group.columns]
             group_no_exact = group.drop_duplicates()
 
+            # Only one unique row → safe: drop exact dupes, keep one
             if len(group_no_exact) == 1:
                 drop_these = [i for i in group.index if i != group_no_exact.index[0]]
                 to_drop_idx.extend(drop_these)
-            else:
-                if not present_cols:
-                    raise ValueError(f"Conflicting duplicates for {time_col}={ts}")
+                continue
 
-                base = group_no_exact.iloc[0][present_cols]
-                if not group_no_exact[present_cols].eq(base).all(axis=None):
-                    log.error(
-                        "Conflicting duplicate rows for %s=%s: %s",
-                        time_col, ts, group_no_exact.to_dict(orient="records")
+            # Multiple non-identical rows at same timestamp → potential conflict
+            if not present_cols:
+                # Nothing to compare on – definitely a conflict
+                conflicts.append(
+                    group_no_exact.assign(
+                        _conflict_time=ts,
+                        _conflict_reason="no_present_ohlcv_cols",
                     )
-                    raise ValueError(f"Conflicting duplicates for {time_col}={ts}")
+                )
+                continue
 
-                drop_these = [i for i in group.index if i != group_no_exact.index[0]]
+            base = group_no_exact.iloc[0][present_cols]
+            same_as_base = group_no_exact[present_cols].eq(base).all(axis=1)
+
+            if same_as_base.all():
+                # All OHLCV columns match base → safe, keep first, drop rest
+                keep_idx = group_no_exact.index[0]
+                drop_these = [i for i in group.index if i != keep_idx]
                 to_drop_idx.extend(drop_these)
+            else:
+                # True content conflict on OHLCV columns
+                conflicts.append(
+                    group_no_exact.assign(
+                        _conflict_time=ts,
+                        _conflict_reason="ohlcv_mismatch",
+                    )
+                )
 
-        out = out.drop(index=to_drop_idx)
+        # Drop all safe duplicates
+        if to_drop_idx:
+            out = out.drop(index=to_drop_idx)
 
     out = out.reset_index(drop=True)
-    return out, before - len(out)
+    n_dropped = before - len(out)
 
+    conflicts_df: Optional[pd.DataFrame]
+    if conflicts:
+        conflicts_df = pd.concat(conflicts, ignore_index=True)
+        # You can also log summary here if you want
+        log.error(
+            "Found %d conflicting duplicate groups on '%s' (total %d rows)",
+            conflicts_df["_conflict_time"].nunique(),
+            time_col,
+            len(conflicts_df),
+        )
+    else:
+        conflicts_df = None
+
+    return out, n_dropped, conflicts_df
+
+
+# -------------------------------------------------------------------
+#  Frequency inference (returns structured object)
+# -------------------------------------------------------------------
+def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
+    if df.empty or "tz_start" not in df.columns:
+        return None
+
+    s = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
+    if len(s) < 2:
+        return None
+
+    delta = s.iloc[1] - s.iloc[0]
+    seconds = delta.total_seconds()
+
+    if seconds % 86400 == 0:
+        return TimeFreq(count=int(seconds // 86400), unit=TimeUnit.DAY)
+    elif seconds % 3600 == 0:
+        return TimeFreq(count=int(seconds // 3600), unit=TimeUnit.HOUR)
+    elif seconds % 60 == 0:
+        return TimeFreq(count=int(seconds // 60), unit=TimeUnit.MINUTE)
+    elif seconds >= 1:
+        return TimeFreq(count=int(seconds), unit=TimeUnit.SECOND)
+    else:
+        try:
+            off = pd.tseries.frequencies.to_offset(delta)
+            return TimeFreq(count=off.n, unit=off.name, pandas_offset=off)
+        except ValueError:
+            return None
+
+
+# -------------------------------------------------------------------
+#  Candle gap detection
+# -------------------------------------------------------------------
+def detect_candle_gaps(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[pd.Timestamp]:
+    if df.empty or freq is None or 
 
 # -------------------------------------------------------------------
 #  Frequency inference (returns structured object)
