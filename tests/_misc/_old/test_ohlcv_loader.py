@@ -1,6 +1,6 @@
 # tests/test_ohlcv_loader.py
 import pandas as pd
-from qlir.data.loader.load import load_ohlcv
+from qlir.data.sources.load import old_load_ohlcv
 from qlir.io import write
 import pytest
 pytestmark = pytest.mark.local
@@ -17,7 +17,7 @@ def test_load_ohlcv_csv(tmp_path):
     df = _seed_df()
     p = tmp_path / "x.csv"
     write(df, p)  # our writer (calls DataFrame.to_csv)
-    got = load_ohlcv(p)
+    got = old_load_ohlcv(p)
     assert list(got.columns)[:6] == ["timestamp","open","high","low","close","volume"]
     assert pd.api.types.is_datetime64tz_dtype(got["timestamp"]) # type: ignore[attr-defined]
 
@@ -26,7 +26,7 @@ def test_load_ohlcv_parquet(tmp_path):
     df = _seed_df()
     p = tmp_path / "x.parquet"
     write(df, p, compression="snappy")
-    got = load_ohlcv(p)
+    got = old_load_ohlcv(p)
     assert list(got.columns)[:6] == ["timestamp","open","high","low","close","volume"]
     assert pd.api.types.is_datetime64tz_dtype(got["timestamp"]) # type: ignore[attr-defined]
 
@@ -34,6 +34,6 @@ def test_load_ohlcv_json(tmp_path):
     df = _seed_df()
     p = tmp_path / "x.json"
     write(df, p)  # defaults to records JSON
-    got = load_ohlcv(p)
+    got = old_load_ohlcv(p)
     assert list(got.columns)[:6] == ["timestamp","open","high","low","close","volume"]
     assert pd.api.types.is_datetime64tz_dtype(got["timestamp"]) # type: ignore[attr-defined]

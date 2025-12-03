@@ -127,7 +127,6 @@ def candles_from_disk_validated(
     Load + validate + log candle DQ in one place.
     """
 
-    return NotImplementedError("Need to introduce logic to detemrine whether fill candles or orcale candles are read")
     # --- normalize input
     file_uri = io.writer._prep_path(file_uri)
     if not file_uri.exists():

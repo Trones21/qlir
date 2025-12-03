@@ -50,6 +50,8 @@ poetry run fetch_and_append_new_data
 __PROJECT_NAME__/
   README.md
   pyproject.toml
+  etl/
+    <source>_etl.py   # functions for managing data layers (fetch raw, clean to df, etc.)
   src/__PROJECT_NAME__/
     __init__.py
     main.py
@@ -115,16 +117,7 @@ This avoids an explosion of redundant files while keeping resampling flexible.
 
 ### 4. Updating datasets on disk
 
-Typical study pipelines include an explicit update step, e.g.:
-
-```python
-def update_disk_dataset():
-    """Fetch new candles, merge with existing data, and write back to disk."""
-    ...
-```
-
-You can call this from your study, or maintain separate updater scripts/CLIs
-that keep your canonical datasets fresh.
+Use the source specific etl files to get and clean data
 
 Once the canonical data exists on disk, your studies can repeatedly:
 

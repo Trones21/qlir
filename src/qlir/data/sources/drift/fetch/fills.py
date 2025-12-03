@@ -49,7 +49,7 @@ def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill, base_
     drift_res = timefreq_to_driftres_typed(base_resolution)
     drift_res_str = driftres_typed_to_string(drift_res)
 
-    intended_first_unix, intended_final_unix = to_drift_valid_unix_timerange(drift_symbol, drift_res)
+    intended_first_unix, intended_final_unix = to_drift_valid_unix_timerange(drift_symbol, drift_res, from_ts=from_ts, to_ts=to_ts)
     
     save_folder = f"{oracle_or_fill.value}/{drift_symbol}_{drift_res}/"
     temp_folder = f"tmp/{save_folder}"

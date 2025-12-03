@@ -55,6 +55,8 @@ def main() -> None:
     logging_setup = render_template("logging_setup.py.tpl", substitutions)
     fetch_initial_data = render_template("fetch_initial_data.py.tpl", substitutions)
     fetch_and_append_new_data = render_template("fetch_and_append_new_data.py.tpl", substitutions)
+    drift_etl = render_template("etl/drift.py.tpl", substitutions)
+    binance_etl = render_template("etl/binance.py.tpl", substitutions)
 
     # --- write files
     write(dest / ".gitignore", gitignore)
@@ -63,8 +65,16 @@ def main() -> None:
     write(dest / "src" / name / "__init__.py", "")
     write(dest / "src" / name / "main.py", main_py)
     write(dest / "src" / name / "logging_setup.py", logging_setup)
+
+    # master scripts for the user to run, will need to be updated, currently only does old drift implementation (no raw layer) 
     write(dest / "src" / name / "fetch_initial_data.py", fetch_initial_data)
     write(dest / "src" / name / "fetch_and_append_new_data.py", fetch_and_append_new_data)
+    
+    # etl scripts  
+    write(dest / "etl" / "binance.py", binance_etl)
+    write(dest / "etl" / "drift.py", drift_etl)
+    
+    # Tests Dir
     write(dest / "tests" / "test_smoke.py", "def test_placeholder(): assert True\n")
 
     print(f"✅ Created starter project at {dest}")

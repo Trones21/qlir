@@ -8,7 +8,10 @@ Currently I have:
 markers =
     network: test requires network access (HTTP, RPC, real API)
     local: test must not make network calls
-    integration: Integration tests - may or may not make network calls 
+    integration: Integration tests - may or may not make network calls
+    datasources: 
+    datasource.<source> # optional filtering to tests specific to certain datasources 
+    datasource.<source>.<endpoint> # an even further filtering, may not exist for all endpoints so double check the test itself for the mark
 ```
 
 To mark all tests within a file, add:
