@@ -101,7 +101,7 @@ def run_klines_worker(
 
     _ensure_dir(sym_interval_dir)
     _ensure_dir(responses_dir)
-
+    log.info("Saving raw reponses to: %s", responses_dir)
     backoff = 1.0
 
     while True:
@@ -129,7 +129,9 @@ def run_klines_worker(
         if not missing:
             # No work to do; reset backoff and sleep for a bit.
             backoff = 1.0
+            log.info(f"No missing slices, sleeping for {poll_interval_sec} seconds")
             time.sleep(poll_interval_sec)
+            
             continue
 
         for slice_key in missing:
@@ -187,10 +189,11 @@ def run_klines_worker(
                     }
                 )
                 manifest["slices"][key] = entry
-
+        
                 _update_summary(manifest)
                 _save_manifest(manifest_path, manifest)
-
+                log.warning("Exception occured for: %s", entry)
+                log.warning(exc)
                 time.sleep(backoff)
                 backoff = min(backoff * 2.0, max_backoff_sec)
 
@@ -244,6 +247,7 @@ def _load_manifest(
             return json.load(f)
 
     # Fresh skeleton
+    log.info("Creating fresh manifest because there was no manifest found at: %s", manifest_path)
     return {
         "version": 1,
         "endpoint": "klines",
@@ -268,6 +272,7 @@ def _save_manifest(manifest_path: Path, manifest: Dict) -> None:
     with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     tmp_path.replace(manifest_path)
+    print("Manifest updated: ", manifest_path)
 
 
 def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:
@@ -325,3 +330,4 @@ def _update_summary(manifest: Dict) -> None:
         "failed_slices": failed,
         "last_evaluated_at": _now_iso(),
     }
+    log.info("Manifest Summary Updated: %s", manifest["summary"])

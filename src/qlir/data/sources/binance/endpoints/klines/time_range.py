@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 from datetime import datetime, timezone
 from typing import Optional, Tuple
@@ -8,7 +9,8 @@ import httpx
 
 from .urls import build_kline_url, interval_to_ms
 from .model import KlineSliceKey
-
+import logging
+log = logging.getLogger(__name__)
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
@@ -79,6 +81,9 @@ def probe_latest_open_time(
     """
     if now_ms is None:
         now_ms = _now_ms()
+    
+    # extra guard in case type is ignored and a float is passed
+    now_ms = math.floor(now_ms)
 
     url = build_kline_url(
         symbol=symbol,

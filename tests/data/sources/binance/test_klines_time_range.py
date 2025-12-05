@@ -1,3 +1,4 @@
+import math
 import time
 
 import pytest
@@ -5,20 +6,25 @@ import logging
 log = logging.getLogger(__name__)
 from qlir.data.sources.binance.endpoints.klines.time_range import compute_time_range
 
-# This is a LIVE integration test against Binance.
-# You probably want to mark it so it can be skipped by default in CI:
-pytestmark = pytest.mark.live_binance
-
-
 # ---------------------------------------------------------------------------
 # Configuration for this test
 # ---------------------------------------------------------------------------
 
-# Use a fixed "now" timestamp for reproducibility.
-# 1) Set this to int(time.time() * 1000) at the moment you decide.
-# 2) Run compute_time_range(...) manually (e.g. in a REPL) with that same now_ms.
-# 3) Paste the resulting (start_ms, end_ms) into EXPECTED_RANGES below.
-NOW_MS_FOR_TEST = 0  # <-- TODO: set this once, e.g. int(time.time() * 1000)
+# Current UTC time in milliseconds
+now_ms = int(time.time() * 1000)
+NOW_MS_FOR_TEST = now_ms
+
+# Lengths of time windows
+MS_PER_SECOND = 1000
+MS_PER_MINUTE = 60_000
+
+# ---- FLOORING OPERATIONS ----
+
+# Floor to the current UTC minute (in milliseconds)
+minute_floor_ms = (now_ms // MS_PER_MINUTE) * MS_PER_MINUTE
+
+# Floor to the current UTC second (in milliseconds)
+second_floor_ms = (now_ms // MS_PER_SECOND) * MS_PER_SECOND
 
 # Fill these in after you manually probe with the same NOW_MS_FOR_TEST.
 # Example process (in a REPL / notebook):
@@ -28,11 +34,16 @@ NOW_MS_FOR_TEST = 0  # <-- TODO: set this once, e.g. int(time.time() * 1000)
 #   compute_time_range("BTCUSDT", "1m", limit=1000, now_ms=NOW_MS_FOR_TEST)
 #   compute_time_range("ETHUSDT", "1m", limit=1000, now_ms=NOW_MS_FOR_TEST)
 #
-# Then copy the returned tuples into EXPECTED_RANGES.
+# or just run the test and copy the built urls into a browser to get the values
+
 EXPECTED_RANGES = {
-    # "symbol": (expected_start_ms, expected_end_ms)
-    "BTCUSDT": (0, 0),  # TODO: replace with real values
-    "ETHUSDT": (0, 0),  # TODO: replace with real values
+    # "symbolinterval": (expected_start_ms, expected_end_ms)
+    "BTCUSDT1m": (1502942400000 , minute_floor_ms),
+    "ETHUSDT1m": (1502942400000, minute_floor_ms), 
+    "SOLUSDT1m": ( 1597125600000, minute_floor_ms),
+    "BTCUSDT1s": (1502942428000, second_floor_ms),
+    "ETHUSDT1s": (1502942429000, second_floor_ms), #need to get via the url when internet is back https://api.binance.com/api/v3/klines?symbol=ETHUSDT&interval=1s&limit=1&startTime=0 
+    "SOLUSDT1s": (1597125600000, second_floor_ms),
 }
 
 
@@ -46,6 +57,10 @@ EXPECTED_RANGES = {
 @pytest.mark.parametrize("symbol, interval", [
     ("BTCUSDT", "1m"),
     ("ETHUSDT", "1m"),
+    ("SOLUSDT", "1m"),
+    ("BTCUSDT", "1s"),
+    ("ETHUSDT", "1s"),
+    ("SOLUSDT", "1s"),
 ])
 def test_compute_time_range_live(symbol: str, interval: str):
     """
@@ -60,7 +75,7 @@ def test_compute_time_range_live(symbol: str, interval: str):
         "and fill EXPECTED_RANGES before running this test."
     )
 
-    expected = EXPECTED_RANGES.get(symbol)
+    expected = EXPECTED_RANGES.get(symbol+interval)
     assert expected is not None, f"No expected range configured for {symbol}"
 
     expected_start_ms, expected_end_ms = expected
@@ -74,10 +89,12 @@ def test_compute_time_range_live(symbol: str, interval: str):
 
     # Exact equality since you will paste the values that compute_time_range
     # produced for this exact NOW_MS_FOR_TEST.
+    # log.info(f"start_ms: {start_ms}, expected_start_ms: {expected_start_ms}")
     assert start_ms == expected_start_ms, (
         f"{symbol} {interval}: start_ms mismatch: "
         f"got {start_ms}, expected {expected_start_ms}"
     )
+    # log.info(f"end_ms: {end_ms}, expected_end_ms: {expected_end_ms}")
     assert end_ms == expected_end_ms, (
         f"{symbol} {interval}: end_ms mismatch: "
         f"got {end_ms}, expected {expected_end_ms}"
