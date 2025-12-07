@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 import re
 import keyword
+from typing import Optional
 
 
 def write(path: Path, content: str) -> None:
@@ -15,12 +16,15 @@ def templates_dir() -> Path:
     return Path(__file__).parent / "templates"
 
 
-def render_template(template_name: str, substitutions: dict[str, str]) -> str:
+def render_template(template_name: str, substitutions: Optional[dict[str, str]]) -> str:
     """
     Load a template file and apply simple token substitution.
 
     Templates should use __TOKEN__ placeholders, e.g. __PROJECT_NAME__.
     """
+    if substitutions is None:
+        substitutions = {}
+
     template_path = templates_dir() / template_name
     if not template_path.exists():
         sys.exit(f"❌ missing template file: {template_path}")
@@ -47,18 +51,15 @@ def main() -> None:
         # add more tokens later if you need them
     }
 
-    # --- render from templates
+    # --- Main Project files - render from templates
     gitignore = render_template("gitignore.tpl", substitutions)
     readme = render_template("README.md.tpl", substitutions)
     pyproject = render_template("pyproject.toml.tpl", substitutions)
     main_py = render_template("main.py.tpl", substitutions)
     logging_setup = render_template("logging_setup.py.tpl", substitutions)
-    fetch_initial_data = render_template("fetch_initial_data.py.tpl", substitutions)
-    fetch_and_append_new_data = render_template("fetch_and_append_new_data.py.tpl", substitutions)
-    drift_etl = render_template("etl/drift.py.tpl", substitutions)
-    binance_etl = render_template("etl/binance.py.tpl", substitutions)
 
-    # --- write files
+
+    # --- write main files
     write(dest / ".gitignore", gitignore)
     write(dest / "README.md", readme)
     write(dest / "pyproject.toml", pyproject)
@@ -66,14 +67,27 @@ def main() -> None:
     write(dest / "src" / name / "main.py", main_py)
     write(dest / "src" / name / "logging_setup.py", logging_setup)
 
+    
+    # --- Data (Fetch, ETL, etc.) ---
+
+    # Binance Data
+    binance_data_server = render_template("etl/binance/data-server.py.tpl", None)
+    binance_etl_main = render_template("etl/binance/main.py.tpl", substitutions)
+
+    write(dest / "src" / name / "etl/binance/main.py", binance_etl_main)
+    write(dest / "src" / name / "etl/binance/data-server.py", binance_data_server)
+
+    # Drift Data
     # master scripts for the user to run, will need to be updated, currently only does old drift implementation (no raw layer) 
-    write(dest / "src" / name / "fetch_initial_data.py", fetch_initial_data)
-    write(dest / "src" / name / "fetch_and_append_new_data.py", fetch_and_append_new_data)
-    
-    # etl scripts  
-    write(dest / "etl" / "binance.py", binance_etl)
-    write(dest / "etl" / "drift.py", drift_etl)
-    
+    fetch_initial_data = render_template("etl/drift/fetch_initial_data.py.tpl", None)
+    fetch_and_append_new_data = render_template("etl/drift/fetch_and_append_new_data.py.tpl", None)
+    drift_main = render_template("etl/drift/main.py.tpl", None)
+
+    write(dest / "src" / name / "etl/drift/fetch_initial_data.py", fetch_initial_data)
+    write(dest / "src" / name / "etl/drift/fetch_and_append_new_data.py", fetch_and_append_new_data)
+    write(dest / "src" / name / "etl/drift/main.py", drift_main)
+
+
     # Tests Dir
     write(dest / "tests" / "test_smoke.py", "def test_placeholder(): assert True\n")
 
@@ -82,8 +96,11 @@ def main() -> None:
     print(
         "Then run:\n"
         f"  cd {name}\n"
+        "  Open pyproject.toml and uncomment a source for qlir "
         "  poetry install\n"
-        "  poetry run analysis  # or: poetry run python -m __PACKAGE_NAME__.main\n"
+        f"  poetry run analysis  # or: poetry run python -m {name}.main\n"
+        "  if you dont have price data on your local machine (or you need to fetch new data), run one of the fetchers / data servers (etl folder)\n"
+        "      e.g. poetry run binance-data-server\n"
     )
 
 

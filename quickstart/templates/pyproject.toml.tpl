@@ -55,8 +55,10 @@ dev = ["pytest>=8.0"]
 
 [project.scripts]
 main = "__PACKAGE_NAME__.main:entrypoint"
-fetch_initial_data = "__PACKAGE_NAME__.fetch_initial_data:main"
-fetch_and_append_new_data = "__PACKAGE_NAME__.fetch_and_append_new_data:main"
+
+binance-data-server = "__PACKAGE_NAME__.etl.binance.main:fetch_raw"
+drift-fetch = "__PACKAGE_NAME__.etl.drift.fetch_initial_data:main"
+drift-append = "__PACKAGE_NAME__.etl.drift.fetch_and_append_new_data:main"
 [build-system]
 requires = ["poetry-core>=1.8.0"]
 build-backend = "poetry.core.masonry.api"

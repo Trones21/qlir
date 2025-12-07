@@ -1,7 +1,9 @@
-# etl/drift_etl.py
+import sys
+import subprocess
 
 def fetch_raw(...) -> pd.DataFrame:
     """Source-specific. No cleaning, no validation, no writing."""
+    subprocess.run([sys.executable, "fetch_initial_data.py", check=True])
 
 def normalize_raw(raw: pd.DataFrame) -> pd.DataFrame:
     """Convert raw from this venue/source into canonical candle schema."""
