@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging
+
+from qlir.time.iso import now_utc, parse_iso
 log = logging.getLogger(__name__)
 import json
 import time
@@ -12,34 +14,77 @@ from .model import KlineSliceKey, SliceStatus
 from .urls import generate_kline_slices
 from .fetch import fetch_and_persist_slice
 from .time_range import compute_time_range
-# Try to import your shared get_data_root helper.
-# Adjust the import path if it's different in your codebase.
-try:  # pragma: no cover - import wiring
-    from qlir.data.core.paths import get_data_root
-except ImportError:  # fallback so this file is locally testable
-    def get_data_root(user_root: Optional[Path | str] = None) -> Path:
-        """
-        Minimal fallback implementation.
 
-        Priority:
-            1. Explicit user_root
-            2. QLIR_DATA_ROOT env var
-            3. Default: ~/qlir_data
-        """
-        from pathlib import Path as _Path
-        import os as _os
-        log.info("qlir.data.core.paths.get_data_root() was not found/resolved. Using locally defined get_data_root() instead")
-        if user_root is not None:
-            return _Path(user_root).expanduser().resolve()
-
-        env_root = _os.environ.get("QLIR_DATA_ROOT")
-        if env_root:
-            return _Path(env_root).expanduser().resolve()
-
-        return _Path("~").expanduser().joinpath("qlir_data").resolve()
+from qlir.data.core.paths import get_data_root
 
 
 MANIFEST_FILENAME = "manifest.json"
+
+
+def _seed_manifest_with_expected_slices(manifest, expected_slices):
+    """
+    Ensure every expected slice exists in manifest with at least a 'pending' status.
+    """
+    changed = False
+    for s in expected_slices:
+        key = s.manifest_key
+        if key not in manifest:
+            manifest[key] = {
+                "status": "pending",
+                "slice_id": s.slice_id,
+                "first_ts": s.first_ts,
+                "last_ts": s.last_ts,
+                "requested_at": None,
+                "completed_at": None,
+                "relative_path": None,
+                "n_items": None,
+                "error": None,
+                "http_status": None,
+            }
+            changed = True
+    return changed
+
+
+def _compute_missing_slices(
+    expected: list[KlineSliceKey],
+    manifest: dict,
+) -> list[KlineSliceKey]:
+    """
+    Determine which slices still need work.
+
+    Scheduler-space API:
+    - input: expected slices (KlineSliceKey)
+    - output: missing slices (KlineSliceKey)
+    """
+    slices = manifest.get("slices", {})
+    missing: list[KlineSliceKey] = []
+
+    for slice_key in expected:
+        key = slice_key.composite_key()
+        entry = slices.get(key)
+
+        status_str = entry.get("status") if entry else SliceStatus.PENDING.value
+        try:
+            status = SliceStatus(status_str)
+        except ValueError:
+            status = SliceStatus.PENDING
+
+        if status in (SliceStatus.PENDING, SliceStatus.FAILED):
+            missing.append(slice_key)
+
+    return missing
+
+
+
+IN_PROGRESS_STALE_SEC = 300  # 5 minutes
+
+def is_stale(entry):
+    if entry["status"] != "in_progress":
+        return False
+    ts = entry.get("requested_at")
+    if not ts:
+        return True
+    return (now_utc() - parse_iso(ts)).total_seconds() > IN_PROGRESS_STALE_SEC
 
 
 def run_klines_worker(
@@ -122,6 +167,11 @@ def run_klines_worker(
             interval=interval,
             limit=limit,
         )
+        log.info(f"Total Expected Slice Count:{len(expected_slices)}")
+        return 
+    
+        if _seed_manifest_with_expected_slices(manifest, expected_slices):
+            _save_manifest(manifest_path, manifest)  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
 
         known_statuses = _extract_known_statuses(manifest)
         missing = _compute_missing_slices(expected_slices, known_statuses)
@@ -137,8 +187,22 @@ def run_klines_worker(
         for slice_key in missing:
             key = slice_key.composite_key()
             try:
+
+                entry = manifest[slice_key]
+                entry = manifest["slices"].get(key, {})
+
+                # Skip if another thread is currently handling this 
+                # (with stale safeguard to prevent items from being locked forever, in case the proc is killed while fetch is being performed)
+                if entry.get("status") == "in_progress" and not is_stale(entry):
+                    continue
+
+                # Mark in-progress
+                entry["status"] = "in_progress"
+                entry["requested_at"] = now_utc().isoformat()
+                _save_manifest(manifest_path, manifest)
+
                 meta = fetch_and_persist_slice(
-                    slice_key=slice_key,
+                    slice_key=sliceS_key,
                     data_root=root,
                     responses_dir=responses_dir,
                 )
@@ -154,7 +218,7 @@ def run_klines_worker(
                 #   "completed_at": ISO8601 str,
                 # }
 
-                entry = manifest["slices"].get(key, {})
+                
                 entry.update(
                     {
                         "slice_id": meta["slice_id"],
@@ -292,27 +356,19 @@ def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:
     return mapping
 
 
-def _compute_missing_slices(
-    expected: List[KlineSliceKey],
-    known_statuses: Dict[str, SliceStatus],
-) -> List[KlineSliceKey]:
-    """
-    Determine which slices are missing or need re-fetching.
+# def _compute_missing_slices(
+#     expected: List[KlineSliceKey],
+#     known_statuses: Dict[str, SliceStatus],
+# ) -> List[KlineSliceKey]:
+#     missing: List[KlineSliceKey] = []
 
-    Rules:
-        - If slice not present in manifest: fetch it.
-        - If status is PENDING or FAILED: fetch it.
-        - If status is OK: skip.
-    """
-    missing: List[KlineSliceKey] = []
+#     for slice_key in expected:
+#         key = slice_key.composite_key()
+#         status = known_statuses.get(key, SliceStatus.PENDING)
+#         if status in (SliceStatus.PENDING, SliceStatus.FAILED):
+#             missing.append(slice_key)
 
-    for slice_key in expected:
-        key = slice_key.composite_key()
-        status = known_statuses.get(key, SliceStatus.PENDING)
-        if status in (SliceStatus.PENDING, SliceStatus.FAILED):
-            missing.append(slice_key)
-
-    return missing
+#     return missing
 
 
 def _update_summary(manifest: Dict) -> None:

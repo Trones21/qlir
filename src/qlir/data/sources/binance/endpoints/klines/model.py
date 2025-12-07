@@ -11,10 +11,12 @@ class SliceStatus(str, Enum):
     - PENDING: not yet fetched or scheduled
     - OK:      successfully fetched and stored
     - FAILED:  attempted but failed (eligible for retry)
+    - IN_PROGRESS: Some thread is currently fetching 
     """
     PENDING = "pending"
     OK = "ok"
     FAILED = "failed"
+    IN_PROGRESS= "in_progress"
 
 
 @dataclass(frozen=True)

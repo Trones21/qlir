@@ -10,11 +10,15 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 from qlir.data.core.paths import get_data_root
+from __PACKAGE_NAME__.logging_setup import setup_logging, LogProfile
 from qlir.data.sources.binance.server import (
     BinanceServerConfig,
     KlinesJobConfig,
     start_data_server,
 )
+
+# See logging_setup.py for logging options (LogProfile enum) 
+setup_logging(profile=LogProfile.QLIR_INFO)
 
 def parse_csv_arg(value: str) -> list[str]:
     return [v.strip() for v in value.split(",") if v.strip()]
