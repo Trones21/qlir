@@ -57,6 +57,7 @@ dev = ["pytest>=8.0"]
 main = "__PACKAGE_NAME__.main:entrypoint"
 
 binance-data-server = "__PACKAGE_NAME__.etl.binance.main:fetch_raw"
+binance-agg-server = "__PACKAGE_NAME__.etl.binance.main:aggregate_raw"
 drift-fetch = "__PACKAGE_NAME__.etl.drift.fetch_initial_data:main"
 drift-append = "__PACKAGE_NAME__.etl.drift.fetch_and_append_new_data:main"
 [build-system]

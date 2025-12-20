@@ -71,11 +71,13 @@ def main() -> None:
     # --- Data (Fetch, ETL, etc.) ---
 
     # Binance Data
-    binance_data_server = render_template("etl/binance/data-server.py.tpl", None)
+    binance_data_server = render_template("etl/binance/data-server.py.tpl", substitutions)
+    binance_agg_server = render_template("etl/binance/agg-server.py.tpl", substitutions)
     binance_etl_main = render_template("etl/binance/main.py.tpl", substitutions)
 
     write(dest / "src" / name / "etl/binance/main.py", binance_etl_main)
     write(dest / "src" / name / "etl/binance/data-server.py", binance_data_server)
+    write(dest / "src" / name / "etl/binance/agg-server.py", binance_agg_server)
 
     # Drift Data
     # master scripts for the user to run, will need to be updated, currently only does old drift implementation (no raw layer) 

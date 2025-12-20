@@ -24,8 +24,16 @@ def fetch_raw():
     ]
     subprocess.run(cmd, check=True)
 
-def normalize_raw(raw: pd.DataFrame) -> pd.DataFrame:
-    """Convert raw from this venue/source into canonical candle schema."""
+
+def aggregate_raw():
+    args = ["--symbol", "BTCUSDT", "--interval", "1m", "--limit", "1000"]
+    subprocess.run(
+        [sys.executable, "-m", "__PACKAGE_NAME__.etl.binance.agg_server", *args],
+        check=True,
+    )
+
+def normalize(raw: pd.DataFrame) -> pd.DataFrame:
+    """Load agg parquet files from this venue/source into canonical candle schema."""
     raise NotImplementedError("Normlization not yet implemented")
 
 # def validate_clean(clean: pd.DataFrame, base_resolution: TimeFreq) -> tuple[pd.DataFrame, CandlesDQReport | None]:
