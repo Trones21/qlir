@@ -12,7 +12,7 @@ from typing import Dict, Optional, Tuple, List
 
 from .model import KlineSliceKey, SliceStatus
 from .urls import generate_kline_slices
-from .fetch import fetch_and_persist_slice
+from .fetch import fetch_and_persist_slice, _make_slice_id
 from .time_range import compute_time_range
 
 from qlir.data.core.paths import get_data_root
@@ -21,19 +21,19 @@ from qlir.data.core.paths import get_data_root
 MANIFEST_FILENAME = "manifest.json"
 
 
-def _seed_manifest_with_expected_slices(manifest, expected_slices):
+def _seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSliceKey]):
     """
     Ensure every expected slice exists in manifest with at least a 'pending' status.
     """
     changed = False
     for s in expected_slices:
-        key = s.manifest_key
-        if key not in manifest:
-            manifest[key] = {
+        composite_key = s.composite_key()
+        if composite_key not in manifest['slices']:
+            manifest['slices'][composite_key] = {
                 "status": "pending",
-                "slice_id": s.slice_id,
-                "first_ts": s.first_ts,
-                "last_ts": s.last_ts,
+                "slice_id": _make_slice_id(s),
+                "first_ts": s.start_ms,
+                "last_ts": s.end_ms,
                 "requested_at": None,
                 "completed_at": None,
                 "relative_path": None,
@@ -56,13 +56,17 @@ def _compute_missing_slices(
     - input: expected slices (KlineSliceKey)
     - output: missing slices (KlineSliceKey)
     """
-    slices = manifest.get("slices", {})
+    try:
+        slices = manifest["slices"]
+    except KeyError as exc:
+        raise RuntimeError(
+            f"Invalid manifest structure: missing 'slices' \
+              manifest keys include: {manifest.keys()}"
+        ) from exc
     missing: list[KlineSliceKey] = []
-
     for slice_key in expected:
         key = slice_key.composite_key()
         entry = slices.get(key)
-
         status_str = entry.get("status") if entry else SliceStatus.PENDING.value
         try:
             status = SliceStatus(status_str)
@@ -72,6 +76,11 @@ def _compute_missing_slices(
         if status in (SliceStatus.PENDING, SliceStatus.FAILED):
             missing.append(slice_key)
 
+    summary = {
+        "Slices": len(slices),
+        "Missing": len(missing)
+    }
+    log.info(f"_compute_missing_slices: {summary}")
     return missing
 
 
@@ -168,13 +177,12 @@ def run_klines_worker(
             limit=limit,
         )
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
-        return 
     
         if _seed_manifest_with_expected_slices(manifest, expected_slices):
-            _save_manifest(manifest_path, manifest)  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
-
+            _save_manifest(manifest_path, manifest, f"Updating Manifest with range {min_start_ms} , {max_end_ms}")  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
         known_statuses = _extract_known_statuses(manifest)
-        missing = _compute_missing_slices(expected_slices, known_statuses)
+        log.info(f"known_statuses: {len(known_statuses)}")
+        missing = _compute_missing_slices(expected=expected_slices, manifest=manifest)
 
         if not missing:
             # No work to do; reset backoff and sleep for a bit.
@@ -183,12 +191,10 @@ def run_klines_worker(
             time.sleep(poll_interval_sec)
             
             continue
-
+        
         for slice_key in missing:
             key = slice_key.composite_key()
             try:
-
-                entry = manifest[slice_key]
                 entry = manifest["slices"].get(key, {})
 
                 # Skip if another thread is currently handling this 
@@ -199,10 +205,11 @@ def run_klines_worker(
                 # Mark in-progress
                 entry["status"] = "in_progress"
                 entry["requested_at"] = now_utc().isoformat()
-                _save_manifest(manifest_path, manifest)
+
+                _save_manifest(manifest_path, manifest, "slice marked as in progress")
 
                 meta = fetch_and_persist_slice(
-                    slice_key=sliceS_key,
+                    slice_key=slice_key,
                     data_root=root,
                     responses_dir=responses_dir,
                 )
@@ -236,7 +243,7 @@ def run_klines_worker(
                 manifest["slices"][key] = entry
 
                 _update_summary(manifest)
-                _save_manifest(manifest_path, manifest)
+                _save_manifest(manifest_path, manifest, "fetched slice - marking as successful")
 
                 # Reset backoff on success
                 backoff = 1.0
@@ -255,9 +262,9 @@ def run_klines_worker(
                 manifest["slices"][key] = entry
         
                 _update_summary(manifest)
-                _save_manifest(manifest_path, manifest)
-                log.warning("Exception occured for: %s", entry)
-                log.warning(exc)
+                _save_manifest(manifest_path, manifest, "fetch slice - marking as error")
+                # log.warning("Exception occured for: %s", entry)
+                log.exception("Slice failed: %s", key)
                 time.sleep(backoff)
                 backoff = min(backoff * 2.0, max_backoff_sec)
 
@@ -328,7 +335,7 @@ def _load_manifest(
     }
 
 
-def _save_manifest(manifest_path: Path, manifest: Dict) -> None:
+def _save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") -> None:
     """
     Write manifest.json to disk atomically-ish (write then replace).
     """
@@ -336,7 +343,7 @@ def _save_manifest(manifest_path: Path, manifest: Dict) -> None:
     with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     tmp_path.replace(manifest_path)
-    print("Manifest updated: ", manifest_path)
+    print("Manifest updated: ", manifest_path , " - ", log_suffix)
 
 
 def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:
@@ -386,4 +393,4 @@ def _update_summary(manifest: Dict) -> None:
         "failed_slices": failed,
         "last_evaluated_at": _now_iso(),
     }
-    log.info("Manifest Summary Updated: %s", manifest["summary"])
+    log.info("Manifest Summary: %s", manifest["summary"])
