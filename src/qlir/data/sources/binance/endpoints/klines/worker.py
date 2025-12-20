@@ -146,15 +146,15 @@ def run_klines_worker(
     """
     # Resolve data root and this symbol+interval directory
     root = get_data_root(data_root)
-    sym_interval_dir = (
+    sym_interval_limit_dir = (
         Path(root)
-        .joinpath("binance", "klines", "raw", symbol, interval)
+        .joinpath("binance", "klines", "raw", symbol, interval, f"limit={limit}")
         .resolve()
     )
-    responses_dir = sym_interval_dir.joinpath("responses")
-    manifest_path = sym_interval_dir.joinpath(MANIFEST_FILENAME)
+    responses_dir = sym_interval_limit_dir.joinpath("responses")
+    manifest_path = sym_interval_limit_dir.joinpath(MANIFEST_FILENAME)
 
-    _ensure_dir(sym_interval_dir)
+    _ensure_dir(sym_interval_limit_dir)
     _ensure_dir(responses_dir)
     log.info("Saving raw reponses to: %s", responses_dir)
     backoff = 1.0
