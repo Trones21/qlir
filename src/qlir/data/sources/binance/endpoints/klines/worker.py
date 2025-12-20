@@ -343,7 +343,7 @@ def _save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") -
     with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     tmp_path.replace(manifest_path)
-    print("Manifest updated: ", manifest_path , " - ", log_suffix)
+    print("[WRITE - MANIFEST]: ", manifest_path , " - ", log_suffix)
 
 
 def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:

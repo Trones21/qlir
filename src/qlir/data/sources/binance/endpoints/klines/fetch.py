@@ -104,8 +104,9 @@ def fetch_and_persist_slice(
         first_ts = None
         last_ts = None
 
-    slice_id = _make_slice_id(slice_key)
-    filename = f"{slice_id}.json"
+    slice_compkey = slice_key.composite_key()
+    slice_compkey_hashed = _make_slice_id(slice_key)
+    filename = f"{slice_compkey_hashed}.json"
     relative_path = f"responses/{filename}"
     file_path = responses_dir.joinpath(filename)
 
@@ -114,7 +115,7 @@ def fetch_and_persist_slice(
         "meta": {
             "url": url,
             "slice": slice_key.composite_key(),
-            "slice_id": slice_id,
+            "slice_id": slice_compkey_hashed,
             "symbol": slice_key.symbol,
             "interval": slice_key.interval,
             "start_ms": slice_key.start_ms,
@@ -136,9 +137,10 @@ def fetch_and_persist_slice(
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
 
+    print(f"[WROTE - SLICE]: {file_path} - {slice_compkey}")
     # Return the metadata subset expected by worker.py
     return {
-        "slice_id": slice_id,
+        "slice_id": slice_compkey_hashed,
         "relative_path": relative_path,
         "http_status": http_status,
         "n_items": n_items,
