@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from qlir.utils.str.color import Ansi, colorize
+
 from .model import KlineSliceKey
 from .urls import build_kline_url
 
@@ -137,7 +139,7 @@ def fetch_and_persist_slice(
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
 
-    print(f"[WROTE - SLICE]: {file_path} - {slice_compkey}")
+    print(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path} - {slice_compkey}")
     # Return the metadata subset expected by worker.py
     return {
         "slice_id": slice_compkey_hashed,

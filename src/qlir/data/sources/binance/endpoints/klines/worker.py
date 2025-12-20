@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 
 from qlir.time.iso import now_utc, parse_iso
+from qlir.utils.str.color import Ansi, colorize
 log = logging.getLogger(__name__)
 import json
 import time
@@ -243,7 +244,7 @@ def run_klines_worker(
                 manifest["slices"][key] = entry
 
                 _update_summary(manifest)
-                _save_manifest(manifest_path, manifest, "fetched slice - marking as successful")
+                _save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize("successful", Ansi.GREEN , Ansi.BOLD)}")
 
                 # Reset backoff on success
                 backoff = 1.0
@@ -262,7 +263,7 @@ def run_klines_worker(
                 manifest["slices"][key] = entry
         
                 _update_summary(manifest)
-                _save_manifest(manifest_path, manifest, "fetch slice - marking as error")
+                _save_manifest(manifest_path, manifest, f"fetch slice error - marking as {colorize("error", Ansi.RED , Ansi.BOLD)}")
                 # log.warning("Exception occured for: %s", entry)
                 log.exception("Slice failed: %s", key)
                 time.sleep(backoff)
@@ -343,7 +344,7 @@ def _save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") -
     with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     tmp_path.replace(manifest_path)
-    print("[WRITE - MANIFEST]: ", manifest_path , " - ", log_suffix)
+    print(f"[{colorize("WRITE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
 
 
 def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:
