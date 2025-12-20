@@ -177,6 +177,7 @@ def run_klines_worker(
             interval=interval,
             limit=limit,
         )
+        # Bug to investigate: This continues to print the originally calculated length (from startup)
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
     
         if _seed_manifest_with_expected_slices(manifest, expected_slices):
