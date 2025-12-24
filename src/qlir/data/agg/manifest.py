@@ -17,7 +17,7 @@ class AggManifest:
     """
     Single manifest for an agg dataset (one slice universe).
     Tracks:
-      - parts: parquet files + slice_hashes they contain
+      - parts: parquet files + slice_ids they contain
       - slice_failures: per-slice load/parse/materialization failures
     """
     data: dict[str, Any]
@@ -33,19 +33,19 @@ class AggManifest:
                 "created_at": _now_iso(),
                 "updated_at": _now_iso(),
                 "parts": [],
-                "slice_failures": {},  # slice_hash -> {error, failed_at, ...}
+                "slice_failures": {},  # slice_id -> {error, failed_at, ...}
             }
         )
 
-    def all_slice_hashes(self) -> set[str]:
+    def all_slice_ids(self) -> set[str]:
         used: set[str] = set()
         for part in self.data.get("parts", []):
-            for h in part.get("slice_hashes", []):
+            for h in part.get("slice_ids", []):
                 used.add(h)
         return used
 
-    def mark_slice_failed(self, slice_hash: str, error: str) -> None:
-        self.data.setdefault("slice_failures", {})[slice_hash] = {
+    def mark_slice_failed(self, slice_id: str, error: str) -> None:
+        self.data.setdefault("slice_failures", {})[slice_id] = {
             "error": error,
             "failed_at": _now_iso(),
         }
@@ -54,7 +54,7 @@ class AggManifest:
     def add_part(
         self,
         part_filename: str,
-        slice_hashes: list[str],
+        slice_ids: list[str],
         row_count: int,
         min_open_time: int | None,
         max_open_time: int | None,
@@ -62,7 +62,7 @@ class AggManifest:
         self.data.setdefault("parts", []).append(
             {
                 "part": part_filename,
-                "slice_hashes": slice_hashes,
+                "slice_ids": slice_ids,
                 "row_count": row_count,
                 "min_open_time": min_open_time,
                 "max_open_time": max_open_time,

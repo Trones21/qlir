@@ -28,7 +28,8 @@ def load_binance_kline_slice_json(path: Path) -> pd.DataFrame:
     Each row is the 12-element kline array.
     """
     with path.open("r", encoding="utf-8") as f:
-        rows = json.load(f)
+        full_file = json.load(f)
+        rows = full_file["data"]
 
     if not isinstance(rows, list):
         raise ValueError(f"expected list, got {type(rows).__name__}")
