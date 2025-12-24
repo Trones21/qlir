@@ -14,7 +14,7 @@ from typing import Dict, Optional, Tuple, List
 
 from .model import KlineSliceKey, SliceStatus
 from .urls import generate_kline_slices
-from .fetch import fetch_and_persist_slice, _make_slice_id
+from .fetch import make_canonical_slice_hash, fetch_and_persist_slice
 from .time_range import compute_time_range
 
 from qlir.data.core.paths import get_data_root
@@ -29,11 +29,11 @@ def _seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSli
     """
     changed = False
     for s in expected_slices:
-        composite_key = s.composite_key()
+        composite_key = s.canonical_slice_composite_key()
         if composite_key not in manifest['slices']:
             manifest['slices'][composite_key] = {
                 "status": "pending",
-                "slice_id": _make_slice_id(s),
+                "slice_id": make_canonical_slice_hash(s),
                 "first_ts": s.start_ms,
                 "last_ts": s.end_ms,
                 "requested_at": None,
@@ -67,7 +67,7 @@ def _compute_missing_slices(
         ) from exc
     missing: list[KlineSliceKey] = []
     for slice_key in expected:
-        key = slice_key.composite_key()
+        key = slice_key.canonical_slice_composite_key()
         entry = slices.get(key)
         status_str = entry.get("status") if entry else SliceStatus.PENDING.value
         try:
@@ -196,7 +196,7 @@ def run_klines_worker(
             continue
         
         for slice_key in missing:
-            key = slice_key.composite_key()
+            key = slice_key.canonical_slice_composite_key()
             try:
                 entry = manifest["slices"].get(key, {})
 
@@ -212,7 +212,7 @@ def run_klines_worker(
                 _save_manifest(manifest_path, manifest, "slice marked as in progress")
 
                 meta = fetch_and_persist_slice(
-                    slice_key=slice_key,
+                    request_slice_key=slice_key,
                     data_root=root,
                     responses_dir=responses_dir,
                 )

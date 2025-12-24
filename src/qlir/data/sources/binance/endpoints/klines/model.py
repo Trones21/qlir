@@ -42,11 +42,15 @@ class KlineSliceKey:
     end_ms: int
     limit: int = 1000
 
-    def composite_key(self) -> str:
+    def canonical_slice_composite_key(self) -> str:
         """
-        Produce a canonical string that uniquely identifies this slice.
+        Produce a canonical string that uniquely identifies the logical slice.
 
-        Example:
-            "BTCUSDT:1m:1609459200000-1609465199999:1000"
+        Note:
+        - end_ms is intentionally excluded so that rolling updates overwrite
+        the same canonical slice on disk.
         """
+        return f"{self.symbol}:{self.interval}:{self.start_ms}:{self.limit}"
+
+    def request_slice_composite_key(self) -> str:
         return f"{self.symbol}:{self.interval}:{self.start_ms}-{self.end_ms}:{self.limit}"

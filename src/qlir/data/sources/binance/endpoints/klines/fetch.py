@@ -27,16 +27,16 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _make_slice_id(slice_key: KlineSliceKey) -> str:
+def make_canonical_slice_hash(slice_key: KlineSliceKey) -> str:
     """
     Stable ID derived from the composite_key, used as filename.
     """
-    key = slice_key.composite_key().encode("utf-8")
+    key = slice_key.canonical_slice_composite_key().encode("utf-8")
     return hashlib.blake2b(key, digest_size=16).hexdigest()
 
 
 def fetch_and_persist_slice(
-    slice_key: KlineSliceKey,
+    request_slice_key: KlineSliceKey,
     data_root: Optional[Path] = None,
     responses_dir: Optional[Path] = None,
     timeout_sec: float = 10.0,
@@ -80,11 +80,11 @@ def fetch_and_persist_slice(
 
     requested_at = _now_iso()
     url = build_kline_url(
-        symbol=slice_key.symbol,
-        interval=slice_key.interval,
-        start_ms=slice_key.start_ms,
-        end_ms=slice_key.end_ms,
-        limit=slice_key.limit,
+        symbol=request_slice_key.symbol,
+        interval=request_slice_key.interval,
+        start_ms=request_slice_key.start_ms,
+        end_ms=request_slice_key.end_ms,
+        limit=request_slice_key.limit,
     )
 
     # Perform the request
@@ -108,9 +108,9 @@ def fetch_and_persist_slice(
         first_ts = None
         last_ts = None
 
-    slice_compkey = slice_key.composite_key()
-    slice_compkey_hashed = _make_slice_id(slice_key)
-    filename = f"{slice_compkey_hashed}.json"
+    canonical_slice_compkey = request_slice_key.canonical_slice_composite_key()
+    canonical_slice_compkey_hashed = make_canonical_slice_hash(request_slice_key)
+    filename = f"{canonical_slice_compkey_hashed}.json"
     relative_path = f"responses/{filename}"
     file_path = responses_dir.joinpath(filename)
 
@@ -118,13 +118,14 @@ def fetch_and_persist_slice(
     payload: Dict[str, Any] = {
         "meta": {
             "url": url,
-            "slice": slice_key.composite_key(),
-            "slice_id": slice_compkey_hashed,
-            "symbol": slice_key.symbol,
-            "interval": slice_key.interval,
-            "start_ms": slice_key.start_ms,
-            "end_ms": slice_key.end_ms,
-            "limit": slice_key.limit,
+            "slice_actual": request_slice_key.request_slice_composite_key(),
+            "canoncal_slice": canonical_slice_compkey,
+            "slice_id": canonical_slice_compkey_hashed,
+            "symbol": request_slice_key.symbol,
+            "interval": request_slice_key.interval,
+            "start_ms": request_slice_key.start_ms,
+            "end_ms": request_slice_key.end_ms,
+            "limit": request_slice_key.limit,
             "http_status": http_status,
             "n_items": n_items,
             "first_ts": first_ts,
@@ -142,12 +143,12 @@ def fetch_and_persist_slice(
         json.dump(payload, f, indent=2)
 
     print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
-    print(term_fmt(f"    Slice Key:    {slice_compkey}"))
+    print(term_fmt(f"    Canonical Slice Key:    {canonical_slice_compkey_hashed}"))
     print(term_fmt(f"    first candle: {format_ts_human(first_ts)}")) #type:ignore
     print(term_fmt(f"    last candle:  {format_ts_human(last_ts)}")) #type: ignore
     # Return the metadata subset expected by worker.py
     return {
-        "slice_id": slice_compkey_hashed,
+        "slice_id": canonical_slice_compkey_hashed,
         "relative_path": relative_path,
         "http_status": http_status,
         "n_items": n_items,
