@@ -33,24 +33,24 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--symbols",
+        "--symbol",
         type=parse_csv_arg,
         default=["BTCUSDT"],
-        help="Comma-separated list of symbols (default: BTCUSDT).",
+        help="Symbol (default: BTCUSDT).",
     )
 
     parser.add_argument(
-        "--intervals",
+        "--interval",
         type=parse_csv_arg,
         default=["1s"],
-        help="Comma-separated list of kline intervals (default: 1s).",
+        help="kline intervals (default: 1s).",
     )
 
     parser.add_argument(
         "--limit",
         type=int,
-        default=500,
-        help="Kline limit per request (default: 500).",
+        default=1000,
+        help="Kline limit per request (default: 1000).",
     )
 
     return parser.parse_args()
@@ -63,15 +63,15 @@ def main() -> None:
     else:
         data_root = get_data_root()
     data_root.mkdir(parents=True, exist_ok=True)
-
+    
     klines_jobs = [
         KlinesJobConfig(
             symbol=symbol,
             interval=interval,
             limit=args.limit,
         )
-        for symbol in args.symbols
-        for interval in args.intervals
+        for symbol in args.symbol
+        for interval in args.interval
     ]
 
     cfg = BinanceServerConfig(
@@ -80,10 +80,16 @@ def main() -> None:
         use_threads=False,  # block this process in the worker loop
     )
 
+    if not cfg.use_threads and len(klines_jobs) != 1:
+        raise ValueError(
+            "Non-threaded mode supports exactly one job per process. "
+            "Run one server per symbol/interval."
+        )
+
     print(
         "[data_server] starting with\n"
-        f"  symbols={args.symbols}\n"
-        f"  intervals={args.intervals}\n"
+        f"  symbol={args.symbol}\n"
+        f"  intervals={args.interval}\n"
         f"  limit={args.limit}\n"
         f"  data_root={data_root}"
     )
