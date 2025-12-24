@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from qlir.utils.str.color import Ansi, colorize
+from qlir.utils.str.fmt import term_fmt
+from qlir.utils.time.fmt import format_ts_human
 
 from .model import KlineSliceKey
 from .urls import build_kline_url
@@ -139,7 +141,10 @@ def fetch_and_persist_slice(
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
 
-    print(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path} - {slice_compkey}")
+    print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
+    print(term_fmt(f"    Slice Key:    {slice_compkey}"))
+    print(term_fmt(f"    first candle: {format_ts_human(first_ts)}")) #type:ignore
+    print(term_fmt(f"    last candle:  {format_ts_human(last_ts)}")) #type: ignore
     # Return the metadata subset expected by worker.py
     return {
         "slice_id": slice_compkey_hashed,

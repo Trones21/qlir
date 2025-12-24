@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import Callable
 
-from qlir.utils.time.fmt import format_delta_ms, format_ts_ms
+from qlir.utils.time.fmt import format_delta_ms, format_ts_ms_and_human
 
 
 @dataclass
@@ -17,8 +17,8 @@ class TsCompareResult:
         eq_flag = "✅" if self.equal else "❌"
         return (
             f"[{eq_flag}] {self.label}\n"
-            f"  A: {format_ts_ms(self.a_ms)}\n"
-            f"  B: {format_ts_ms(self.b_ms)}\n"
+            f"  A: {format_ts_ms_and_human(self.a_ms)}\n"
+            f"  B: {format_ts_ms_and_human(self.b_ms)}\n"
             f"  Δ: {format_delta_ms(self.delta_ms)}\n"
         )
 

@@ -3,6 +3,7 @@ import logging
 
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
+from qlir.utils.time.fmt import format_ts_human
 log = logging.getLogger(__name__)
 import json
 import time
@@ -181,7 +182,7 @@ def run_klines_worker(
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
     
         if _seed_manifest_with_expected_slices(manifest, expected_slices):
-            _save_manifest(manifest_path, manifest, f"Updating Manifest with range {min_start_ms} , {max_end_ms}")  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
+            _save_manifest(manifest_path, manifest, f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
         known_statuses = _extract_known_statuses(manifest)
         log.info(f"known_statuses: {len(known_statuses)}")
         missing = _compute_missing_slices(expected=expected_slices, manifest=manifest)
