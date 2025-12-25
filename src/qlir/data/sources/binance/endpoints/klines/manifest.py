@@ -55,6 +55,26 @@ def save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") ->
     print(f"[{colorize("WRITE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
 
 
+def validate_manifest(manifest):
+    log.info(colorize("Manifest structure validation not fully implemented", Ansi.BOLD, Ansi.YELLOW))
+    return
+    errors = []
+    if "slices" not in manifest:
+        raise RuntimeError(
+        "Manifest is missing required 'slices' key — cannot evaluate state"
+        )
+
+    slices = manifest['slices']
+    ensure_uniform_canonical_sizing(slices)
+
+    if errors:
+        raise RuntimeError("Manifest structure is invalid", errors)
+
+
+def ensure_uniform_canonical_sizing(slices):
+    '''While some entries may contain partial data, this is due to other factors'''
+    slices
+
 
 def seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSliceKey]):
     """
@@ -100,6 +120,10 @@ def update_manifest_with_classification(manifest, classified: SliceClassificatio
     for slice_key in classified.complete:
         slice_comp_key = slice_key.canonical_slice_composite_key()
         manifest["slices"][slice_comp_key]["status"] = SliceStatus.COMPLETE.value
+
+    for slice_key in classified.failed:
+        slice_comp_key = slice_key.canonical_slice_composite_key()
+        manifest["slices"][slice_comp_key]["status"] = SliceStatus.FAILED.value
 
     # update summary block (very useful for debugging / dashboards)
     manifest["summary"] = {

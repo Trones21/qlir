@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import json
-import time
 import hashlib
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
-
+from urllib.parse import parse_qs, urlparse
+import logging
+log = logging.getLogger(__name__)
 from qlir.time.iso import now_iso
+from qlir.time.timeunit import TimeUnit
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.str.fmt import term_fmt
 from qlir.utils.time.fmt import format_ts_human
+from qlir.utils.time.logging import TsDeltaResult, compute_ts_delta
 
 from .model import KlineSliceKey
 from .urls import build_kline_url
@@ -30,6 +32,41 @@ def make_canonical_slice_hash(slice_key: KlineSliceKey) -> str:
     """
     key = slice_key.canonical_slice_composite_key().encode("utf-8")
     return hashlib.blake2b(key, digest_size=16).hexdigest()
+
+
+def interval_to_timeunit(interval: str) -> TimeUnit | None:
+    return {
+        "1s": TimeUnit.SECOND,
+        "1m": TimeUnit.MINUTE,
+    }.get(interval)
+
+def log_requested_slice_size(url: str):
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+
+    try:
+        interval = params["interval"][0]
+        unix_start = int(params["startTime"][0])
+        unix_end = int(params["endTime"][0])
+    except (KeyError, IndexError, ValueError) as exc:
+        log.debug(f"Failed to parse slice parameters from url: {url}")
+        return "<Error deriving requested slice size>"
+
+    unit = interval_to_timeunit(interval)
+    if unit is None:
+        log.debug(
+            f"Will not derive requested slice size; unsupported interval={interval}"
+        )
+        return "<Unsupported interval>"
+
+    delta = compute_ts_delta(
+        unix_a=unix_start,
+        unix_b=unix_end,
+        unit=unit,
+    )
+
+    log.debug(str(delta))
+    return str(delta)
 
 
 def fetch_and_persist_slice(
@@ -98,12 +135,12 @@ def fetch_and_persist_slice(
     # Each entry: [ openTime, open, high, low, close, volume, closeTime, ... ]
     if isinstance(data, list) and data:
         n_items = len(data)
-        first_ts = int(data[0][0])
-        last_ts = int(data[-1][0])
+        actual_first_open = int(data[0][0])
+        actual_last_open = int(data[-1][0])
     else:
         n_items = 0
-        first_ts = None
-        last_ts = None
+        actual_first_open = None
+        actual_last_open = None
 
     canonical_slice_compkey = request_slice_key.canonical_slice_composite_key()
     canonical_slice_compkey_hashed = make_canonical_slice_hash(request_slice_key)
@@ -120,13 +157,13 @@ def fetch_and_persist_slice(
             "slice_id": canonical_slice_compkey_hashed,
             "symbol": request_slice_key.symbol,
             "interval": request_slice_key.interval,
-            "start_ms": request_slice_key.start_ms,
-            "end_ms": request_slice_key.end_ms,
+            "requested_first_open": format_ts_human(request_slice_key.start_ms),
+            "requested_last_open": format_ts_human(request_slice_key.end_ms),
             "limit": request_slice_key.limit,
             "http_status": http_status,
             "n_items": n_items,
-            "first_ts": first_ts,
-            "last_ts": last_ts,
+            "actual_first_open": actual_first_open,
+            "actual_last_open": actual_last_open,
             "requested_at": requested_at,
             "completed_at": completed_at,
             "data_root": str(data_root) if data_root is not None else None,
@@ -141,19 +178,22 @@ def fetch_and_persist_slice(
 
     print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
     print(term_fmt(f"    Canonical Slice Key:    {canonical_slice_compkey_hashed}"))
-    print(term_fmt(f"    first candle: {format_ts_human(first_ts)}")) #type:ignore
-    print(term_fmt(f"    last candle:  {format_ts_human(last_ts)}")) #type: ignore
+    print(term_fmt(f"    first candle: {format_ts_human(actual_first_open)}")) #type:ignore
+    print(term_fmt(f"    last candle:  {format_ts_human(actual_last_open)}")) #type: ignore
     
     # Return the metadata subset shape expected by worker.py
     return {
         "actual_slice_comp_key": request_slice_key.request_slice_composite_key(),
-        "canoncal_slice_comp_key": canonical_slice_compkey,
+        "canonical_slice_comp_key": canonical_slice_compkey,
         "slice_id": canonical_slice_compkey_hashed,
         "relative_path": relative_path,
         "http_status": http_status,
         "n_items": n_items,
-        "first_ts": first_ts,
-        "last_ts": last_ts,
+        "requested_first_open": request_slice_key.start_ms,
+        "requested_last_open": request_slice_key.end_ms,
+        "actual_first_open": actual_first_open,
+        "actual_last_open": actual_last_open,
+        "url": url,
         "requested_at": requested_at,
         "completed_at": completed_at,
     }

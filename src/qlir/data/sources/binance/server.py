@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TypeAlias, Union, Literal
 from .endpoints.klines.worker import run_klines_worker
-from .endpoints.uiklines.worker import run_uiklines_worker
+# from .endpoints.uiklines.worker import run_uiklines_worker
 
 # ---------------------------------------------------------------------------
 # Configuration models
@@ -115,12 +115,12 @@ def _start_klines_worker(job_config: KlinesJobConfig, data_root: Path) -> None:
             data_root=data_root,
         )
     
-def _start_uiklines_worker(job_config: UIKlinesJobConfig, data_root: Path) -> None:
-    """Start the klines worker"""
-    run_uiklines_worker(
-            symbol=job_config.symbol,
-            interval=job_config.interval,
-            limit=job_config.limit,
-            data_root=data_root,
-        )
+# def _start_uiklines_worker(job_config: UIKlinesJobConfig, data_root: Path) -> None:
+#     """Start the klines worker"""
+#     # run_uiklines_worker(
+#             symbol=job_config.symbol,
+#             interval=job_config.interval,
+#             limit=job_config.limit,
+#             data_root=data_root,
+#         )
 

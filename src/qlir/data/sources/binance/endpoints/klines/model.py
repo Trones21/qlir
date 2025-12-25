@@ -85,6 +85,7 @@ class SliceClassification:
     partial: list[KlineSliceKey]
     needs_refresh: list[KlineSliceKey]
     complete: list[KlineSliceKey]
+    failed: list[KlineSliceKey]
 
 
 def classify_slices(
@@ -93,7 +94,7 @@ def classify_slices(
 ) -> SliceClassification:
 
     slices = manifest.get("slices", {})
-    result = SliceClassification([], [], [], [])
+    result = SliceClassification([], [], [], [], [])
 
     for slice_key in expected:
         key = slice_key.canonical_slice_composite_key()
@@ -124,7 +125,7 @@ def classify_slices(
             continue
 
         
-        status = SliceStatus(entry.get("status", SliceStatus.PENDING.value))
+        status = SliceStatus(entry.get("status"))
 
         if status == SliceStatus.PENDING:
             result.missing.append(slice_key)
@@ -132,6 +133,8 @@ def classify_slices(
             result.partial.append(slice_key)
         elif status == SliceStatus.COMPLETE:
             result.complete.append(slice_key)
+        elif status == SliceStatus.FAILED:
+            result.failed.append(slice_key)
 
     log.info(
         {"Slice Classification Summary": 

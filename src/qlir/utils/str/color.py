@@ -11,7 +11,8 @@ class Ansi:
     MAGENTA = "\033[35m"
     CYAN = "\033[36m"
     GRAY = "\033[90m"
-
+    PINK_HOT = "\033[38;5;198m"
+    
 def colorize(text: str, *styles: str, enabled: bool = True) -> str:
     if not enabled or not styles:
         return text
