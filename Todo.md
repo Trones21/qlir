@@ -1,14 +1,19 @@
 
 # Priorities
+manifest_validation
+    - ensure that the chunks are the proper sizes
 
 uklines - basically copy paste from klines worker
-    - will need to figure this out on the user facing side (pyproject.toml (how to specify enpoint))
+    - already setu pthe pyproject.toml in afterdata (but havent moved to template)
 
-partials are being saved, and never overwritten
+wrap fetch and persist slice with response timing logging (maybe use the same decorator pattern as in nocrud??)
+    - the 1s seems slow... not sure if this is my code or binance servers 
 
 ## Medium Term 
+- add dedicated logging to file (not just to the console)
+    - this will be used for things like prometheus/grafana, so the structure needs to be tight
 - prepend pid func in the setup logging
-- refactor project agg_server.py.tpl (and maybe main) so that we can start one subproc per symbol/interval/endpoint 9just like we did with the data server)
+- refactor project agg_server.py.tpl (and maybe main) so that we can start one subproc per symbol/interval/endpoint just like we did with the data server)
 
 ## Long Term (Not a prio at all)
 - log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)
