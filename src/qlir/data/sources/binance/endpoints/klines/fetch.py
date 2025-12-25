@@ -135,12 +135,12 @@ def fetch_and_persist_slice(
     # Each entry: [ openTime, open, high, low, close, volume, closeTime, ... ]
     if isinstance(data, list) and data:
         n_items = len(data)
-        actual_first_open = int(data[0][0])
-        actual_last_open = int(data[-1][0])
+        received_first_open = int(data[0][0])
+        received_last_open = int(data[-1][0])
     else:
         n_items = 0
-        actual_first_open = None
-        actual_last_open = None
+        received_first_open = None
+        received_last_open = None
 
     canonical_slice_compkey = request_slice_key.canonical_slice_composite_key()
     canonical_slice_compkey_hashed = make_canonical_slice_hash(request_slice_key)
@@ -157,13 +157,13 @@ def fetch_and_persist_slice(
             "slice_id": canonical_slice_compkey_hashed,
             "symbol": request_slice_key.symbol,
             "interval": request_slice_key.interval,
-            "requested_first_open": format_ts_human(request_slice_key.start_ms),
-            "requested_last_open": format_ts_human(request_slice_key.end_ms),
+            "request_param_startTime": format_ts_human(request_slice_key.start_ms),
+            "request_param_endTime": format_ts_human(request_slice_key.end_ms),
             "limit": request_slice_key.limit,
             "http_status": http_status,
             "n_items": n_items,
-            "actual_first_open": actual_first_open,
-            "actual_last_open": actual_last_open,
+            "actual_first_open": received_first_open,
+            "actual_last_open": received_last_open,
             "requested_at": requested_at,
             "completed_at": completed_at,
             "data_root": str(data_root) if data_root is not None else None,
@@ -178,22 +178,24 @@ def fetch_and_persist_slice(
 
     print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
     print(term_fmt(f"    Canonical Slice Key:    {canonical_slice_compkey_hashed}"))
-    print(term_fmt(f"    first candle: {format_ts_human(actual_first_open)}")) #type:ignore
-    print(term_fmt(f"    last candle:  {format_ts_human(actual_last_open)}")) #type: ignore
+    print(term_fmt(f"    first candle: {format_ts_human(received_first_open)}")) #type:ignore
+    print(term_fmt(f"    last candle:  {format_ts_human(received_last_open)}")) #type: ignore
     
     # Return the metadata subset shape expected by worker.py
     return {
-        "actual_slice_comp_key": request_slice_key.request_slice_composite_key(),
-        "canonical_slice_comp_key": canonical_slice_compkey,
         "slice_id": canonical_slice_compkey_hashed,
         "relative_path": relative_path,
+        "canonical_slice_comp_key": canonical_slice_compkey,
+ 
         "http_status": http_status,
-        "n_items": n_items,
-        "requested_first_open": request_slice_key.start_ms,
-        "requested_last_open": request_slice_key.end_ms,
-        "actual_first_open": actual_first_open,
-        "actual_last_open": actual_last_open,
         "url": url,
+        "n_items": n_items,
+
+        "received_first_open": received_first_open,
+        "received_last_open": received_last_open,
+        "request_param_startTime": format_ts_human(request_slice_key.start_ms),
+        "request_param_endTime": format_ts_human(request_slice_key.end_ms),
+        
         "requested_at": requested_at,
         "completed_at": completed_at,
     }

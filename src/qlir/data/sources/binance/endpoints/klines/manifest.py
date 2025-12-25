@@ -65,15 +65,26 @@ def validate_manifest(manifest):
         )
 
     slices = manifest['slices']
+    for slice in slices:
+        validate_manifest_slice(slice)
     ensure_uniform_canonical_sizing(slices)
 
     if errors:
         raise RuntimeError("Manifest structure is invalid", errors)
 
 
-def ensure_uniform_canonical_sizing(slices):
-    '''While some entries may contain partial data, this is due to other factors'''
-    slices
+def validate_manifest_slice(slice):
+    '''Ensure that is individual slice does not break any of the invariants'''
+
+
+def ensure_canonical_first_to_last_is_correct(slice):
+    '''This is just ensuring the canonical slice if correct (matches the limit)'''
+    canonical_first_open = slice['canoncial_first_open']
+    canonical_last_open = slice['canonical_last_open']
+    
+    
+def has_expected_canonical_slice_count():
+    '''Does the actual count of slices match the expected count of slices (the canonical list)'''
 
 
 def seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSliceKey]):

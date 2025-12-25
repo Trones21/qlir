@@ -18,6 +18,7 @@ REQUIRED_FIELDS = [
     "n_items",
     "first_ts",
     "last_ts",
+    "requested_url",
     "requested_at",
     "completed_at",
 ]
@@ -76,7 +77,8 @@ class KlineSliceKey:
         return f"{self.symbol}:{self.interval}:{self.start_ms}:{self.limit}"
 
     def request_slice_composite_key(self) -> str:
-        return f"{self.symbol}:{self.interval}:{self.start_ms}-{self.end_ms}:{self.limit}"
+        '''Excluding limit'''
+        return f"{self.symbol}:{self.interval}:{self.start_ms}-{self.end_ms}"
 
 
 @dataclass

@@ -7,6 +7,7 @@ uklines - basically copy paste from klines worker
     - already setu pthe pyproject.toml in afterdata (but havent moved to template)
 
 wrap fetch and persist slice with response timing logging (maybe use the same decorator pattern as in nocrud??)
+    - possibly other funcs as well... like when we are doing something fror the entire manifest... thats ~170,000 items for the 1s interval (58MB manifest)
     - the 1s seems slow... not sure if this is my code or binance servers 
 
 ## Medium Term 

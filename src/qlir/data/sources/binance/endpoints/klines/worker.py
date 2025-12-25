@@ -92,7 +92,10 @@ def run_klines_worker(
     backoff = 1.0
 
     while True:
-        # TODO: Update _compute_time_range_stub
+        # TODO: Update _compute_time_range 
+        # This is where any off by 1 ms will occur ... because end_ms is not last open (with current logic)
+        # Need to give a param to compute time range so that it returns first_open and last_open (the logic seems to be there but its commented out)
+        # this would be a good one to write a unit test for       
         min_start_ms, max_end_ms = compute_time_range(symbol=symbol, interval=interval, limit=1000)
 
         expected_slices = _enumerate_expected_slices(
@@ -142,9 +145,6 @@ def run_klines_worker(
             continue
         
         fetch_comp_keys = [skey.canonical_slice_composite_key() for skey in to_fetch]
-        print("==============================================================")
-        print("==============================================================")
-        print("==============================================================")
         for slice_key in to_fetch:
             meta: dict | None = None
             slice_comp_key = slice_key.canonical_slice_composite_key()
@@ -210,6 +210,7 @@ def run_klines_worker(
                         "n_items": meta.get("n_items"),
                         "first_ts": meta.get("first_ts"),
                         "last_ts": meta.get("last_ts"),
+                        "requested_url": meta.get("url"),
                         "requested_at": meta.get("requested_at"),
                         "completed_at": meta.get("completed_at"),
                         "error": None,
