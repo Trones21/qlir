@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import TypeAlias, Union, Literal
 from .endpoints.klines.worker import run_klines_worker
 from .endpoints.uiklines.worker import run_uiklines_worker
@@ -56,7 +57,7 @@ class UIKlinesJobConfig:
 
 @dataclass
 class BaseServerConfig:
-    data_root: str
+    data_root: Path
 
 
 @dataclass
@@ -105,7 +106,7 @@ def start_data_server(config: BinanceServerConfig) -> None:
 # Config to Worker Param Mapping
 # ---------------------------------------------------------------------------
 
-def _start_klines_worker(job_config: KlinesJobConfig, data_root: str) -> None:
+def _start_klines_worker(job_config: KlinesJobConfig, data_root: Path) -> None:
     """Start the klines worker"""
     run_klines_worker(
             symbol=job_config.symbol,
@@ -114,7 +115,7 @@ def _start_klines_worker(job_config: KlinesJobConfig, data_root: str) -> None:
             data_root=data_root,
         )
     
-def _start_uiklines_worker(job_config: UIKlinesJobConfig, data_root: str) -> None:
+def _start_uiklines_worker(job_config: UIKlinesJobConfig, data_root: Path) -> None:
     """Start the klines worker"""
     run_uiklines_worker(
             symbol=job_config.symbol,

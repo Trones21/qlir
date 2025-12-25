@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+from qlir.time.iso import now_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.str.fmt import term_fmt
 from qlir.utils.time.fmt import format_ts_human
@@ -21,10 +22,6 @@ except ImportError as exc:  # pragma: no cover
         "httpx is required for qlir.data.sources.binance.endpoints.klines.fetch\n"
         "Install it with: pip install httpx"
     ) from exc
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def make_canonical_slice_hash(slice_key: KlineSliceKey) -> str:
@@ -78,7 +75,7 @@ def fetch_and_persist_slice(
     if responses_dir is None:
         raise ValueError("responses_dir must be provided to fetch_and_persist_slice")
 
-    requested_at = _now_iso()
+    requested_at = now_iso()
     url = build_kline_url(
         symbol=request_slice_key.symbol,
         interval=request_slice_key.interval,
@@ -90,7 +87,7 @@ def fetch_and_persist_slice(
     # Perform the request
     with httpx.Client(timeout=timeout_sec) as client:
         resp = client.get(url)
-    completed_at = _now_iso()
+    completed_at = now_iso()
 
     http_status = resp.status_code
     resp.raise_for_status()  # will raise on 4xx/5xx
@@ -115,7 +112,7 @@ def fetch_and_persist_slice(
     file_path = responses_dir.joinpath(filename)
 
     # Wrap with metadata so downstream consumers have context.
-    payload: Dict[str, Any] = {
+    raw_response_payload: Dict[str, Any] = {
         "meta": {
             "url": url,
             "slice_actual": request_slice_key.request_slice_composite_key(),
@@ -140,14 +137,17 @@ def fetch_and_persist_slice(
     # Ensure directory exists and write to disk.
     responses_dir.mkdir(parents=True, exist_ok=True)
     with file_path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2)
+        json.dump(raw_response_payload, f, indent=2)
 
     print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
     print(term_fmt(f"    Canonical Slice Key:    {canonical_slice_compkey_hashed}"))
     print(term_fmt(f"    first candle: {format_ts_human(first_ts)}")) #type:ignore
     print(term_fmt(f"    last candle:  {format_ts_human(last_ts)}")) #type: ignore
-    # Return the metadata subset expected by worker.py
+    
+    # Return the metadata subset shape expected by worker.py
     return {
+        "actual_slice_comp_key": request_slice_key.request_slice_composite_key(),
+        "canoncal_slice_comp_key": canonical_slice_compkey,
         "slice_id": canonical_slice_compkey_hashed,
         "relative_path": relative_path,
         "http_status": http_status,

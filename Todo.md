@@ -4,6 +4,7 @@
 uklines - basically copy paste from klines worker
     - will need to figure this out on the user facing side (pyproject.toml (how to specify enpoint))
 
+partials are being saved, and never overwritten
 
 ## Medium Term 
 - prepend pid func in the setup logging

@@ -12,7 +12,6 @@ def now_iso() -> str:
     """Return current UTC time as ISO-8601 string."""
     return now_utc().isoformat()
 
-
 def parse_iso(value: str) -> datetime:
     """
     Parse ISO-8601 string into timezone-aware datetime.

@@ -1,91 +1,22 @@
 from __future__ import annotations
 import logging
 
+from qlir.data.sources.binance.endpoints.klines.manifest import MANIFEST_FILENAME, load_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
 log = logging.getLogger(__name__)
-import json
 import time
-from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 
-from .model import KlineSliceKey, SliceStatus
+from .model import REQUIRED_FIELDS, KlineSliceKey, SliceStatus, classify_slices
 from .urls import generate_kline_slices
 from .fetch import make_canonical_slice_hash, fetch_and_persist_slice
 from .time_range import compute_time_range
 
 from qlir.data.core.paths import get_data_root
-
-
-MANIFEST_FILENAME = "manifest.json"
-
-
-def _seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSliceKey]):
-    """
-    Ensure every expected slice exists in manifest with at least a 'pending' status.
-    """
-    changed = False
-    for s in expected_slices:
-        composite_key = s.canonical_slice_composite_key()
-        if composite_key not in manifest['slices']:
-            manifest['slices'][composite_key] = {
-                "status": "pending",
-                "slice_id": make_canonical_slice_hash(s),
-                "first_ts": s.start_ms,
-                "last_ts": s.end_ms,
-                "requested_at": None,
-                "completed_at": None,
-                "relative_path": None,
-                "n_items": None,
-                "error": None,
-                "http_status": None,
-            }
-            changed = True
-    return changed
-
-
-def _compute_missing_slices(
-    expected: list[KlineSliceKey],
-    manifest: dict,
-) -> list[KlineSliceKey]:
-    """
-    Determine which slices still need work.
-
-    Scheduler-space API:
-    - input: expected slices (KlineSliceKey)
-    - output: missing slices (KlineSliceKey)
-    """
-    try:
-        slices = manifest["slices"]
-    except KeyError as exc:
-        raise RuntimeError(
-            f"Invalid manifest structure: missing 'slices' \
-              manifest keys include: {manifest.keys()}"
-        ) from exc
-    missing: list[KlineSliceKey] = []
-    for slice_key in expected:
-        key = slice_key.canonical_slice_composite_key()
-        entry = slices.get(key)
-        status_str = entry.get("status") if entry else SliceStatus.PENDING.value
-        try:
-            status = SliceStatus(status_str)
-        except ValueError:
-            status = SliceStatus.PENDING
-
-        if status in (SliceStatus.PENDING, SliceStatus.FAILED):
-            missing.append(slice_key)
-
-    summary = {
-        "Slices": len(slices),
-        "Missing": len(missing)
-    }
-    log.info(f"_compute_missing_slices: {summary}")
-    return missing
-
-
 
 IN_PROGRESS_STALE_SEC = 300  # 5 minutes
 
@@ -115,8 +46,8 @@ def run_klines_worker(
         2. In a loop:
             a. Determine the time range to cover (start_ms -> now_ms).
             b. Enumerate all expected slices (KlineSliceKey).
-            c. Load manifest.json and determine missing/failed slices.
-            d. Fetch + persist each missing slice.
+            c. Load manifest.json and determine missing/failed/partial/needs_refresh(broken meta contract) slices.
+            d. Fetch + persist each slice in to_fetch.
             e. Update manifest.json and summary stats.
             f. Sleep briefly, then repeat.
 
@@ -172,35 +103,44 @@ def run_klines_worker(
             end_ms=max_end_ms,
         )
 
-        manifest = _load_manifest(
+        manifest = load_manifest(
             manifest_path=manifest_path,
             symbol=symbol,
             interval=interval,
             limit=limit,
         )
-        # Bug to investigate: This continues to print the originally calculated length (from startup)
+
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
     
-        if _seed_manifest_with_expected_slices(manifest, expected_slices):
-            _save_manifest(manifest_path, manifest, f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
+        if seed_manifest_with_expected_slices(manifest, expected_slices):
+            save_manifest(manifest_path, manifest, f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
         known_statuses = _extract_known_statuses(manifest)
         log.info(f"known_statuses: {len(known_statuses)}")
-        missing = _compute_missing_slices(expected=expected_slices, manifest=manifest)
+        
+        classified = classify_slices(expected_slices, manifest)
 
-        if not missing:
-            # No work to do; reset backoff and sleep for a bit.
+        manifest = update_manifest_with_classification(manifest=manifest, classified=classified)
+        save_manifest(manifest_path, manifest, f"Updating Manifest with slice classifications" )
+
+        to_fetch = [
+            *classified.missing,
+            *classified.partial,
+            *classified.needs_refresh
+        ]
+
+        # No work to do; reset backoff and sleep for a bit.
+        if not to_fetch:
             backoff = 1.0
-            log.info(f"No missing slices, sleeping for {poll_interval_sec} seconds")
+            log.info(f"No missing or partial slices, sleeping for {poll_interval_sec} seconds")
             time.sleep(poll_interval_sec)
-            
             continue
         
-        for slice_key in missing:
+        for slice_key in to_fetch:
             key = slice_key.canonical_slice_composite_key()
             try:
                 entry = manifest["slices"].get(key, {})
 
-                # Skip if another thread is currently handling this 
+                # Skip if another proc is currently handling this 
                 # (with stale safeguard to prevent items from being locked forever, in case the proc is killed while fetch is being performed)
                 if entry.get("status") == "in_progress" and not is_stale(entry):
                     continue
@@ -209,32 +149,30 @@ def run_klines_worker(
                 entry["status"] = "in_progress"
                 entry["requested_at"] = now_utc().isoformat()
 
-                _save_manifest(manifest_path, manifest, "slice marked as in progress")
+                save_manifest(manifest_path, manifest, "slice marked as in progress")
 
                 meta = fetch_and_persist_slice(
                     request_slice_key=slice_key,
                     data_root=root,
                     responses_dir=responses_dir,
                 )
-                # Contract for fetch_and_persist_slice:
-                # meta = {
-                #   "slice_id": str,
-                #   "relative_path": "responses/<slice_id>.json",
-                #   "http_status": int,
-                #   "n_items": int,
-                #   "first_ts": int | None,
-                #   "last_ts": int | None,
-                #   "requested_at": ISO8601 str,
-                #   "completed_at": ISO8601 str,
-                # }
 
-                
+                # Check if the slice is a partial slice (or contract out of date)
+                n_items = meta.get("n_items")
+                if n_items is None:
+                    log.info("meta.n_items was not returned from fetch_and_persist_slice")
+                    new_status = SliceStatus.NEEDS_REFRESH
+                elif int(n_items) == int(limit):
+                    new_status = SliceStatus.COMPLETE
+                else:
+                    new_status = SliceStatus.PARTIAL
+
                 entry.update(
                     {
                         "slice_id": meta["slice_id"],
                         "relative_path": meta["relative_path"],
-                        "status": SliceStatus.OK.value,
-                        "http_status": meta.get("http_status", 200),
+                        "status": new_status,
+                        "http_status": meta.get("http_status"),
                         "n_items": meta.get("n_items"),
                         "first_ts": meta.get("first_ts"),
                         "last_ts": meta.get("last_ts"),
@@ -243,10 +181,16 @@ def run_klines_worker(
                         "error": None,
                     }
                 )
+
+                entry_keys = set(entry.keys()) - {"__meta_contract"}
+                if set(meta.keys()) != entry_keys:
+                    log.debug(f"[Fyi] - Not all keys returned as meta from fetch_and_persist_slice are written to disk. \n Entry Keys: {entry_keys} \n Meta Keys: {meta.keys()}")
+                
+                entry = add_or_update_entry_meta_contract(entry=entry, expected_fields=REQUIRED_FIELDS)
                 manifest["slices"][key] = entry
 
                 _update_summary(manifest)
-                _save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize("successful", Ansi.GREEN , Ansi.BOLD)}")
+                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize("successful", Ansi.GREEN , Ansi.BOLD)}")
 
                 # Reset backoff on success
                 backoff = 1.0
@@ -262,10 +206,12 @@ def run_klines_worker(
                         "completed_at": now_iso,
                     }
                 )
+
+                entry = add_or_update_entry_meta_contract(entry, expected_fields=REQUIRED_FIELDS)
                 manifest["slices"][key] = entry
         
                 _update_summary(manifest)
-                _save_manifest(manifest_path, manifest, f"fetch slice error - marking as {colorize("error", Ansi.RED , Ansi.BOLD)}")
+                save_manifest(manifest_path, manifest, f"fetch slice error - marking as {colorize("error", Ansi.RED , Ansi.BOLD)}")
                 # log.warning("Exception occured for: %s", entry)
                 log.exception("Slice failed: %s", key)
                 time.sleep(backoff)
@@ -275,6 +221,25 @@ def run_klines_worker(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+def add_or_update_entry_meta_contract(entry, expected_fields):
+    present = set(entry.keys())
+    missing = [f for f in expected_fields if f not in present]
+
+    if missing:
+        entry["__meta_contract"] = {
+            "status": "out_of_sync",
+            "missing_fields": missing,
+        }
+    else:
+        entry["__meta_contract"] = {
+        "status": "ok",        
+        "missing_fields": [],
+        "notes": None,
+        }
+
+    return entry
+
 
 def _ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
@@ -307,48 +272,6 @@ def _enumerate_expected_slices(
     return slices
 
 
-def _load_manifest(
-    manifest_path: Path,
-    symbol: str,
-    interval: str,
-    limit: int,
-) -> Dict:
-    """
-    Load manifest.json if present; otherwise create a fresh skeleton.
-    """
-    if manifest_path.exists():
-        with manifest_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-
-    # Fresh skeleton
-    log.info("Creating fresh manifest because there was no manifest found at: %s", manifest_path)
-    return {
-        "version": 1,
-        "endpoint": "klines",
-        "symbol": symbol,
-        "interval": interval,
-        "limit": limit,
-        "summary": {
-            "total_slices": 0,
-            "ok_slices": 0,
-            "failed_slices": 0,
-            "last_evaluated_at": None,
-        },
-        "slices": {},
-    }
-
-
-def _save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") -> None:
-    """
-    Write manifest.json to disk atomically-ish (write then replace).
-    """
-    tmp_path = manifest_path.with_suffix(".tmp")
-    with tmp_path.open("w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2, sort_keys=True)
-    tmp_path.replace(manifest_path)
-    print(f"[{colorize("WRITE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
-
-
 def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:
     """
     Build a mapping of composite_key -> SliceStatus from the manifest.
@@ -366,33 +289,22 @@ def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:
     return mapping
 
 
-# def _compute_missing_slices(
-#     expected: List[KlineSliceKey],
-#     known_statuses: Dict[str, SliceStatus],
-# ) -> List[KlineSliceKey]:
-#     missing: List[KlineSliceKey] = []
-
-#     for slice_key in expected:
-#         key = slice_key.composite_key()
-#         status = known_statuses.get(key, SliceStatus.PENDING)
-#         if status in (SliceStatus.PENDING, SliceStatus.FAILED):
-#             missing.append(slice_key)
-
-#     return missing
-
-
 def _update_summary(manifest: Dict) -> None:
     """
     Recompute summary stats based on current slice entries.
     """
     slices = manifest.get("slices", {})
     total = len(slices)
-    ok = sum(1 for e in slices.values() if e.get("status") == SliceStatus.OK.value)
+    complete = sum(1 for e in slices.values() if e.get("status") == SliceStatus.COMPLETE.value)
+    partial = sum(1 for e in slices.values() if e.get("status") == SliceStatus.PARTIAL.value)
     failed = sum(1 for e in slices.values() if e.get("status") == SliceStatus.FAILED.value)
+    needs_refresh = sum(1 for e in slices.values() if e.get("status") == SliceStatus.NEEDS_REFRESH.value)
 
     manifest["summary"] = {
         "total_slices": total,
-        "ok_slices": ok,
+        "complete_slices": complete,
+        "partial_slices": partial,
+        "needs_refresh": needs_refresh,
         "failed_slices": failed,
         "last_evaluated_at": _now_iso(),
     }
