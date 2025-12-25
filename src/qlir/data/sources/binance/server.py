@@ -3,29 +3,27 @@ Binance data server
 
 This module provides the main entrypoint for running Binance data workers.
 
-Typical usage:
-
-    from qlir.data.sources.binance.server import start_data_server
-    start_data_server()
-
-By default this will start a kline worker for a small default set of
-(symbol, interval) pairs. In real deployments you will likely pass an
-explicit config instead of relying on defaults.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Iterable, Sequence, Optional
-import threading
-
-# Import the kline worker. We'll define run_klines_worker in
-# qlir/data/sources/binance/endpoints/klines/worker.py
+from dataclasses import dataclass
+from enum import Enum
+from typing import TypeAlias, Union, Literal
 from .endpoints.klines.worker import run_klines_worker
-
+from .endpoints.uiklines.worker import run_uiklines_worker
 
 # ---------------------------------------------------------------------------
 # Configuration models
+# ---------------------------------------------------------------------------
+
+class WorkerType(str, Enum):
+    KLINES = "klines"
+    UI_KLINES = "ui_klines"
+
+
+# ---------------------------------------------------------------------------
+# Job Config Classes (specify all the data that the job needs to run)
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -44,128 +42,84 @@ class KlinesJobConfig:
     interval: str         # e.g. "1s" or "1m"
     limit: int = 1000     # fixed for now in our design
 
+@dataclass(frozen=True)
+class UIKlinesJobConfig:
+    """Only separate from klines job for clarity/readability reasons"""
+    symbol: str           # e.g. "BTCUSDT"
+    interval: str         # e.g. "1s" or "1m"
+    limit: int = 1000     # fixed for now in our design
+
+
+# ---------------------------------------------------------------------------
+# BinanceServerConfig (Using a union typealias to avoid the optional/none/type:ignore pattern we would encounter if BinanceServerConfig was a single class)
+# ---------------------------------------------------------------------------
 
 @dataclass
-class BinanceServerConfig:
-    """
-    High-level configuration for the Binance data server.
+class BaseServerConfig:
+    data_root: str
 
-    Attributes:
-        klines_jobs:
-            Iterable of KlinesJobConfig entries. Each will be processed
-            by a kline worker.
 
-        data_root:
-            Optional explicit data root for all datasets. If None,
-            lower layers (io / path utilities) should fall back to
-            get_data_root() which resolves:
-                1. user_root (if provided)
-                2. QLIR_DATA_ROOT env var
-                3. default ~/qlir_data
+@dataclass
+class KlinesServerConfig(BaseServerConfig):
+    worker_type: Literal[WorkerType.KLINES]
+    klines: KlinesJobConfig
 
-        use_threads:
-            If True, each job is run in its own thread. If False,
-            jobs are run sequentially in the current thread.
 
-        daemon_threads:
-            If True and use_threads is enabled, worker threads will be
-            started as daemon threads.
-    """
-    klines_jobs: Sequence[KlinesJobConfig] = field(
-        default_factory=lambda: (
-            # conservative defaults; callers should usually override
-            [KlinesJobConfig(symbol="BTCUSDT", interval="1m")]
-        )
-    )
-    data_root: Optional[str] = None
-    use_threads: bool = False
-    daemon_threads: bool = True
+@dataclass
+class UIKlinesServerConfig(BaseServerConfig):
+    worker_type: Literal[WorkerType.UI_KLINES]
+    ui_klines: UIKlinesJobConfig
 
+
+BinanceServerConfig: TypeAlias = Union[
+    KlinesServerConfig,
+    UIKlinesServerConfig,
+]
 
 # ---------------------------------------------------------------------------
 # Server entrypoint
 # ---------------------------------------------------------------------------
 
-def start_data_server(config: Optional[BinanceServerConfig] = None) -> None:
+def start_data_server(config: BinanceServerConfig) -> None:
     """
     Start the Binance data server.
 
-    If no config is provided, a default configuration is used, which
-    starts a single kline worker for BTCUSDT @ 1m, limit=1000.
-
-    This function does *not* return if use_threads=False and workers are
-    implemented as long-running loops. If use_threads=True, the threads
-    are started and this function returns immediately.
-
     Args:
-        config:
-            Optional BinanceServerConfig. If None, a default config is
-            constructed.
+        config: BinanceServerConfig
     """
-    if config is None:
-        config = BinanceServerConfig()
+    if config.worker_type is None:
+        raise ValueError("You must pass a WorkerType to BinanceServerConfig (from qlir.data.sources.binance import WorkerType)")
 
-    if not config.klines_jobs:
-        # Nothing to do; just return.
-        return
+    # All Workers beneath here rely on the data_root, so we ensure it is not None
+    if config.data_root is None:
+        raise TypeError("data_root is None and the server reached the job area which rely on data_root. Please ensure that you provide a data_root if your job requires a data_root.")
 
-    if config.use_threads:
-        _start_workers_threaded(config)
-    else:
-        _start_workers_sequential(config)
+    if config.worker_type == WorkerType.KLINES:
+        _start_klines_worker(config.klines, config.data_root)
+
+    elif config.worker_type == WorkerType.UI_KLINES:
+        _start_uiklines_worker(config.ui_klines, config.data_root)
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Config to Worker Param Mapping
 # ---------------------------------------------------------------------------
 
-def _start_workers_sequential(config: BinanceServerConfig) -> None:
-    """
-    Run all configured jobs sequentially in the current thread.
-
-    This is the simplest mode and is fine when you only have a small
-    number of jobs and/or are just running one symbol+interval.
-    """
-    for job in config.klines_jobs:
-        # The worker is responsible for being a long-running loop.
-        # If you want this to be finite (e.g., one pass), you can add
-        # a mode parameter to run_klines_worker later.
-        run_klines_worker(
-            symbol=job.symbol,
-            interval=job.interval,
-            limit=job.limit,
-            data_root=config.data_root,
+def _start_klines_worker(job_config: KlinesJobConfig, data_root: str) -> None:
+    """Start the klines worker"""
+    run_klines_worker(
+            symbol=job_config.symbol,
+            interval=job_config.interval,
+            limit=job_config.limit,
+            data_root=data_root,
+        )
+    
+def _start_uiklines_worker(job_config: UIKlinesJobConfig, data_root: str) -> None:
+    """Start the klines worker"""
+    run_uiklines_worker(
+            symbol=job_config.symbol,
+            interval=job_config.interval,
+            limit=job_config.limit,
+            data_root=data_root,
         )
 
-
-def _start_workers_threaded(config: BinanceServerConfig) -> None:
-    """
-    Run all configured jobs in separate threads.
-
-    This is useful if you want to ingest multiple symbols/intervals
-    in parallel without switching to asyncio.
-    """
-    threads: list[threading.Thread] = []
-
-    for job in config.klines_jobs:
-        t = threading.Thread(
-            target=run_klines_worker,
-            kwargs={
-                "symbol": job.symbol,
-                "interval": job.interval,
-                "limit": job.limit,
-                "data_root": config.data_root,
-            },
-            daemon=config.daemon_threads,
-            name=f"binance-klines-{job.symbol}-{job.interval}",
-        )
-        threads.append(t)
-        t.start()
-
-    # In threaded mode we *optionally* join threads. For a library-style
-    # server it's reasonable to just start daemon threads and return,
-    # so callers regain control. If you want blocking behavior, you can
-    # uncomment the join loop below or add a flag for it.
-
-    # for t in threads:
-    #     t.join()

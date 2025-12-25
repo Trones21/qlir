@@ -1,15 +1,23 @@
+
+# Priorities
+
+uklines - basically copy paste from klines worker
+    - will need to figure this out on the user facing side (pyproject.toml (how to specify enpoint))
+
+
+## Medium Term 
+- prepend pid func in the setup logging
+- refactor project agg_server.py.tpl (and maybe main) so that we can start one subproc per symbol/interval/endpoint 9just like we did with the data server)
+
+## Long Term (Not a prio at all)
+- log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)
+- Add ability to write to a non-local location (e.g. S3 bucket)
+- metrics/helth endpoints
+
+
 ## Data Integrations
-
-- Drift 
-     - store oracle data to DRIFT/candles/oracle
-     - store fill data to DRIFT/candles/fills
-     - store raw data to DRIFT/raw/   
-
-- Binance candles (klines) and (kulines)
-    - need to clarify the exact difference docs just say that the one is candlestick friendly (maybe holding those invariants)
-
-- Kraken candles 
-
+   
+- Binance uklines
 
 
 ### Ta-lib integration
