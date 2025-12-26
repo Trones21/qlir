@@ -1,0 +1,35 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Poetry / pip / build
+dist/
+build/
+*.egg-info/
+poetry.lock
+
+# Tests / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs / editors
+.vscode/
+.idea/
+*.swp
+
+# OS / misc
+.DS_Store
+Thumbs.db
+
+# Optional data conventions
+data/raw/
+data/tmp/
