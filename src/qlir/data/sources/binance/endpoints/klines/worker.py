@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Any, Dict, Optional, Tuple, List
 
 from .model import REQUIRED_FIELDS, KlineSliceKey, SliceStatus, classify_slices
 from .urls import generate_kline_slices
@@ -119,9 +119,6 @@ def run_klines_worker(
             save_manifest(manifest_path, manifest, f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
         
         
-        # known_statuses = _extract_known_statuses(manifest)
-        # log.info(f"known_statuses: {len(known_statuses)}")
-        
         classified = classify_slices(expected_slices, manifest)
 
         manifest = update_manifest_with_classification(manifest=manifest, classified=classified)
@@ -135,7 +132,7 @@ def run_klines_worker(
         ]
 
         log.info(f"{len(to_fetch)} slices to fetch")
-        log.debug(to_fetch)
+        log.debug({"to_fetch":to_fetch})
 
         # No work to do; reset backoff and sleep for a bit.
         if not to_fetch:
@@ -174,54 +171,7 @@ def run_klines_worker(
                     responses_dir=responses_dir,
                 )
 
-                # Check if the slice is a partial slice (or contract out of date)
-                n_items = meta.get("n_items")
-                
-                if n_items is None:
-                    raise RuntimeError(
-                        "meta.n_items was not returned from fetch_and_persist_slice"
-                        "Partial slice logic assumes meta['n_items'] exists"
-                    )
-
-                # Its important to why we received a partial slice - this should give us enough info
-                int_limit = int(limit)
-                int_n_items = int(n_items)
-                if int_n_items != int_limit:
-                    log.debug(f"slice {slice_comp_key} marked as {colorize("PARTIAL", Ansi.PINK_HOT , Ansi.BOLD)} Limit={int(limit)} n_items={int(n_items)}")
-                    log.debug(colorize(f"You may have requested a partial slice.", Ansi.BOLD))
-                    log.debug(f"Request url was: {meta.get('url')}")
-                    log.debug(f'Slice Requested: {format_ts_human(meta.get("requested_first_open", "KeyError"))} - {format_ts_human(meta.get("requested_last_open", "KeyError"))}')
-                    log.debug(f' Slice Received: {format_ts_human(meta.get("actual_first_open", "KeyError"))} - {format_ts_human(meta.get("actual_last_open", "KeyError"))}')
-                    log_requested_slice_size({meta.get('url')}) #type:ignore
-
-                    new_status = SliceStatus.PARTIAL
-                
-                if int_n_items == int_limit:
-                    log.debug(f"slice {slice_comp_key} marked as {colorize("SUCCESSFUL", Ansi.GREEN , Ansi.BOLD)}")
-                    new_status = SliceStatus.COMPLETE
-
-
-                entry.update(
-                    {
-                        "slice_id": meta["slice_id"],
-                        "relative_path": meta["relative_path"],
-                        "status": new_status.value, #type:ignore
-                        "http_status": meta.get("http_status"),
-                        "n_items": meta.get("n_items"),
-                        "first_ts": meta.get("first_ts"),
-                        "last_ts": meta.get("last_ts"),
-                        "requested_url": meta.get("url"),
-                        "requested_at": meta.get("requested_at"),
-                        "completed_at": meta.get("completed_at"),
-                        "error": None,
-                    }
-                )
-
-                entry_keys = set(entry.keys()) - {"__meta_contract"}
-                if set(meta.keys()) != entry_keys:
-                    log.debug(f"[Fyi] - Not all keys returned as meta from fetch_and_persist_slice are written to disk. \n Entry Keys: {entry_keys} \n Meta Keys: {meta.keys()}")
-                
-                entry = add_or_update_entry_meta_contract(entry=entry, expected_fields=REQUIRED_FIELDS)
+                entry, new_status = _update_entry(meta, entry, limit, slice_comp_key)
                 manifest["slices"][slice_comp_key] = entry
 
                 _update_summary(manifest)
@@ -232,28 +182,16 @@ def run_klines_worker(
 
             except Exception as exc:
                 # Mark slice as failed and backoff
-                now_iso = _now_iso()
-                entry = manifest["slices"].get(slice_comp_key, {})
-                entry.update(
-                    {
-                        "status": SliceStatus.FAILED.value,
-                        "http_status": (
-                            meta.get("http_status")
-                            if meta is not None
-                            else "exception_occured_before_fetch_and_persist_slice_func_returned"
-                        ),
-                        "error": str(exc),
-                        "completed_at": now_iso,
-                    }
-                )
-
-                entry = add_or_update_entry_meta_contract(entry, expected_fields=REQUIRED_FIELDS)
+                entry = _update_entry_on_exception(manifest, slice_comp_key, meta, exc)
                 manifest["slices"][slice_comp_key] = entry
         
                 _update_summary(manifest)
-                save_manifest(manifest_path, manifest, f"fetch slice error - marking as {colorize("error", Ansi.RED , Ansi.BOLD)}")
-                # log.warning("Exception occured for: %s", entry)
-                log.exception("Slice failed: %s", slice_comp_key)
+
+                if entry['http_status'] == 200:
+                    save_manifest(manifest_path, manifest, f"Request Succeeded (200), but exception occured - marking slice as {colorize(SliceStatus.FAILED.value, Ansi.RED , Ansi.BOLD)}")
+                else:
+                    save_manifest(manifest_path, manifest, f"Request Failed - http_status: {entry['http_status']} - marking slice as {colorize(SliceStatus.FAILED.value, Ansi.RED , Ansi.BOLD)}")
+                log.exception(exc)
                 time.sleep(backoff)
                 backoff = min(backoff * 2.0, max_backoff_sec)
 
@@ -262,7 +200,83 @@ def run_klines_worker(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def add_or_update_entry_meta_contract(entry, expected_fields):
+def _update_entry_on_exception(manifest, slice_comp_key, meta, exception):
+        now_iso = _now_iso()
+        entry = manifest["slices"].get(slice_comp_key)
+        entry.update(
+            {
+                "status": SliceStatus.FAILED.value,
+                "http_status": (
+                    meta.get("http_status")
+                    if meta is not None
+                    else "exception_occured_before_fetch_and_persist_slice_func_returned"
+                ),
+                "error": str(exception),
+                "completed_at": now_iso,
+            }
+        )
+        entry = _add_or_update_entry_meta_contract(entry, expected_fields=REQUIRED_FIELDS)
+        return entry
+
+
+def _update_entry(meta, entry, limit, slice_comp_key) -> tuple[Any, SliceStatus]:
+                    # Check if the slice is a partial slice (or contract out of date)
+        n_items = meta.get("n_items")
+        
+        if n_items is None:
+            raise RuntimeError(
+                "meta.n_items was not returned from fetch_and_persist_slice"
+                "Partial slice logic assumes meta['n_items'] exists"
+            )
+
+        # Its important to why we received a partial slice - this should give us enough info
+        int_limit = int(limit)
+        int_n_items = int(n_items)
+        if int_n_items != int_limit:
+            _partial_slice_logging(meta, slice_comp_key, int_limit, int_n_items)
+            new_status = SliceStatus.PARTIAL
+        
+        if int_n_items == int_limit:
+            log.debug(f"slice {slice_comp_key} marked as {colorize("SUCCESSFUL", Ansi.GREEN , Ansi.BOLD)}")
+            new_status = SliceStatus.COMPLETE
+
+
+        entry.update(
+            {
+                "slice_id": meta["slice_id"],
+                "relative_path": meta["relative_path"],
+                "status": new_status.value, #type:ignore
+                "http_status": meta.get("http_status"),
+                "n_items": meta.get("n_items"),
+                "first_ts": meta.get("first_ts"),
+                "last_ts": meta.get("last_ts"),
+                "requested_url": meta.get("url"),
+                "requested_at": meta.get("requested_at"),
+                "completed_at": meta.get("completed_at"),
+                "error": None,
+            }
+        )
+        entry_keys = set(entry.keys()) - {"__meta_contract"}
+        if set(meta.keys()) != entry_keys:
+            log.debug(f"[Fyi] - Not all keys returned as meta from fetch_and_persist_slice are written to disk. \n Entry Keys: {entry_keys} \n Meta Keys: {meta.keys()}")
+        
+        entry = _add_or_update_entry_meta_contract(entry=entry, expected_fields=REQUIRED_FIELDS)
+        return entry, new_status
+
+
+def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
+    try:
+        log.debug(f"slice {slice_comp_key} marked as {colorize("PARTIAL", Ansi.PINK_HOT , Ansi.BOLD)} Limit={limit} n_items={n_items}")
+        log.debug(colorize(f"You may have requested a partial slice.", Ansi.BOLD))
+        log.debug(f"Request url was: {meta.get('url')}")
+        log.debug(f'Slice Requested: {format_ts_human(meta.get("requested_first_open", "KeyError"))} - {format_ts_human(meta.get("requested_last_open", "KeyError"))}')
+        log.debug(f' Slice Received: {format_ts_human(meta.get("received_first_open", "KeyError"))} - {format_ts_human(meta.get("received_last_open", "KeyError"))}')
+        log_requested_slice_size(meta.get('url')) #type:ignore
+    except Exception as exc:
+        log.exception(exc)
+        pass
+
+def _add_or_update_entry_meta_contract(entry, expected_fields):
     present = set(entry.keys())
     missing = [f for f in expected_fields if f not in present]
 

@@ -1,15 +1,12 @@
 
+from urllib.parse import parse_qs, urlparse
 from qlir.data.core.paths import get_raw_responses_dir_path
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_fs_integrity import validate_manifest_vs_responses
 from qlir.utils.str.color import Ansi, colorize
 import logging 
 log = logging.getLogger(__name__)
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from typing import Any, Dict, Iterable, List
-
-
-def has_expected_canonical_slice_count():
-    '''Does the actual count of slices match the expected count of slices (the canonical list)'''
 
 
 def do_all_slices_have_same_top_level_metadata(slices_dict) -> tuple[bool, list]:

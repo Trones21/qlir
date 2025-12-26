@@ -41,6 +41,7 @@ def interval_to_timeunit(interval: str) -> TimeUnit | None:
     }.get(interval)
 
 def log_requested_slice_size(url: str):
+
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
 
