@@ -120,6 +120,27 @@ def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
+def get_agg_dir_path(datasource:str, endpoint:str, symbol: str, interval: str, limit: int) -> Path:
+    root = get_data_root()
+    path = (Path(root)/datasource/endpoint/"agg"/symbol/interval/f"limit={limit}"/"parts")
+    if not Path.exists(path):
+        raise NotADirectoryError(f"Directory not Found: {path}")
+    return path
+
+def get_raw_responses_dir_path(datasource:str, endpoint:str, symbol: str, interval: str, limit: int) -> Path:
+    root = get_data_root()
+    path = (Path(root)/datasource/endpoint/"raw"/symbol/interval/f"limit={limit}"/"responses")
+    if not Path.exists(path):
+        raise NotADirectoryError(f"Directory not Found: {path}")
+    return path
+
+def get_raw_manifest_path(datasource:str, endpoint:str, symbol: str, interval: str, limit: int) -> Path:
+    root = get_data_root()
+    path = (Path(root)/datasource/endpoint/"raw"/symbol/interval/f"limit={limit}"/"manifest.json")
+    if not Path.exists(path):
+        raise FileNotFoundError(f"Manifest not Found at {path}")
+    return path
+
 # ---------------------------------------------------------------------------
 # Canonical dataset path builders
 # ---------------------------------------------------------------------------

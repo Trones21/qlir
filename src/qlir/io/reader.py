@@ -68,38 +68,38 @@ def read(path: str | Path, **kwargs) -> pd.DataFrame:
                      Use .csv, .parquet, or .json.
                      """)
 
-def read_candles(
-    path: str | Path,
-    *,
-    fill: FillMode = "none",            # "none" or "fetch"
-    symbol: Optional[str] = None,       # required if fill="fetch"
-    token: Optional[str] = None,        # Drift token; improves gap detection
-    fetch_kwargs: Optional[Dict[str, Any]] = None,  # passed to backfill_gaps_drift
-    **read_kwargs,
-) -> pd.DataFrame:
-    """
-    Read candles from CSV/Parquet/JSON, validate, and optionally fetch-fill real gaps from Drift.
-    """
-    df = read(path, **read_kwargs)
-    if df.empty:
-        return df
+# def read_candles(
+#     path: str | Path,
+#     *,
+#     fill: FillMode = "none",            # "none" or "fetch"
+#     symbol: Optional[str] = None,       # required if fill="fetch"
+#     token: Optional[str] = None,        # Drift token; improves gap detection
+#     fetch_kwargs: Optional[Dict[str, Any]] = None,  # passed to backfill_gaps_drift
+#     **read_kwargs,
+# ) -> pd.DataFrame:
+#     """
+#     Read candles from CSV/Parquet/JSON, validate, and optionally fetch-fill real gaps from Drift.
+#     """
+#     df = read(path, **read_kwargs)
+#     if df.empty:
+#         return df
 
-    fixed, report = validate_candles(df, token=token)
-    print(
-        f"[candles_dq] file={Path(path).name} rows={report.n_rows} "
-        f"dupes_dropped={report.n_dupes_dropped} gaps={report.n_gaps} "
-        f"freq={report.freq or 'unknown'}"
-    )
+#     fixed, report = validate_candles(df, token=token)
+#     print(
+#         f"[candles_dq] file={Path(path).name} rows={report.n_rows} "
+#         f"dupes_dropped={report.n_dupes_dropped} gaps={report.n_gaps} "
+#         f"freq={report.freq or 'unknown'}"
+#     )
 
-    if fill == "none" or report.n_gaps == 0:
-        return fixed
+#     if fill == "none" or report.n_gaps == 0:
+#         return fixed
 
-    if fill == "fetch":
-        if not symbol or not token:
-            raise ValueError("read_candles(fill='fetch') requires symbol= and token= (Drift token).")
-        filled = backfill_gaps_drift(
-            fixed, symbol=symbol, token=token, **(fetch_kwargs or {})
-        )
-        return filled
+#     if fill == "fetch":
+#         if not symbol or not token:
+#             raise ValueError("read_candles(fill='fetch') requires symbol= and token= (Drift token).")
+#         filled = backfill_gaps_drift(
+#             fixed, symbol=symbol, token=token, **(fetch_kwargs or {})
+#         )
+#         return filled
 
-    raise ValueError(f"Unknown fill='{fill}'")
+#     raise ValueError(f"Unknown fill='{fill}'")

@@ -12,7 +12,7 @@ from qlir.data.agg.manifest import AggManifest
 from qlir.data.agg.paths import DatasetPaths
 from qlir.data.agg.schema_binance_klines import load_binance_kline_slice_json
 
-SLICE_OK = "ok"
+SLICE_OK = "complete"
 
 def load_json(path: Path) -> dict[str, Any]:
     import json
@@ -31,7 +31,7 @@ def iter_raw_ok_slices(raw_manifest: dict[str, Any]) -> Iterable[RawSliceRef]:
     Expected-ish shape:
       raw_manifest["slices"] is dict[key -> entry]
       where entry has:
-        - status: "ok"
+        - status: "complete"
         - slice_id: "e901567f..."   (or derive from key)
         - start_ms: 1610462400000
     """

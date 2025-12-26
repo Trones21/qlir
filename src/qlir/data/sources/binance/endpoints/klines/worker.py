@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 
-from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification, validate_manifest
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
@@ -13,9 +13,9 @@ from typing import Dict, Optional, Tuple, List
 
 from .model import REQUIRED_FIELDS, KlineSliceKey, SliceStatus, classify_slices
 from .urls import generate_kline_slices
-from .fetch import log_requested_slice_size, make_canonical_slice_hash, fetch_and_persist_slice
+from .fetch import log_requested_slice_size, fetch_and_persist_slice
 from .time_range import compute_time_range
-
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.orchestrator import validate_manifest_and_fs_integrity
 from qlir.data.core.paths import get_data_root
 
 IN_PROGRESS_STALE_SEC = 300  # 5 minutes
@@ -112,7 +112,7 @@ def run_klines_worker(
             interval=interval,
             limit=limit,
         )
-        validate_manifest(manifest)
+        validate_manifest_and_fs_integrity(manifest, responses_dir)
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
     
         if seed_manifest_with_expected_slices(manifest, expected_slices):

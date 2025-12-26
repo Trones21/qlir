@@ -8,7 +8,7 @@ import pyarrow.dataset as ds
 import logging
 log = logging.getLogger(__name__)
 
-def union_file_datasets(dir_path: str) -> pd.DataFrame: # type: ignore
+def union_file_datasets(dir_path: str | Path) -> pd.DataFrame: # type: ignore
     log.info(dir_path)
     dir = Path(dir_path)
     log.info(f"Unioning files in {dir_path}")

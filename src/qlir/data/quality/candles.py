@@ -6,9 +6,9 @@ import logging
 import numpy as np
 import pandas as pd
 
-from qlir.time.ensure_utc import ensure_utc_series
+from qlir.time.ensure_utc import ensure_utc_series, assert_not_epoch_drift
 from qlir.time.timefreq import TimeFreq, TimeUnit
-
+from qlir.utils.str.color import colorize, Ansi
 log = logging.getLogger(__name__)
 
 OHLCV_COLS = ["open", "high", "low", "close", "volume"]
@@ -34,6 +34,7 @@ def _sort_dedupe(
 
     out = df.copy()
     out[time_col] = ensure_utc_series(out[time_col])
+    assert_not_epoch_drift(out[time_col])
     out = out.sort_values(time_col)
 
     conflicts: list[pd.DataFrame] = []
@@ -137,9 +138,9 @@ def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
 # -------------------------------------------------------------------
 #  Candle gap detection
 # -------------------------------------------------------------------
-def detect_candle_gaps(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[pd.Timestamp]:
-    if df.empty or freq is None or 
-
+# def detect_candle_gaps(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[pd.Timestamp]:
+#    # if df.empty or freq is None or 
+#     return []
 # -------------------------------------------------------------------
 #  Frequency inference (returns structured object)
 # -------------------------------------------------------------------
@@ -182,7 +183,7 @@ def detect_candle_gaps(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> lis
     if miss:
         raise ValueError(f"Missing required columns: {sorted(miss)}")
 
-    fixed, _ = _sort_dedupe(df)
+    fixed, _, _ = _sort_dedupe(df)
     s = pd.to_datetime(fixed["tz_start"], utc=True)
 
     expected = pd.date_range(
@@ -334,7 +335,7 @@ def validate_candles(
 
     We do **not** infer frequency here.
     """
-    fixed, count_dups_removed = _sort_dedupe(df)
+    fixed, count_dups_removed, conflicts = _sort_dedupe(df)
     missing = detect_candle_gaps(fixed, freq=freq)
 
     # value-level diagnostics
@@ -368,6 +369,30 @@ def validate_candles(
     )
     return fixed, report
 
+def format_missing_str(missing: list, *, max_items: int = 10) -> str:
+    """
+    Format a human-readable summary of missing items.
+
+    If the list is longer than `max_items`, only the first `max_items`
+    are shown and the remainder is summarized.
+
+    Examples:
+        - [] -> "none"
+        - [a, b] -> "a, b"
+        - [a, b, c, ...] -> "a, b, c, ... (+7 more)"
+    """
+    if not missing:
+        return "none"
+
+    n = len(missing)
+
+    if n <= max_items:
+        return ", ".join(map(str, missing))
+
+    shown = ", ".join(map(str, missing[:max_items]))
+    remaining = n - max_items
+    more_str = colorize("+ more", Ansi.BOLD, Ansi.RED)
+    return f"{shown}, … {more_str}"
 
 def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
     """
@@ -456,7 +481,10 @@ def log_candle_dq_issues(
 
     # Always log a basic summary
     log.info(
-        "%sCandles DQ: n_rows=%d freq=%s range=[%s -> %s]",
+        "%sCandles Summary: \n" \
+        "   n_rows=%d \n" \
+        "   freq=%s \n" \
+        "   range=[%s -> %s] \n",
         ctx,
         report.n_rows,
         report.freq,
@@ -476,11 +504,7 @@ def log_candle_dq_issues(
         first_miss = report.missing_starts[0]
         last_miss = report.missing_starts[-1]
         log.warning(
-            "%sDetected %d missing candles (first_missing=%s, last_missing=%s)",
-            ctx,
-            report.n_gaps,
-            first_miss,
-            last_miss,
+            f"{ctx} Detected {colorize(str(report.n_gaps), Ansi.BOLD, Ansi.RED)} missing candles (first_missing={first_miss}, last_missing={last_miss})"
         )
 
     if report.n_ohlc_zeros:
