@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 
-from qlir.data.sources.binance.endpoints.klines.manifest import MANIFEST_FILENAME, load_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification, validate_manifest
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification, validate_manifest
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human

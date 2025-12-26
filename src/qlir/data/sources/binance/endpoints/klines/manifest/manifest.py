@@ -55,38 +55,6 @@ def save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") ->
     print(f"[{colorize("WRITE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
 
 
-def validate_manifest(manifest):
-    log.info(colorize("Manifest structure validation not fully implemented", Ansi.BOLD, Ansi.YELLOW))
-    return
-    errors = []
-    if "slices" not in manifest:
-        raise RuntimeError(
-        "Manifest is missing required 'slices' key — cannot evaluate state"
-        )
-
-    slices = manifest['slices']
-    for slice in slices:
-        validate_manifest_slice(slice)
-    ensure_uniform_canonical_sizing(slices)
-
-    if errors:
-        raise RuntimeError("Manifest structure is invalid", errors)
-
-
-def validate_manifest_slice(slice):
-    '''Ensure that is individual slice does not break any of the invariants'''
-
-
-def ensure_canonical_first_to_last_is_correct(slice):
-    '''This is just ensuring the canonical slice if correct (matches the limit)'''
-    canonical_first_open = slice['canoncial_first_open']
-    canonical_last_open = slice['canonical_last_open']
-    
-    
-def has_expected_canonical_slice_count():
-    '''Does the actual count of slices match the expected count of slices (the canonical list)'''
-
-
 def seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSliceKey]):
     """
     Ensure every expected slice exists in manifest with at least a 'pending' status.
