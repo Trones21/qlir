@@ -12,7 +12,7 @@ from qlir.data.core.instruments import CanonicalInstrument
 from qlir.data.core.datasource import DataSource
 from qlir.time.timefreq import TimeFreq
 from qlir.time.timeunit import TimeUnit
-import qlir.data.quality.candles as DQ
+import qlir.data.quality.candles.candles as DQ
 from qlir.io.union_files import union_file_datasets
 from qlir.utils.logdf import logdf
 

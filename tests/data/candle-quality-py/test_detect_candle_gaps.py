@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 pytestmark = pytest.mark.local
 
-from qlir.data.quality.candles import detect_candle_gaps, TimeFreq
+from qlir.data.quality.candles.candles import detect_missing_candles, TimeFreq
 import logging
 from qlir.time.timefreq import TimeUnit
 
@@ -31,7 +31,7 @@ def test_detect_candle_gaps_none_missing_minutely():
         ]
     )
     tf = TimeFreq(count=1, unit=TimeUnit.MINUTE)
-    missing = detect_candle_gaps(df, freq=tf)
+    missing = detect_missing_candles(df, freq=tf)
     assert missing == []
 
 
@@ -44,7 +44,7 @@ def test_detect_candle_gaps_finds_gap_minutely():
         ]
     )
     tf = TimeFreq(count=1, unit=TimeUnit.MINUTE)
-    missing = detect_candle_gaps(df, freq=tf)
+    missing = detect_missing_candles(df, freq=tf)
     assert missing == [pd.Timestamp("2025-01-01 00:01:00", tz="UTC")]
 
 
@@ -52,6 +52,6 @@ def test_detect_candle_gaps_returns_empty_when_no_freq_or_too_short():
     df = _candles(["2025-01-01 00:00:00"])
     tf = TimeFreq(count=1, unit=TimeUnit.MINUTE)
     # too short -> []
-    assert detect_candle_gaps(df, freq=tf) == []
+    assert detect_missing_candles(df, freq=tf) == []
     # no freq -> []
-    assert detect_candle_gaps(df, freq=None) == []
+    assert detect_missing_candles(df, freq=None) == []

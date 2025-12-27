@@ -1,6 +1,6 @@
 
 from qlir.time.timefreq import TimeFreq, TimeUnit 
-from qlir.data.quality.candles import infer_freq, ensure_homogeneous_candle_size, detect_candle_gaps
+from qlir.data.quality.candles.candles import infer_freq, ensure_homogeneous_candle_size, detect_missing_candles
 import pandas as pd
 from typing import Iterable, Dict
 
@@ -118,7 +118,7 @@ def generate_candles_from_1m(
         logdf(df=df, name="infer_freq_failure", level="critical")
         raise ValueError(f"Incorrect dataset frequency. Expected 1 minute data, got (freq.to_dict() here): {freq.to_dict()} ")
     
-    gaps = detect_candle_gaps(df, freq)
+    gaps = detect_missing_candles(df, freq)
     if gaps:
         logdf(df=df, name="canlde_gaps_failure", level="critical")
         raise ValueError({"message":"Found gaps in 1 minute data", "gaps": gaps})
@@ -147,7 +147,7 @@ def generate_candles(
         logdf(df=df, name="infer_freq_failure", level="critical")
         raise ValueError(f"input freq mismatch: inferred {freq}, got arg {in_unit}")
 
-    gaps = detect_candle_gaps(df, freq)
+    gaps = detect_missing_candles(df, freq)
     if gaps:
         logdf(df=df, name="candle_gaps_failure", level="critical")
         raise ValueError({"message":"Found gaps in {in_unit} data", "number_of_gaps": len(gaps), "gaps": gaps})

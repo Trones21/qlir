@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 pytestmark = pytest.mark.local
 
-from qlir.data.quality.candles import ensure_homogeneous_candle_size
+from qlir.data.quality.candles.candles import ensure_homogeneous_candle_size
 
 
 def test_homogeneous_passes_for_equal_intervals():

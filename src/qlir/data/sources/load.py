@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 from enum import Enum, auto
 
-from qlir.data.quality.candles import (
+from qlir.data.quality.candles.candles import (
     run_candle_quality,
     log_candle_dq_issues,
     CandlesDQReport,

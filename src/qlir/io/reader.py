@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, Literal, Optional
 import pandas as pd
 
-from qlir.data.quality.candles import validate_candles
+from qlir.data.quality.candles.candles import validate_candles
 
 FillMode = Literal["none", "fetch"]
 

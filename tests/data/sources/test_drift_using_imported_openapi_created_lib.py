@@ -5,7 +5,7 @@ from drift_data_api_client.models.get_market_symbol_candles_resolution_resolutio
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
 from qlir.time.timefreq import TimeFreq, TimeUnit
-from qlir.data.quality.candles import validate_candles
+from qlir.data.quality.candles.candles import validate_candles
 from qlir.data.normalize import normalize_candles
 from qlir.utils.logdf import logdf
 from qlir.io.checkpoint import write_checkpoint, FileType

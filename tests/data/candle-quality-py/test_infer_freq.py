@@ -6,7 +6,7 @@ pytestmark = pytest.mark.local
 from qlir.time.timefreq import TimeUnit
 log = logging.getLogger(__name__)
 
-from qlir.data.quality.candles import infer_freq, TimeFreq
+from qlir.data.quality.candles.candles import infer_freq, TimeFreq
 
 def test_infer_freq_1min():
     df = pd.DataFrame(

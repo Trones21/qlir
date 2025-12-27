@@ -6,10 +6,14 @@ import logging
 import numpy as np
 import pandas as pd
 
+from qlir.data.quality.candles.models.candles_dq_report import CandlesDQReport
+from qlir.data.quality.candles.models.candle_gap import CandleGap, candle_gaps_to_df, detect_contiguous_gaps
 from qlir.time.ensure_utc import ensure_utc_series, assert_not_epoch_drift
 from qlir.time.timefreq import TimeFreq, TimeUnit
+from qlir.utils.logdf import logdf
 from qlir.utils.str.color import colorize, Ansi
 log = logging.getLogger(__name__)
+
 
 OHLCV_COLS = ["open", "high", "low", "close", "volume"]
 
@@ -134,47 +138,10 @@ def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
         except ValueError:
             return None
 
-
 # -------------------------------------------------------------------
 #  Candle gap detection
 # -------------------------------------------------------------------
-# def detect_candle_gaps(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[pd.Timestamp]:
-#    # if df.empty or freq is None or 
-#     return []
-# -------------------------------------------------------------------
-#  Frequency inference (returns structured object)
-# -------------------------------------------------------------------
-def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
-    if df.empty or "tz_start" not in df.columns:
-        return None
-
-    s = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
-    if len(s) < 2:
-        return None
-
-    delta = s.iloc[1] - s.iloc[0]
-    seconds = delta.total_seconds()
-
-    if seconds % 86400 == 0:
-        return TimeFreq(count=int(seconds // 86400), unit=TimeUnit.DAY)
-    elif seconds % 3600 == 0:
-        return TimeFreq(count=int(seconds // 3600), unit=TimeUnit.HOUR)
-    elif seconds % 60 == 0:
-        return TimeFreq(count=int(seconds // 60), unit=TimeUnit.MINUTE)
-    elif seconds >= 1:
-        return TimeFreq(count=int(seconds), unit=TimeUnit.SECOND)
-    else:
-        try:
-            off = pd.tseries.frequencies.to_offset(delta)
-            return TimeFreq(count=off.n, unit=off.name, pandas_offset=off)
-        except ValueError:
-            return None
-
-
-# -------------------------------------------------------------------
-#  Candle gap detection
-# -------------------------------------------------------------------
-def detect_candle_gaps(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[pd.Timestamp]:
+def detect_missing_candles(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[pd.Timestamp]:
     if df.empty or freq is None or len(df) < 2:
         return []
 
@@ -291,84 +258,6 @@ def find_ohlc_inconsistencies(df: pd.DataFrame) -> pd.DataFrame:
 
     return bad
 
-
-
-# -------------------------------------------------------------------
-#  Candle validation & report
-# -------------------------------------------------------------------
-@dataclass
-class CandlesDQReport:
-    freq: TimeFreq
-    n_rows: int
-    n_dupes_dropped: int
-    n_gaps: int
-    missing_starts: List[pd.Timestamp]
-    first_ts: pd.Timestamp
-    final_ts: pd.Timestamp
-
-    ohlc_zeros: Optional[pd.DataFrame] = None
-    n_ohlc_zeros: int = 0
-
-    ohlc_inconsistencies: Optional[pd.DataFrame] = None
-    n_ohlc_inconsistencies: int = 0
-
-    large_ranges: Optional[pd.DataFrame] = None
-    n_large_ranges: int = 0
-
-
-def validate_candles(
-    df: pd.DataFrame,
-    freq: TimeFreq,
-    *,
-    max_abs_range: float | None = None,
-    max_rel_range: float | None = None,
-) -> tuple[pd.DataFrame, CandlesDQReport]:
-    """
-    Validate candles for a *known* frequency.
-
-    - sort + dedupe (strict OHLCV match on dupes)
-    - detect gaps using the provided `freq`
-    - flag:
-        * rows with OHLC zeros
-        * rows with inconsistent OHLC ordering
-        * rows with unrealistically large ranges (if thresholds provided)
-
-    We do **not** infer frequency here.
-    """
-    fixed, count_dups_removed, conflicts = _sort_dedupe(df)
-    missing = detect_candle_gaps(fixed, freq=freq)
-
-    # value-level diagnostics
-    zeros_df = find_ohlc_zeros(fixed)
-    inconsist_df = find_ohlc_inconsistencies(fixed)
-    large_ranges_df: Optional[pd.DataFrame] = None
-    if max_abs_range is not None or max_rel_range is not None:
-        large_ranges_df = find_unrealistic_ranges(
-            fixed,
-            max_abs_range=max_abs_range,
-            max_rel_range=max_rel_range,
-        )
-
-    first_candle = fixed["tz_start"].min()
-    last_candle = fixed["tz_start"].max()
-
-    report = CandlesDQReport(
-        freq=freq,
-        n_rows=len(fixed),
-        n_dupes_dropped=count_dups_removed,
-        n_gaps=len(missing),
-        missing_starts=missing,
-        first_ts=first_candle,
-        final_ts=last_candle,
-        ohlc_zeros=zeros_df if not zeros_df.empty else None,
-        n_ohlc_zeros=len(zeros_df),
-        ohlc_inconsistencies=inconsist_df if not inconsist_df.empty else None,
-        n_ohlc_inconsistencies=len(inconsist_df),
-        large_ranges=large_ranges_df if (large_ranges_df is not None and not large_ranges_df.empty) else None,
-        n_large_ranges=0 if large_ranges_df is None else len(large_ranges_df),
-    )
-    return fixed, report
-
 def format_missing_str(missing: list, *, max_items: int = 10) -> str:
     """
     Format a human-readable summary of missing items.
@@ -422,6 +311,108 @@ def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
         )
 
 
+def summarize_gap_sizes_df(gaps: list[CandleGap]) -> pd.DataFrame:
+    """
+    Return gap-size distribution as a DataFrame.
+    """
+    df = pd.DataFrame(
+        {"gap_size": [g.missing_count for g in gaps]}
+    )
+
+    return (
+        df.value_counts("gap_size")
+          .rename("gap_count")
+          .reset_index()
+          .sort_values("gap_size", ascending=False)
+    )
+
+def gap_sizes_df_to_records(
+    df: pd.DataFrame,
+) -> list[dict]:
+    """
+    View adapter: convert gap-size summary DF into
+    logging / JSON friendly records.
+    """
+    if df.empty:
+        return []
+
+    expected_cols = ["gap_size", "gap_count"]
+    missing = set(expected_cols) - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    # Preserve ordering from DF (already sorted there)
+    return df[expected_cols].to_dict(orient="records")
+
+
+# -------------------------------------------------------------------
+#  Candle validation
+# -------------------------------------------------------------------
+
+def validate_candles(
+    df: pd.DataFrame,
+    freq: TimeFreq,
+    *,
+    max_abs_range: float | None = None,
+    max_rel_range: float | None = None,
+) -> tuple[pd.DataFrame, CandlesDQReport]:
+    """
+    Validate candles for a *known* frequency.
+
+    - sort + dedupe (strict OHLCV match on dupes)
+    - detect gaps using the provided `freq`
+    - flag:
+        * rows with OHLC zeros
+        * rows with inconsistent OHLC ordering
+        * rows with unrealistically large ranges (if thresholds provided)
+
+    We do **not** infer frequency here.
+    """
+    fixed, count_dups_removed, conflicts = _sort_dedupe(df)
+    
+    # Missing Candles & Further Grouping/Agg/Views 
+    missing = detect_missing_candles(fixed, freq=freq)
+    gaps = detect_contiguous_gaps(missing, freq)
+    gaps_df = candle_gaps_to_df(gaps)
+    gap_sizes_df = summarize_gap_sizes_df(gaps)
+    gap_sizes_dict = gap_sizes_df_to_records(gap_sizes_df)
+    
+    # value-level diagnostics
+    zeros_df = find_ohlc_zeros(fixed)
+    inconsist_df = find_ohlc_inconsistencies(fixed)
+    gigantic_candles_df: Optional[pd.DataFrame] = None
+    if max_abs_range is not None or max_rel_range is not None:
+        gigantic_candles_df = find_unrealistic_ranges(
+            fixed,
+            max_abs_range=max_abs_range,
+            max_rel_range=max_rel_range,
+        )
+
+    first_candle = fixed["tz_start"].min()
+    last_candle = fixed["tz_start"].max()
+
+    report = CandlesDQReport(
+        freq=freq,
+        n_rows=len(fixed),
+        n_dupes_dropped=count_dups_removed,
+        n_gaps=len(gaps),
+        gaps=gaps,
+        gaps_df=gaps_df,
+        gap_sizes_dict=gap_sizes_dict,
+        gap_sizes_df=gap_sizes_df,
+        missing_starts=missing,
+        first_ts=first_candle,
+        final_ts=last_candle,
+        ohlc_zeros=zeros_df if not zeros_df.empty else None,
+        n_ohlc_zeros=len(zeros_df),
+        ohlc_inconsistencies=inconsist_df if not inconsist_df.empty else None,
+        n_ohlc_inconsistencies=len(inconsist_df),
+        unrealistically_large_candles=gigantic_candles_df if (gigantic_candles_df is not None and not gigantic_candles_df.empty) else None,
+        n_unrealistically_large_candles=0 if gigantic_candles_df is None else len(gigantic_candles_df),
+    )
+    return fixed, report
+
+
 def run_candle_quality(
     df: pd.DataFrame,
     freq: TimeFreq,
@@ -455,7 +446,7 @@ def run_candle_quality(
     issues = {
         "ohlc_zeros": report.ohlc_zeros,
         "ohlc_inconsistencies": report.ohlc_inconsistencies,
-        "large_ranges": report.large_ranges,
+        "large_ranges": report.unrealistically_large_candles,
         "missing_candles": pd.DataFrame({"tz_start": report.missing_starts})
             if report.n_gaps > 0 else None,
         "deduped_rows": None,  # optional: populate if needed
@@ -501,11 +492,13 @@ def log_candle_dq_issues(
         )
 
     if report.n_gaps:
-        first_miss = report.missing_starts[0]
-        last_miss = report.missing_starts[-1]
         log.warning(
-            f"{ctx} Detected {colorize(str(report.n_gaps), Ansi.BOLD, Ansi.RED)} missing candles (first_missing={first_miss}, last_missing={last_miss})"
+            f"{ctx} Detected {colorize(str(report.n_gaps), Ansi.BOLD, Ansi.RED)} gaps which represent {colorize(str(len(report.missing_starts)), Ansi.BOLD, Ansi.RED)} missing candles"
         )
+        report.gaps_df = report.gaps_df.sort_values("missing_count", ascending=False)
+        logdf(report.gaps_df, name="Candle Gaps")
+        report.gap_sizes_df = report.gap_sizes_df.sort_values("gap_count", ascending=False)
+        logdf(report.gap_sizes_df, name="Gap Sizes")
 
     if report.n_ohlc_zeros:
         log.warning(
@@ -521,11 +514,11 @@ def log_candle_dq_issues(
             report.n_ohlc_inconsistencies,
         )
 
-    if report.n_large_ranges:
+    if report.n_unrealistically_large_candles:
         log.warning(
             "%sFound %d candles with unrealistically large ranges",
             ctx,
-            report.n_large_ranges,
+            report.n_unrealistically_large_candles,
         )
 
     # If nothing bad was found, say so explicitly
@@ -534,6 +527,6 @@ def log_candle_dq_issues(
         and report.n_gaps == 0
         and report.n_ohlc_zeros == 0
         and report.n_ohlc_inconsistencies == 0
-        and report.n_large_ranges == 0
+        and report.n_unrealistically_large_candles == 0
     ):
         log.info("%sCandles passed all DQ checks", ctx)

@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 pytestmark = pytest.mark.local
 
-from qlir.data.quality.candles import validate_candles, CandlesDQReport
+from qlir.data.quality.candles.candles import validate_candles, CandlesDQReport
 from qlir.time.timefreq import TimeFreq, TimeUnit
 import logging
 

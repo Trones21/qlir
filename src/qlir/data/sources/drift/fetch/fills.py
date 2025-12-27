@@ -28,7 +28,7 @@ from drift_data_api_client.models import get_market_symbol_candles_resolution_re
 from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
 from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
-from qlir.data.quality.candles import validate_candles
+from qlir.data.quality.candles.candles import validate_candles
 from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles
 from qlir.io.checkpoint import write_checkpoint, FileType
 from qlir.io.union_files import union_file_datasets
