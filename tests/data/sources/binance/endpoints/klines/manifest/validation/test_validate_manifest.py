@@ -7,7 +7,7 @@ from qlir.data.sources.binance.endpoints.klines.manifest.validation.orchestrator
 import logging
 log = logging.getLogger(__name__)
 
-def test_validate_manifest():
+def test_validate_manifest_on_real_data():
     symbol="SOLUSDT"
     interval="1m"
     limit=1000
@@ -21,4 +21,6 @@ def test_validate_manifest():
                 limit=limit,
             )
     
-    validate_manifest_and_fs_integrity(manifest=manifest, response_dir=response_dir)
+    report = validate_manifest_and_fs_integrity(manifest=manifest, response_dir=response_dir)
+
+    log.info(report)

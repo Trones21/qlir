@@ -1,7 +1,10 @@
 import re
 from typing import Any
 from urllib.parse import parse_qs, urlparse
-import logging 
+import logging
+
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_structure import isolate_open_time_from_composite_key, isolate_open_time_from_request_url 
+from .violations import ManifestViolation
 log = logging.getLogger(__name__)
 
 def validate_slice_open_spacing_wrapper(manifest):
@@ -13,22 +16,40 @@ def validate_slice_open_spacing_wrapper(manifest):
     
     slices = manifest['slices']
 
-    # get pairs (key, slice) - extract open time from composite key
-    pairs_bycompkey = extract_open_pairs_by_composite_key_segment(slices)
-    validate_slice_open_spacing(pairs_bycompkey, expected_gap)
+    violations: dict = {}
+    slice_structure_violations: dict[str, list[ManifestViolation]] = {}
+    open_spacing_violations: dict[str, list[ManifestViolation]] = {}
 
-    # get pairs (key, slice) - extract open time from requested url 
-    pairs_byrequrl = extract_open_pairs_by_url_starttime(slices)
-    validate_slice_open_spacing(pairs_byrequrl, expected_gap)
+    # get pairs (key, slice) - extract open time from composite key - and collect issues
+    pairs_bycompkey, composite_key_structure_violations = extract_open_pairs_by_composite_key_segment(slices)
+    slice_structure_violations['composite_key_structure_violations'] = composite_key_structure_violations
+    
+    open_space_viols_bycompkey = validate_slice_open_spacing(pairs_bycompkey, expected_gap))
+    open_spacing_violations['via_composite_key_parse'] = open_space_viols_bycompkey
 
+    # get pairs (key, slice) - extract open time from requested url - and collect issues
+    pairs_byrequrl, url_parse_violations = extract_open_pairs_by_url_starttime(slices)
+    slice_structure_violations['url_structure_violations'] = url_parse_violations
+    
+    req_url_space_violations = validate_slice_open_spacing(pairs_byrequrl, expected_gap)
+    open_spacing_violations['via_req_url_parse'] = req_url_space_violations
+
+    # Collect Violations 
+    violations['open_spacing_violations'] = open_spacing_violations
+    violations['slice_structure_violations'] = slice_structure_violations
+
+    return violations
 
 
 def validate_slice_open_spacing(
     pairs: list[tuple[int, Any]],
     expected_gap_ms: int,
-) -> None:
+) -> list[ManifestViolation]:
+    
+    violations: list[ManifestViolation] = []
+
     if not pairs:
-        return
+        return violations
 
     pairs.sort(key=lambda x: x[0])
 
@@ -38,115 +59,62 @@ def validate_slice_open_spacing(
         delta = curr_ts - prev_ts
 
         if delta != expected_gap_ms:
-            raise ValueError(
+            violations.append({
+                "rule": "open_time_spacing",
+                "index": i,
+                "expected_gap_ms": expected_gap_ms,
+                "actual_gap_ms": delta,
+                "prev_ts": prev_ts,
+                "curr_ts": curr_ts,
+            })
+            log.warning(
                 f"Slice gap violation at index {i}: "
                 f"expected {expected_gap_ms}ms, got {delta}ms "
-                f"(prev={prev_ts}, curr={curr_ts})"
+                f"(prev={prev_ts}, curr={curr_ts})",
+                extra={"tag": ("MANIFEST","VALIDATION","OPEN_TIME_SPACING")}
             )
 
+    return violations
 
 
 def extract_open_pairs_by_composite_key_segment(
     slices: dict[str, Any],
-) -> list[tuple[int, Any]]:
+) -> tuple[list[tuple[int, Any]], list[ManifestViolation]]:
+    
     pairs: list[tuple[int, Any]] = []
 
     for composite_key, slice_entry in slices.items():
-        unix_ts, returned_slice = isolate_open_time_from_composite_key(
-            composite_key,
-            slice_entry,
-        )
-        pairs.append((unix_ts, returned_slice))
+        unix_ts = isolate_open_time_from_composite_key(composite_key)
+        if unix_ts is None:
+            continue  # invalid key -> already logged
 
-    return pairs
-
-
-
-def extract_open_pairs_by_url_starttime(
-    slices,
-) -> list[tuple[int, Any]]:
-    pairs: list[tuple[int, Any]] = []
-
-    for slice in slices:
-        unix_ts, slice_entry = isolate_open_time_from_request_url(slice)
         pairs.append((unix_ts, slice_entry))
 
     return pairs
 
 
 
-def isolate_open_time_from_composite_key(
-    composite_key: str,
-    slice_entry: dict
-) -> tuple[int, dict]:
-    """
-    Extract the open timestamp from a composite slice key.
 
-    Expected format:
-        SYMBOL:INTERVAL:START_TIME:LIMIT
+def extract_open_pairs_by_url_starttime(
+    slices: dict[str, Any],
+    violations: list[ManifestViolation],
+) -> tuple[list[tuple[int, Any]], list[ManifestViolation]]:
+    
+    pairs: list[tuple[int, Any]] = []
 
-    Example:
-        BTCUSDT:1m:1503122400000:1000
-
-    Returns:
-        (open_ts_ms, slice_entry)
-    """
-    parts = composite_key.split(":")
-
-    if len(parts) < 4:
-        raise ValueError(
-            f"Invalid composite key format: {composite_key}"
+    for slice_key, slice_entry in slices.items():
+        unix_ts = isolate_open_time_from_request_url(
+            slice_key=slice_key,
+            slice_entry=slice_entry,
         )
+        if unix_ts is None:
+            continue  # violation captured upstream
 
-    start_time_str = parts[2]
+        pairs.append((unix_ts, slice_entry))
 
-    try:
-        open_ts_ms = int(start_time_str)
-    except ValueError as exc:
-        raise ValueError(
-            f"Invalid startTime in composite key: {composite_key}"
-        ) from exc
-
-    return open_ts_ms, slice_entry
+    return pairs
 
 
-def isolate_open_time_from_request_url(
-    slice_entry: dict,
-) -> tuple[int, dict]:
-    """
-    Extract the open timestamp (startTime) from the slice's requested_url.
-
-    Contract:
-    - requested_url must exist
-    - startTime query param must exist
-    - startTime must be parseable as int (ms)
-
-    Returns:
-        (open_ts_ms, slice_entry)
-    """
-    try:
-        url = slice_entry["requested_url"]
-    except KeyError as exc:
-        raise KeyError("Slice entry missing 'requested_url'") from exc
-
-    parsed = urlparse(url)
-    qs = parse_qs(parsed.query)
-
-    try:
-        start_time_str = qs["startTime"][0]
-    except (KeyError, IndexError) as exc:
-        raise ValueError(
-            f"requested_url missing startTime param: {url}"
-        ) from exc
-
-    try:
-        open_ts_ms = int(start_time_str)
-    except ValueError as exc:
-        raise ValueError(
-            f"Invalid startTime value: {start_time_str}"
-        ) from exc
-
-    return open_ts_ms, slice_entry
 
 _INTERVAL_RE = re.compile(r"^(?P<value>\d+)(?P<unit>[sm])$")
 
