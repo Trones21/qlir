@@ -24,7 +24,7 @@ def validate_slice_open_spacing_wrapper(manifest):
     pairs_bycompkey, composite_key_structure_violations = extract_open_pairs_by_composite_key_segment(slices)
     slice_structure_violations['composite_key_structure_violations'] = composite_key_structure_violations
     
-    open_space_viols_bycompkey = validate_slice_open_spacing(pairs_bycompkey, expected_gap))
+    open_space_viols_bycompkey = validate_slice_open_spacing(pairs_bycompkey, expected_gap)
     open_spacing_violations['via_composite_key_parse'] = open_space_viols_bycompkey
 
     # get pairs (key, slice) - extract open time from requested url - and collect issues
@@ -59,14 +59,20 @@ def validate_slice_open_spacing(
         delta = curr_ts - prev_ts
 
         if delta != expected_gap_ms:
-            violations.append({
-                "rule": "open_time_spacing",
-                "index": i,
-                "expected_gap_ms": expected_gap_ms,
-                "actual_gap_ms": delta,
-                "prev_ts": prev_ts,
-                "curr_ts": curr_ts,
-            })
+            violations.append(
+                ManifestViolation(
+                    rule="open_time_spacing",
+                    slice_key=None,
+                    message="Gap (of non-interval length) detected",
+                    extra={
+                    "index": i,
+                    "expected_gap_ms": expected_gap_ms,
+                    "actual_gap_ms": delta,
+                    "prev_ts": prev_ts,
+                    "curr_ts": curr_ts,
+                    })
+                )
+            
             log.warning(
                 f"Slice gap violation at index {i}: "
                 f"expected {expected_gap_ms}ms, got {delta}ms "
@@ -82,37 +88,40 @@ def extract_open_pairs_by_composite_key_segment(
 ) -> tuple[list[tuple[int, Any]], list[ManifestViolation]]:
     
     pairs: list[tuple[int, Any]] = []
-
+    violations: list[ManifestViolation] = []
     for composite_key, slice_entry in slices.items():
-        unix_ts = isolate_open_time_from_composite_key(composite_key)
-        if unix_ts is None:
-            continue  # invalid key -> already logged
+        res = isolate_open_time_from_composite_key(composite_key)
+        if res is ManifestViolation:
+            violations.append(res)
+        elif res is int:
+            pairs.append((res, slice_entry))
+        else:
+            log.debug("extract_open_pairs_by_composite_key_segment returned an unexpected value")
 
-        pairs.append((unix_ts, slice_entry))
-
-    return pairs
+    return pairs, violations
 
 
 
 
 def extract_open_pairs_by_url_starttime(
     slices: dict[str, Any],
-    violations: list[ManifestViolation],
 ) -> tuple[list[tuple[int, Any]], list[ManifestViolation]]:
     
     pairs: list[tuple[int, Any]] = []
-
+    violations: list[ManifestViolation] = []
     for slice_key, slice_entry in slices.items():
-        unix_ts = isolate_open_time_from_request_url(
+        res = isolate_open_time_from_request_url(
             slice_key=slice_key,
             slice_entry=slice_entry,
         )
-        if unix_ts is None:
-            continue  # violation captured upstream
+        if res is ManifestViolation:
+            violations.append(res)
+        elif res is int:
+            pairs.append((res, slice_entry))
+        else:
+            log.debug("extract_open_pairs_by_url_starttime returned an unexpected value")
 
-        pairs.append((unix_ts, slice_entry))
-
-    return pairs
+    return pairs, violations
 
 
 

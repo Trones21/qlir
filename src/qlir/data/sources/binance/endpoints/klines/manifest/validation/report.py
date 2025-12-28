@@ -1,6 +1,7 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 
 
+@dataclass
 class ManifestValidationReport:
     fatal: list[str] = field(default_factory=list)
     warnings: list[dict] = field(default_factory=list)

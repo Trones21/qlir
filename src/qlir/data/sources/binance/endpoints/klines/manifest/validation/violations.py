@@ -3,7 +3,7 @@ from typing import Any
 
 @dataclass
 class ManifestViolation:
-    slice_key: str
+    slice_key: str | None
     rule: str
     message: str
     severity: str = "error"   # or "warn"
