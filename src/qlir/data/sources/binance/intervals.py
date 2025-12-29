@@ -38,3 +38,7 @@ def interval_to_ms(interval: str) -> int:
 
     # defensive: regex already constrains this
     raise ValueError(f"Unsupported interval unit: {unit}")
+
+def floor_unix_ts_to_interval(interval_in_ms: int, value_to_floor: int):
+    base = value_to_floor // interval_in_ms
+    return base * interval_in_ms

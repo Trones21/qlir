@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlparse
 import logging
 
 from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
+from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval
 log = logging.getLogger(__name__)
 from qlir.data.sources.binance.endpoints.klines.rest_api_contracts import audit_binance_rest_kline_invariants
 from qlir.time.iso import now_iso
@@ -134,8 +135,9 @@ def fetch_and_persist_slice(
     resp.raise_for_status()  # will raise on 4xx/5xx
 
     data = resp.json()
-
-
+    interval_ms = interval_to_ms(request_slice_key.interval)
+    stats = _inspect_klines(raw=data, interval_ms=interval_ms)
+    log.debug("RAW_KLINES stats: %s", stats)
 
     # Binance kline format: list of lists.
     # Each entry: [ openTime, open, high, low, close, volume, closeTime, ... ]
@@ -149,7 +151,6 @@ def fetch_and_persist_slice(
         received_last_open = None
 
     # A super light check of binance
-    interval_ms = interval_to_ms(request_slice_key.interval)
     audit_binance_rest_kline_invariants(data, interval_ms=interval_ms, log=log)
 
     # Prep for writing
@@ -170,6 +171,8 @@ def fetch_and_persist_slice(
             "interval": request_slice_key.interval,
             "request_param_startTime": format_ts_human(request_slice_key.start_ms),
             "request_param_endTime": format_ts_human(request_slice_key.end_ms),
+            "requested_first_open": request_slice_key.start_ms,
+            "requested_last_open_implicit": floor_unix_ts_to_interval(interval_in_ms=interval_ms,value_to_floor=request_slice_key.end_ms),
             "limit": request_slice_key.limit,
             "http_status": http_status,
             "n_items": n_items,
@@ -204,11 +207,36 @@ def fetch_and_persist_slice(
 
         "received_first_open": received_first_open,
         "received_last_open": received_last_open,
+        "requested_first_open": request_slice_key.start_ms,
+        "requested_last_open_implicit": floor_unix_ts_to_interval(interval_in_ms=interval_ms,value_to_floor=request_slice_key.end_ms),
         "request_param_startTime": format_ts_human(request_slice_key.start_ms),
         "request_param_endTime": format_ts_human(request_slice_key.end_ms),
         
         "requested_at": requested_at,
         "completed_at": completed_at,
+    }
+
+
+def _inspect_klines(raw: list[list], interval_ms: int) -> dict:
+    if not raw:
+        return {"n": 0}
+
+    opens = [int(r[0]) for r in raw]  # open_time ms
+    opens_sorted = sorted(opens)
+    uniq = len(set(opens_sorted))
+
+    deltas = [opens_sorted[i+1] - opens_sorted[i] for i in range(len(opens_sorted)-1)]
+    gaps = [d for d in deltas if d != interval_ms]
+
+    return {
+        "n": len(raw),
+        "uniq_open": uniq,
+        "first_open": opens_sorted[0],
+        "last_open": opens_sorted[-1],
+        "min_delta": min(deltas) if deltas else None,
+        "max_delta": max(deltas) if deltas else None,
+        "n_gaps": len(gaps),
+        "max_gap_ms": max(gaps) if gaps else 0,
     }
 
 

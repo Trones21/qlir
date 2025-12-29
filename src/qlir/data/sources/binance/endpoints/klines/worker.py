@@ -299,7 +299,7 @@ def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
 
         # Pull requested / received bounds (may be None)
         req_first = meta.get("requested_first_open")
-        req_last = meta.get("requested_last_open")
+        req_last = meta.get("requested_last_open_implicit")
         rec_first = meta.get("received_first_open")
         rec_last = meta.get("received_last_open")
 
@@ -412,6 +412,31 @@ def _update_summary(manifest: Dict) -> None:
     failed = sum(1 for e in slices.values() if e.get("status") == SliceStatus.FAILED.value)
     missing = sum(1 for e in slices.values() if e.get("status") == SliceStatus.MISSING.value)
     needs_refresh = sum(1 for e in slices.values() if e.get("status") == SliceStatus.NEEDS_REFRESH.value)
+    in_progress = sum(1 for e in slices.values() if e.get("status") == SliceStatus.IN_PROGRESS.value)
+
+    accounted_for = (
+        complete
+        + partial
+        + failed
+        + missing
+        + needs_refresh
+        + in_progress
+    )
+
+    if accounted_for != total:
+        log.warning(
+            "Manifest summary mismatch: total=%d accounted=%d "
+            "(complete=%d partial=%d missing=%d needs_refresh=%d "
+            "in_progress=%d failed=%d)",
+            total,
+            accounted_for,
+            complete,
+            partial,
+            missing,
+            needs_refresh,
+            in_progress,
+            failed,
+        )
 
     manifest["summary"] = {
         "total_slices": total,
@@ -419,6 +444,7 @@ def _update_summary(manifest: Dict) -> None:
         "complete_slices": complete,
         "partial_slices": partial,
         "needs_refresh": needs_refresh,
+        "in_progress": in_progress,
         "failed_slices": failed,
         "last_evaluated_at": _now_iso(),
     }
