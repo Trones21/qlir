@@ -293,6 +293,9 @@ def _update_entry(meta, entry, limit, slice_comp_key) -> tuple[Any, SliceStatus]
 
 
 def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
+
+    log.debug("======================= Need to update with SliceStatusReason =================================")
+    raise NotImplementedError()
     try:
         log.debug(
             f"slice {slice_comp_key} marked as "

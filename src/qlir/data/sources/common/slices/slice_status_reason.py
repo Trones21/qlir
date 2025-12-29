@@ -1,20 +1,15 @@
 from enum import Enum
 
-
 class SliceStatusReason(str, Enum):
     NONE = "none"  # normal fast-path completion
 
     # Retryable
-    TRUNCATED_RESPONSE = "truncated_response"
-    BOUNDARY_MISMATCH = "boundary_mismatch"
     HTTP_ERROR = "http_error"
     PARSE_ERROR = "parse_error"
 
     # Non-retryable (terminal)
-    INTERNAL_GAP = "internal_gap"
     HISTORICAL_SPARSITY = "historical_sparsity"
-    NO_TRADES = "no_trades"
 
     # Temporal
-    STILL_FORMING = "still_forming"
-    TIME_GATED = "time_gated"
+    AWAITING_UPSTREAM = "awaiting_upstream" # The slice should be complete by time, but the upstream system hasn’t delivered all data yet.
+    STILL_FORMING = "still_forming"  # The slice is mathematically impossible to be complete yet.

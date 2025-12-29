@@ -136,6 +136,10 @@ def fetch_and_persist_slice(
 
     data = resp.json()
     interval_ms = interval_to_ms(request_slice_key.interval)
+
+    log.info("Fix after sleep")
+    log.debug("======================= Need to add fast path (1000 (limit amt) items in data) / slow path (partial res delivered) =================================")
+    raise NotImplementedError()
     stats = _inspect_klines(raw=data, interval_ms=interval_ms)
     log.debug("RAW_KLINES stats: %s", stats)
 
