@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from typing import Optional
 log = logging.getLogger(__name__)
 
 
@@ -28,20 +29,37 @@ class SliceStatus(str, Enum):
     """
     Status of a single kline slice fetch.
 
-    - PENDING:      not yet fetched or scheduled
+    - MISSING:      not yet fetched or scheduled
     - COMPLETE:     Successfully fetched and stored full slice
     - PARTIAL:      Successfully fetched and stored a parital slice (e.g. when full 1000 candle slice isnt available yet)
     - NEEDS_REFRESH: Generic label, see clasiify slices and the __contract object to see the full reason 
     - FAILED:       attempted but failed (eligible for retry)
     - IN_PROGRESS:  A worker is currently fetching 
     """
-    PENDING = "pending"
+    MISSING = "missing"
     COMPLETE = "complete"
     PARTIAL = "partial"
     NEEDS_REFRESH = "needs_refresh"
     FAILED = "failed"
     IN_PROGRESS= "in_progress"
 
+    @classmethod
+    def try_parse(cls, raw: Optional[str]) -> SliceStatus | None:
+        if raw is None:
+            return None
+        try:
+            return cls(raw)
+        except ValueError:
+            return None
+    
+    @classmethod
+    def is_valid(cls, raw) -> "SliceStatus":
+        try:
+            return cls(raw)
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid SliceStatus literal: {raw!r}"
+            ) from exc
 
 @dataclass(frozen=True)
 class KlineSliceKey:
@@ -106,8 +124,12 @@ def classify_slices(
             result.missing.append(slice_key)
             continue
         
-        # worker.add_or_update_entry_meta_contract adds these fields
+        status = SliceStatus(entry.get("status"))
+        if status == SliceStatus.MISSING:
+            result.missing.append(slice_key)
+            continue
 
+        # worker.add_or_update_entry_meta_contract adds these fields
         has_contract = "__meta_contract" in entry
         if not has_contract:
             log.debug(f"Metadata contract object in manifest for slice {key} is out of date, couldnt find __meta_contract field")
@@ -126,12 +148,7 @@ def classify_slices(
             result.needs_refresh.append(slice_key)
             continue
 
-        
-        status = SliceStatus(entry.get("status"))
-
-        if status == SliceStatus.PENDING:
-            result.missing.append(slice_key)
-        elif status == SliceStatus.PARTIAL:
+        if status == SliceStatus.PARTIAL:
             result.partial.append(slice_key)
         elif status == SliceStatus.COMPLETE:
             result.complete.append(slice_key)

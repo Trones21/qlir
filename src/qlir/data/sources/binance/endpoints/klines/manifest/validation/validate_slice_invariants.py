@@ -1,5 +1,6 @@
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_facts import canonical_slice_comp_key_from_facts, compute_slice_id_from_facts, extract_facts_from_composite_key, extract_facts_from_manifest, extract_facts_from_requested_url
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_invariants import canonical_slice_comp_key_from_facts, compute_slice_id_from_facts, extract_facts_from_composite_key, extract_facts_from_manifest, extract_facts_from_requested_url
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
+from qlir.data.sources.binance.endpoints.klines.model import SliceStatus
 from qlir.data.sources.binance.intervals import interval_to_ms
 
 
@@ -10,6 +11,16 @@ def validate_slice_invariants(
     manifest: dict,
 ) -> list[ManifestViolation]:
     violations: list[ManifestViolation] = []
+
+    raw_status = slice_obj.get("status")
+    slice_status = SliceStatus.is_valid(raw_status)
+    if not isinstance(slice_status, SliceStatus):
+        violations.append(ManifestViolation(
+            rule="invalid_slice_status",
+            slice_key=slice_key,
+            message=f"status must be SliceStatus, got {raw_status!r}",
+        ))
+        return violations  # nothing else is meaningful
 
     # ── extract facts ────────────────────────────
     try:

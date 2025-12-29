@@ -1,13 +1,13 @@
 from urllib.parse import parse_qs, urlparse
 
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import SliceFactsParts
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import SliceInvariantsParts
 
 
 class RequestedURLParseError(ValueError):
     pass
 
 
-def parse_requested_kline_url(url: str) -> SliceFactsParts:
+def parse_requested_kline_url(url: str) -> SliceInvariantsParts:
     """
     Parse a Binance klines requested_url and extract canonical slice facts.
 

@@ -2,6 +2,7 @@ from typing import Any
 import logging
 
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_structure import isolate_open_time_from_composite_key, isolate_open_time_from_request_url
+from qlir.data.sources.binance.endpoints.klines.model import SliceStatus
 from qlir.data.sources.binance.intervals import interval_to_ms 
 from .violations import ManifestViolation
 log = logging.getLogger(__name__)
@@ -107,6 +108,10 @@ def extract_open_pairs_by_url_starttime(
     pairs: list[tuple[int, Any]] = []
     violations: list[ManifestViolation] = []
     for slice_key, slice_entry in slices.items():
+        if SliceStatus.try_parse(slice_entry['status']) == SliceStatus.MISSING.value:
+            # We cannot parse the requested url if we havent made the request yet
+            continue
+
         res = isolate_open_time_from_request_url(
             slice_key=slice_key,
             slice_entry=slice_entry,

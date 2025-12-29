@@ -4,6 +4,7 @@ from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_fs_
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_structure import do_all_slices_have_same_top_level_metadata
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.open_time_spacing import validate_slice_open_spacing_wrapper
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.report import ManifestValidationReport
+from qlir.data.sources.binance.endpoints.klines.model import SliceStatus
 from qlir.utils.str.color import Ansi, colorize
 import logging 
 log = logging.getLogger(__name__)
@@ -78,6 +79,12 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
 
     slice_invariant_violations = []
     for slice_key, slice_obj in manifest["slices"].items():
+        
+        if SliceStatus.try_parse(slice_obj['status']) == SliceStatus.MISSING.value:
+            # Slice exists structurally but has not yet been requested.
+            # Invariants depending on requested_url are not meaningful yet.
+            continue
+
         inv_violations = validate_slice_invariants(
             slice_key=slice_key,
             slice_obj=slice_obj,

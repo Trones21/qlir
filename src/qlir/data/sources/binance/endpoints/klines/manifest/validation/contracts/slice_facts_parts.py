@@ -1,6 +1,6 @@
 from typing import TypedDict
 
-class SliceFactsParts(TypedDict):
+class SliceInvariantsParts(TypedDict):
     symbol: str
     interval: str
     start_time: int

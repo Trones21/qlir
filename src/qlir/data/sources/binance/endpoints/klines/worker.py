@@ -120,19 +120,10 @@ def run_klines_worker(
         
         
         classified = classify_slices(expected_slices, manifest)
-
         manifest = update_manifest_with_classification(manifest=manifest, classified=classified)
         save_manifest(manifest_path, manifest, f"Updating Manifest with slice classifications" )
 
-        to_fetch = [
-            *classified.missing,
-            *classified.partial,
-            *classified.needs_refresh,
-            *classified.failed
-        ]
-
-        log.info(f"{len(to_fetch)} slices to fetch")
-        log.debug({"to_fetch":to_fetch})
+        to_fetch = _construct_fetch_batch(classified)
 
         # No work to do; reset backoff and sleep for a bit.
         if not to_fetch:
@@ -165,8 +156,8 @@ hashed: {colorize(entry['slice_id'], Ansi.BOLD)}
 Full Entry: {entry}""")
                           
                 # Mark in-progress
-                entry["status"] = "in_progress"
-                entry["requested_at"] = now_utc().isoformat()
+                entry["status"] = SliceStatus.IN_PROGRESS.value
+                
                 
                 save_manifest(manifest_path, manifest, f"slice marked as in progress")
 
@@ -176,6 +167,7 @@ Full Entry: {entry}""")
                     responses_dir=responses_dir,
                 )
 
+                entry["requested_at"] = now_utc().isoformat()
                 entry, new_status = _update_entry(meta, entry, limit, slice_comp_key)
                 manifest["slices"][slice_comp_key] = entry
 
@@ -204,6 +196,34 @@ Full Entry: {entry}""")
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+def _construct_fetch_batch(classified):
+        
+        by_classification = {
+        "missing": len(classified.missing),
+        "partial": len(classified.partial),
+        "needs_refresh": len(classified.needs_refresh),
+        "failed": len(classified.failed),
+        }
+
+        to_fetch = [
+            *classified.missing,
+            *classified.partial,
+            *classified.needs_refresh,
+            *classified.failed
+        ]
+
+        log.info(f"{len(to_fetch)} slices to fetch")
+        log.debug(
+        "Fetch batch constructed",
+            extra={
+                "count": len(to_fetch),
+                "by_classification": by_classification,
+                "to_fetch": to_fetch,
+            }
+        )
+
+        return to_fetch
 
 def _update_entry_on_exception(manifest, slice_comp_key, meta, exception):
         now_iso = _now_iso()
@@ -332,20 +352,6 @@ def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
         log.exception(exc)
         pass
 
-
-
-# def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
-#     try:
-#         log.debug(f"slice {slice_comp_key} marked as {colorize("PARTIAL", Ansi.PINK_HOT , Ansi.BOLD)} Limit={limit} n_items={n_items}")
-#         log.debug(colorize(f"You may have requested a partial slice.", Ansi.BOLD))
-#         log.debug(f"Request url was: {meta.get('url')}")
-#         log.debug(f'Slice Requested: {format_ts_human(meta.get("requested_first_open", "KeyError"))} - {format_ts_human(meta.get("requested_last_open", "KeyError"))}')
-#         log.debug(f' Slice Received: {format_ts_human(meta.get("received_first_open", "KeyError"))} - {format_ts_human(meta.get("received_last_open", "KeyError"))}')
-#         log_requested_slice_size(meta.get('url')) #type:ignore
-#     except Exception as exc:
-#         log.exception(exc)
-#         pass
-
 def _add_or_update_entry_meta_contract(entry, expected_fields):
     present = set(entry.keys())
     missing = [f for f in expected_fields if f not in present]
@@ -404,10 +410,12 @@ def _update_summary(manifest: Dict) -> None:
     complete = sum(1 for e in slices.values() if e.get("status") == SliceStatus.COMPLETE.value)
     partial = sum(1 for e in slices.values() if e.get("status") == SliceStatus.PARTIAL.value)
     failed = sum(1 for e in slices.values() if e.get("status") == SliceStatus.FAILED.value)
+    missing = sum(1 for e in slices.values() if e.get("status") == SliceStatus.MISSING.value)
     needs_refresh = sum(1 for e in slices.values() if e.get("status") == SliceStatus.NEEDS_REFRESH.value)
 
     manifest["summary"] = {
         "total_slices": total,
+        "missing_slices": missing,
         "complete_slices": complete,
         "partial_slices": partial,
         "needs_refresh": needs_refresh,

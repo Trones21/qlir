@@ -39,6 +39,8 @@ def load_or_create_manifest(
             "complete_slices": 0,
             "partial_slices": 0,
             "failed_slices": 0,
+            "missing_slices": 0,
+            "needs_refresh_slices": 0,
             "last_evaluated_at": None,
         },
         "slices": {},
@@ -57,14 +59,14 @@ def save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") ->
 
 def seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSliceKey]):
     """
-    Ensure every expected slice exists in manifest with at least a 'pending' status.
+    Ensure every expected slice exists in manifest with at least a 'missing' status.
     """
     changed = False
     for s in expected_slices:
         composite_key = s.canonical_slice_composite_key()
         if composite_key not in manifest['slices']:
             manifest['slices'][composite_key] = {
-                "status": "pending",
+                "status": SliceStatus.MISSING.value,
                 "slice_id": make_canonical_slice_hash(s),
                 "first_ts": s.start_ms,
                 "last_ts": s.end_ms,
@@ -86,7 +88,7 @@ def update_manifest_with_classification(manifest, classified: SliceClassificatio
     # mark slice-level status    
     for slice_key in classified.missing:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["status"] = SliceStatus.PENDING.value
+        manifest["slices"][slice_comp_key]["status"] = SliceStatus.MISSING.value
 
     for slice_key in classified.partial:
         slice_comp_key = slice_key.canonical_slice_composite_key()

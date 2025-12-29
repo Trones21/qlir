@@ -1,11 +1,11 @@
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import SliceFactsParts
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import SliceInvariantsParts
 
 
 class CompositeKeyParseError(ValueError):
     pass
 
 
-def parse_composite_slice_key(key: str) -> SliceFactsParts:
+def parse_composite_slice_key(key: str) -> SliceInvariantsParts:
     """
     Parse a composite slice key of the form:
 
