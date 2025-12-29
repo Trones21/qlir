@@ -9,6 +9,7 @@ import logging
 
 from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
 from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval
+from qlir.data.sources.common.slices.slice_key import SliceKey
 log = logging.getLogger(__name__)
 from qlir.data.sources.binance.endpoints.klines.rest_api_contracts import audit_binance_rest_kline_invariants
 from qlir.time.iso import now_iso
@@ -18,7 +19,6 @@ from qlir.utils.str.fmt import term_fmt
 from qlir.utils.time.fmt import format_ts_human
 from qlir.utils.time.logging import TsDeltaResult, compute_ts_delta
 
-from .model import KlineSliceKey
 from .urls import build_kline_url
 
 try:  # pragma: no cover - external dependency wiring
@@ -30,7 +30,7 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 
-def make_canonical_slice_hash(slice_key: KlineSliceKey) -> str:
+def make_canonical_slice_hash(slice_key: SliceKey) -> str:
     """
     Stable ID derived from the composite_key, used as filename.
     """
@@ -75,7 +75,7 @@ def log_requested_slice_size(url: str):
 
 
 def fetch_and_persist_slice(
-    request_slice_key: KlineSliceKey,
+    request_slice_key: SliceKey,
     data_root: Optional[Path] = None,
     responses_dir: Optional[Path] = None,
     timeout_sec: float = 10.0,

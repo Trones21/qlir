@@ -1,7 +1,7 @@
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_invariants import canonical_slice_comp_key_from_facts, compute_slice_id_from_facts, extract_facts_from_composite_key, extract_facts_from_manifest, extract_facts_from_requested_url
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
-from qlir.data.sources.binance.endpoints.klines.model import SliceStatus
 from qlir.data.sources.binance.intervals import interval_to_ms
+from qlir.data.sources.common.slices.slice_status import SliceStatus
 
 
 def validate_slice_invariants(

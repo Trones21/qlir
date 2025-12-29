@@ -2,6 +2,9 @@ from __future__ import annotations
 import logging
 
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
+from qlir.data.sources.common.slices.slice_classification import classify_slices
+from qlir.data.sources.common.slices.slice_key import SliceKey
+from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
@@ -11,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, List
 
-from .model import REQUIRED_FIELDS, KlineSliceKey, SliceStatus, classify_slices
+from .model import REQUIRED_FIELDS #SliceStatus, classify_slices
 from .urls import generate_kline_slices
 from .fetch import log_requested_slice_size, fetch_and_persist_slice
 from .time_range import compute_time_range
@@ -384,14 +387,14 @@ def _enumerate_expected_slices(
     limit: int,
     start_ms: int,
     end_ms: int,
-) -> List[KlineSliceKey]:
+) -> List[SliceKey]:
     """
     Convert the time range into a list of KlineSliceKey objects.
     """
-    slices: List[KlineSliceKey] = []
+    slices: List[SliceKey] = []
     for s, e in generate_kline_slices(symbol, interval, start_ms, end_ms, limit):
         slices.append(
-            KlineSliceKey(
+            SliceKey(
                 symbol=symbol,
                 interval=interval,
                 start_ms=s,

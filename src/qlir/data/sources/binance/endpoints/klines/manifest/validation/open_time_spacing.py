@@ -2,8 +2,8 @@ from typing import Any
 import logging
 
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_structure import isolate_open_time_from_composite_key, isolate_open_time_from_request_url
-from qlir.data.sources.binance.endpoints.klines.model import SliceStatus
-from qlir.data.sources.binance.intervals import interval_to_ms 
+from qlir.data.sources.binance.intervals import interval_to_ms
+from qlir.data.sources.common.slices.slice_status import SliceStatus 
 from .violations import ManifestViolation
 log = logging.getLogger(__name__)
 

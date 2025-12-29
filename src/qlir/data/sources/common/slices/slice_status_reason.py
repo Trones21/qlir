@@ -1,3 +1,6 @@
+from enum import Enum
+
+
 class SliceStatusReason(str, Enum):
     NONE = "none"  # normal fast-path completion
 

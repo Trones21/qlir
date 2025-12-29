@@ -3,7 +3,9 @@ from pathlib import Path
 from typing import Dict
 import logging
 
-from qlir.data.sources.binance.endpoints.klines.model import KlineSliceKey, SliceClassification, SliceStatus
+from qlir.data.sources.common.slices.slice_classification import SliceClassification
+from qlir.data.sources.common.slices.slice_key import SliceKey
+from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.time.iso import now_iso 
 log = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ def save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") ->
     print(f"[{colorize("WRITE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
 
 
-def seed_manifest_with_expected_slices(manifest, expected_slices: list[KlineSliceKey]):
+def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]):
     """
     Ensure every expected slice exists in manifest with at least a 'missing' status.
     """

@@ -4,7 +4,8 @@ from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_fs_
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_structure import do_all_slices_have_same_top_level_metadata
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.open_time_spacing import validate_slice_open_spacing_wrapper
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.report import ManifestValidationReport
-from qlir.data.sources.binance.endpoints.klines.model import SliceStatus
+
+from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.utils.str.color import Ansi, colorize
 import logging 
 log = logging.getLogger(__name__)

@@ -11,7 +11,6 @@ import httpx
 from qlir.data.sources.binance.intervals import interval_to_ms
 
 from .urls import build_kline_url
-from .model import KlineSliceKey
 import logging
 log = logging.getLogger(__name__)
 
