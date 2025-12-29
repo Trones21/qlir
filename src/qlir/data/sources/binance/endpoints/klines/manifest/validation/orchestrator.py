@@ -1,5 +1,5 @@
 from pathlib import Path
-from qlir.data.core.paths import get_raw_responses_dir_path
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.validate_slice_invariants import validate_slice_invariants
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_fs_integrity import validate_manifest_vs_responses
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_structure import do_all_slices_have_same_top_level_metadata
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.open_time_spacing import validate_slice_open_spacing_wrapper
@@ -46,47 +46,20 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
         })
         return report
 
-
-
     # ─────────────────────────────────────────────
     # Relative Gaps (warnings - maybe i'll write a func to automatically fix the issues in the manifest at a later date)
     # ─────────────────────────────────────────────
 
-    validate_slice_open_spacing_wrapper(manifest)
-    
+    slice_parse_violations, open_spacing_violations = validate_slice_open_spacing_wrapper(manifest)
+    report.add_slice_parse_violations(slice_parse_violations)
+    report.add_open_spacing_violations(open_spacing_violations)
+
     # ─────────────────────────────────────────────
     # Manifest Structure (warnings - maybe i'll write a func to automatically fix the issues in the manifest at a later date)
     # ─────────────────────────────────────────────
 
     same_shape, structures = do_all_slices_have_same_top_level_metadata(slices)
-
-    if not same_shape:
-        log.warning(colorize(
-            "Manifest contains slices with different top-level structures",
-            Ansi.YELLOW,
-            Ansi.BOLD,  
-        ),extra={"tag": ("MANIFEST","VALIDATION","STRUCTURE") })
-
-        for s in structures:
-            slice_keys = s['slice_keys']
-            preview = slice_keys[:2]
-            suffix = " ..." if len(slice_keys) > 2 else ""
-
-            log.warning({
-                "slice_keys_count": colorize(str(len(slice_keys)),Ansi.BOLD) ,
-                "slice_keys": f"{preview}{suffix}",
-                
-            },extra={"tag":("MANIFEST","VALIDATION","STRUCTURE","DETAILS")})
-            log.warning({"structure": s['keys']})
-            report.warnings.append(
-                { "violation": "Manifest contains slices with different top-level structures",
-                "details":{
-                "slice_keys_count": colorize(str(len(slice_keys)),Ansi.BOLD) ,
-                "slice_keys": f"{preview}{suffix}",
-                "structure": s['keys']                
-                }
-                }
-            )
+    report.record_and_log_structure_validation(same_shape=same_shape, structures=structures)
 
     # ─────────────────────────────────────────────
     # Manifest ↔ Filesystem Integrity (warnings - maybe i'll write a func to automatically fix the issues in the manifest/fs at a later date)
@@ -96,16 +69,32 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
         manifest=manifest,
         responses_dir=response_dir,
     )
+    report.record_and_log_manifest_vs_responses(fs_issues=fs_issues)
 
-    if fs_issues:
-        log.warning(colorize(
-            "Manifest / filesystem integrity issues detected",
-            Ansi.YELLOW,
-            Ansi.BOLD,
-        ))
-        log.warning(fs_issues, extra={"tag":("MANIFEST","VALIDATION","MANIFEST_FS_TEGRIDY","DETAILS")})
-        report.warnings.append({"violation": "Manifest / filesystem integrity issues detected", 
-                                "details": fs_issues})
+
+    # ─────────────────────────────────────────────
+    # Slice Facts (warnings - maybe i'll write a func to automatically fix the issues in the manifest/fs at a later date)
+    # ─────────────────────────────────────────────
+
+    slice_invariant_violations = []
+    for slice_key, slice_obj in manifest["slices"].items():
+        inv_violations = validate_slice_invariants(
+            slice_key=slice_key,
+            slice_obj=slice_obj,
+            manifest=manifest,
+        )
+        slice_invariant_violations.append(inv_violations)
+        report.add_slice_invariant_violations(inv_violations)
+
+    if not slice_invariant_violations:
+         log.info(
+                colorize(
+                    "Slice invariant validation passed (all slices satisfy all invariants)",
+                    Ansi.DIM,
+                ),
+                extra={"tag": ("MANIFEST", "VALIDATION", "STRUCTURE")},
+            )
+
     # ─────────────────────────────────────────────
     # Summary
     # ─────────────────────────────────────────────
@@ -117,3 +106,7 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
     )) 
 
     return report
+
+
+
+        

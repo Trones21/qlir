@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from urllib.parse import urlparse, parse_qs
 import logging
 log = logging.getLogger(__name__)
@@ -69,18 +70,13 @@ def isolate_open_time_from_request_url(
             )
 
 
+@dataclass(frozen=True)
+class SliceFacts:
+    symbol: str
+    interval: str
+    limit: int
+    start_time: int
 
 
-
-
-
-def validate_manifest_slice(slice):
-    '''Ensure that is individual slice does not break any of the invariants'''
-    
-
-def ensure_canonical_first_to_last_is_correct(slice):
-    '''This is just ensuring the canonical slice if correct (matches the limit)'''
-    canonical_first_open = slice['canoncial_first_open']
-    canonical_last_open = slice['canonical_last_open']
     
 

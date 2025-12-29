@@ -2,7 +2,7 @@ import os
 import logging
 from enum import Enum
 
-from afterdata.logging.filters import HasTagFilter
+from afterdata.logging.filters import HasTagFilter, NoTagFilter
 from afterdata.logging.handler_factories import make_simple_handler, make_tagged_handler, make_telemetry_handler
 from afterdata.logging.level_resolution import resolve_levels
 from afterdata.logging.logging_profiles import LogProfile
@@ -22,7 +22,9 @@ def setup_logging(profile: LogProfile, *, enable_telemetry: bool = False) -> Non
     qlir.handlers.clear()
     qlir.setLevel(qlir_level)
     qlir.propagate = False
-    qlir.addHandler(make_simple_handler(qlir_level))
+    simple = make_simple_handler(qlir_level)
+    simple.addFilter(NoTagFilter())
+    qlir.addHandler(simple)
 
     # tagged handler (only sees tagged records)
     tagged = make_tagged_handler(qlir_level)
@@ -37,7 +39,15 @@ def setup_logging(profile: LogProfile, *, enable_telemetry: bool = False) -> Non
         tlog.propagate = False
         tlog.addHandler(make_telemetry_handler(qlir_level))
 
+    dump_logging_tree("qlir")
+    dump_logging_tree()  # root
 
+def dump_logging_tree(prefix: str = "qlir"):
+    lg = logging.getLogger(prefix)
+    print(f"Logger: {lg.name} level={lg.level} propagate={lg.propagate}")
+    for i, h in enumerate(lg.handlers):
+        fmt = getattr(h.formatter, "_fmt", None)
+        print(f"  handler[{i}]: {type(h).__name__} level={h.level} formatter={type(h.formatter).__name__} fmt={fmt}")
 
 
 

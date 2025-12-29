@@ -21,11 +21,28 @@ from qlir.data.sources.binance.server import (
     start_data_server
 )
 
-# See logging_setup.py for logging options (LogProfile enum) 
-setup_logging(profile=LogProfile.QLIR_DEBUG)
+from afterdata.runtime_config import RuntimeConfig
 
 def parse_csv_arg(value: str) -> list[str]:
     return [v.strip() for v in value.split(",") if v.strip()]
+
+def _add_endpoint_arg(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--endpoint",
+        required=True,
+        choices=["klines", "uiklines"],
+        help="Endpoint [klines, uklines]",
+    )
+
+def _add_log_profile_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--log-profile",
+        type=LogProfile,
+        choices=list(LogProfile),
+        default=LogProfile.QLIR_INFO,
+        help="Logging profile",
+    )
+
 
 # if you want to limit the data to fetch or maybe store raw data somewhere non-canonical (not recommended, but the option is here )
 def parse_args() -> argparse.Namespace:
@@ -34,12 +51,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-root",  
         help="Directory where raw Binance data will be written.",
-    )
-
-    parser.add_argument(
-        "--endpoint",
-        choices=["klines", "uiklines"],
-        help="The endpoint name [klines, uiklines]"
     )
 
     parser.add_argument(
@@ -61,6 +72,9 @@ def parse_args() -> argparse.Namespace:
         help="Kline/uikline limit per request (default: 1000).",
     )
 
+    _add_endpoint_arg(parser)
+    _add_log_profile_arg(parser)
+    
     return parser.parse_args()
 
 def main() -> None:
@@ -72,7 +86,8 @@ def main() -> None:
         data_root = get_data_root()
     data_root.mkdir(parents=True, exist_ok=True)
 
-    cfg = None
+    # What we want to run 
+    data_server_cfg = None
 
     if args.endpoint == 'klines':
         klines_server_cfg = KlinesServerConfig(
@@ -84,7 +99,7 @@ def main() -> None:
             limit=args.limit,
         ))
 
-        cfg = klines_server_cfg
+        data_server_cfg = klines_server_cfg
 
     if args.endpoint == 'uiklines':
         uiklines_server_cfg = UIKlinesServerConfig(
@@ -96,11 +111,17 @@ def main() -> None:
             limit=args.limit,
         ))
 
-        cfg = uiklines_server_cfg
+        data_server_cfg = uiklines_server_cfg
     
-    if cfg is None:
+    if data_server_cfg is None:
         raise SystemError("No matching config was found, check the args that you passed")
 
+
+    # How we want to run it
+    runtime_cfg = RuntimeConfig(log_profile=args.log_profile)
+    setup_logging(profile=runtime_cfg.log_profile)
+
+    # Start the Data Server
     print(
         "[data_server] starting with\n"
         f"  symbol={args.symbol}\n"
@@ -109,7 +130,7 @@ def main() -> None:
         f"  data_root={data_root}"
     )
 
-    start_data_server(cfg)
+    start_data_server(data_server_cfg)
 
 if __name__ == "__main__":
     main()

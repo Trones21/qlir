@@ -7,25 +7,14 @@ import pandas as pd
 from qlir.time.timefreq import TimeFreq
 from qlir.data.core.instruments import CanonicalInstrument
 from afterdata.etl.binance.agg_server import parse_args as parse_agg_server_args
+from afterdata.etl.binance.data_server import _add_endpoint_arg, _add_log_profile_arg
 from afterdata.logging.logging_setup import setup_logging, LogProfile
 import logging
+
+from afterdata.runtime_config import RuntimeConfig
 log = logging.getLogger(__name__)
 
-# See logging_setup.py for logging options (LogProfile enum) 
-setup_logging(profile=LogProfile.QLIR_DEBUG)
-
-def _get_endpoint_arg(parser: argparse.ArgumentParser) -> str:
-    parser.add_argument(
-        "--endpoint",
-        required=True,
-        help="Endpoint [klines, uklines]",
-    )
-
-    args = parser.parse_args()
-    return args.endpoint
-
-
-def _fetch_raw_impl(symbols, intervals, endpoint) -> None:
+def _fetch_raw_impl(symbols, intervals, endpoint, log_profile) -> None:
     """
     Launch Binance raw data servers. One subproc per symbol/interval/endpoint combo.
     """
@@ -42,7 +31,8 @@ def _fetch_raw_impl(symbols, intervals, endpoint) -> None:
                 "afterdata.etl.binance.data_server",
                 "--symbol", symbol,
                 "--interval", interval,
-                "--endpoint", endpoint
+                "--endpoint", endpoint,
+                "--log-profile", log_profile
             ]
 
             proc = subprocess.Popen(cmd, 
@@ -72,7 +62,12 @@ DEFAULT_INTERVALS = ["1m"]
 
 def fetch_raw_default() -> None:
     parser = argparse.ArgumentParser()
-    endpoint = _get_endpoint_arg(parser)
+    _add_endpoint_arg(parser)
+    _add_log_profile_arg(parser)
+
+    args = parser.parse_args()
+
+    
     print(
         "[NOTE] This command spawns long-running worker processes.\n"
         "Ctrl+C will NOT stop the servers.\n"
@@ -90,7 +85,7 @@ def fetch_raw_default() -> None:
     print(f" Servers starting in 10 seconds...")
     sleep(10)
 
-    _fetch_raw_impl(DEFAULT_SYMBOLS, DEFAULT_INTERVALS, endpoint)
+    _fetch_raw_impl(DEFAULT_SYMBOLS, DEFAULT_INTERVALS, args.endpoint, args.log_profile)
 
 
 def fetch_raw_specific() -> None:
@@ -109,11 +104,13 @@ def fetch_raw_specific() -> None:
         help="Comma-separated intervals (default: 1s)",
     )
 
-    endpoint = _get_endpoint_arg(parser)
-    poetry_args = parser.parse_args()
+    _add_endpoint_arg(parser)
+    _add_log_profile_arg(parser)
+
+    args = parser.parse_args()
     
-    symbols = [s.strip() for s in poetry_args.symbols.split(",") if s.strip()]
-    intervals = [i.strip() for i in poetry_args.intervals.split(",") if i.strip()]
+    symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    intervals = [i.strip() for i in args.intervals.split(",") if i.strip()]
 
     print("[binance] starting raw ingestion (SPECIFIC)")
     print(f"  symbols={symbols}")
@@ -122,7 +119,8 @@ def fetch_raw_specific() -> None:
     _fetch_raw_impl(
         symbols=symbols,
         intervals=intervals,
-        endpoint=endpoint
+        endpoint=args.endpoint,
+        log_profile=args.log_profile
     )
 
 

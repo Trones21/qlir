@@ -1,7 +1,25 @@
 
 # Priorities
+Mermaid diagram of project call usage (and maybe asscii)
+
+bash script (entrypoint specified in pyproject.toml - there are currently 3 options (by-arg, all, file-def)) 
+Note: The point of the bash script is to abstract away the params.. so you can just run `bash <something>.sh` and it does exactly what you want
+
+by_arg: use args to specify the symbol/interval/limit combos
+all: not yet implemented, but will call a get_symbols endpoint, then start one server for each
+file-def: Combos determined by the constants in etl.binance.main.py above the func `fetch_raw_default()`
+    DEFAULT_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    DEFAULT_INTERVALS = ["1m"] 
+
+Each of these parse the args, then call _fetch_raw_impl which loops over the combos provided and launch a new sub proc for each.
+which passes args and calls `__PROJECT_NAME.binance.etl.data_server`
+ 
+---
+
+issue where the partials aren't being completed 
+
 manifest_validation
-    - ensure that the chunks are the proper sizes
+    - add log to df for the slice parse and open spacing violations
 
 uklines - basically copy paste from klines worker
     - already setu pthe pyproject.toml in afterdata (but havent moved to template)
@@ -14,7 +32,10 @@ wrap fetch and persist slice with response timing logging (maybe use the same de
 - add dedicated logging to file (not just to the console)
     - this will be used for things like prometheus/grafana, so the structure needs to be tight
 - prepend pid func in the setup logging
-- refactor project agg_server.py.tpl (and maybe main) so that we can start one subproc per symbol/interval/endpoint just like we did with the data server)
+- refactor project agg_server so that we can start one subproc per symbol/interval/endpoint just like we did with the data server)
+- refactor project agg_server so that we can use a RuntimeConfig (with a log_profile) so that we  just like we did with the data server)
+- what else do we want to add to RuntimeConfig
+    - maybe the telemetry?
 
 ## Long Term (Not a prio at all)
 - log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)

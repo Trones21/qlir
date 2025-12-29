@@ -14,7 +14,7 @@ from qlir.utils.str.color import Ansi, colorize
 
 MANIFEST_FILENAME = "manifest.json"
 
-def load_manifest(
+def load_or_create_manifest(
     manifest_path: Path,
     symbol: str,
     interval: str,

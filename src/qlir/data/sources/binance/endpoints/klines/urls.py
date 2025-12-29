@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 from typing import Generator, Tuple, Optional
-import logging 
+import logging
+
+from qlir.data.sources.binance.intervals import interval_to_ms
+
 log = logging.getLogger(__name__)
 BASE_URL = "https://api.binance.com/api/v3/klines"
 
-
-def interval_to_ms(interval: str) -> int:
-    if interval == "1s":
-        return 1_000
-    if interval == "1m":
-        return 60_000
-    raise ValueError(f"Unsupported interval (only '1s' and '1m' allowed): {interval!r}")
 
 
 def generate_kline_slices(

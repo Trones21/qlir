@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import math
+import re
 import time
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
 import httpx
 
-from .urls import build_kline_url, interval_to_ms
+from qlir.data.sources.binance.intervals import interval_to_ms
+
+from .urls import build_kline_url
 from .model import KlineSliceKey
 import logging
 log = logging.getLogger(__name__)
@@ -18,7 +21,6 @@ def _now_ms() -> int:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
 
 def probe_earliest_open_time(
     symbol: str,

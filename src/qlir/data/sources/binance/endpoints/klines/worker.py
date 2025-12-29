@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 
-from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
@@ -106,7 +106,7 @@ def run_klines_worker(
             end_ms=max_end_ms,
         )
 
-        manifest = load_manifest(
+        manifest = load_or_create_manifest(
             manifest_path=manifest_path,
             symbol=symbol,
             interval=interval,
@@ -145,7 +145,7 @@ def run_klines_worker(
         for slice_key in to_fetch:
             meta: dict | None = None
             slice_comp_key = slice_key.canonical_slice_composite_key()
-            
+            print('\n')
             if slice_comp_key not in fetch_comp_keys:
                 log.debug(f'fetching {slice_comp_key}, but its not in to_fetch {fetch_comp_keys}')
             
@@ -159,11 +159,16 @@ def run_klines_worker(
                 if entry.get("status") == "in_progress" and not is_stale(entry):
                     continue
 
+                log.info(f"""{colorize('=== Slice entry pulled from manifest ===', Ansi.BOLD)}
+comp_key: {colorize(slice_comp_key, Ansi.BOLD)}
+hashed: {colorize(entry['slice_id'], Ansi.BOLD)}
+Full Entry: {entry}""")
+                          
                 # Mark in-progress
                 entry["status"] = "in_progress"
                 entry["requested_at"] = now_utc().isoformat()
-
-                save_manifest(manifest_path, manifest, "slice marked as in progress")
+                
+                save_manifest(manifest_path, manifest, f"slice marked as in progress")
 
                 meta = fetch_and_persist_slice(
                     request_slice_key=slice_key,
@@ -175,7 +180,7 @@ def run_klines_worker(
                 manifest["slices"][slice_comp_key] = entry
 
                 _update_summary(manifest)
-                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize(new_status, Ansi.BLUE , Ansi.BOLD)}") #type: ignore
+                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {new_status}") #type: ignore
 
                 # Reset backoff on success
                 backoff = 1.0
@@ -261,20 +266,85 @@ def _update_entry(meta, entry, limit, slice_comp_key) -> tuple[Any, SliceStatus]
             log.debug(f"[Fyi] - Not all keys returned as meta from fetch_and_persist_slice are written to disk. \n Entry Keys: {entry_keys} \n Meta Keys: {meta.keys()}")
         
         entry = _add_or_update_entry_meta_contract(entry=entry, expected_fields=REQUIRED_FIELDS)
-        return entry, new_status
+        return entry, new_status #type:ignore
 
 
 def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
     try:
-        log.debug(f"slice {slice_comp_key} marked as {colorize("PARTIAL", Ansi.PINK_HOT , Ansi.BOLD)} Limit={limit} n_items={n_items}")
-        log.debug(colorize(f"You may have requested a partial slice.", Ansi.BOLD))
+        log.debug(
+            f"slice {slice_comp_key} marked as "
+            f"{colorize('PARTIAL', Ansi.PINK_HOT, Ansi.BOLD)} "
+            f"Limit={limit} n_items={n_items}"
+        )
+
+        # Pull requested / received bounds (may be None)
+        req_first = meta.get("requested_first_open")
+        req_last = meta.get("requested_last_open")
+        rec_first = meta.get("received_first_open")
+        rec_last = meta.get("received_last_open")
+
+        if any(v is None for v in (req_first, req_last, rec_first, rec_last)):
+            log.debug(
+                colorize(
+                    "Partial slice diagnostics incomplete "
+                    "(missing requested/received bounds in meta).",
+                    Ansi.BOLD,
+                )
+            )
+
+        # Determine cause
+        if req_first is None or req_last is None:
+            partial_reason = "INTENTIONAL_OR_UNSPECIFIED_REQUEST"
+            reason_msg = (
+                "Partial slice requested intentionally or request bounds "
+                "were not fully specified."
+            )
+        elif rec_first != req_first or rec_last != req_last:
+            partial_reason = "API_TRUNCATION_OR_HISTORICAL_GAP"
+            reason_msg = (
+                "Partial slice returned by Binance despite full request "
+                "(API truncation or historical gap)."
+            )
+        else:
+            partial_reason = "UNKNOWN_CAUSE"
+            reason_msg = "Partial slice detected with unknown cause."
+
+        log.debug(colorize(reason_msg, Ansi.BOLD))
+        log.debug(f"Partial reason: {partial_reason}")
+
         log.debug(f"Request url was: {meta.get('url')}")
-        log.debug(f'Slice Requested: {format_ts_human(meta.get("requested_first_open", "KeyError"))} - {format_ts_human(meta.get("requested_last_open", "KeyError"))}')
-        log.debug(f' Slice Received: {format_ts_human(meta.get("received_first_open", "KeyError"))} - {format_ts_human(meta.get("received_last_open", "KeyError"))}')
-        log_requested_slice_size(meta.get('url')) #type:ignore
+
+        log.debug(
+            "Slice Requested: "
+            f"{format_ts_human(req_first if req_first is not None else 'KeyError')} - "
+            f"{format_ts_human(req_last  if req_last  is not None else 'KeyError')}"
+        )
+
+        log.debug(
+            "Slice Received:  "
+            f"{format_ts_human(rec_first if rec_first is not None else 'KeyError')} - "
+            f"{format_ts_human(rec_last  if rec_last  is not None else 'KeyError')}"
+        )
+        log.debug("Time Delta (startTime param to endTime param)")
+        log_requested_slice_size(meta.get("url"))  # type: ignore
+
     except Exception as exc:
         log.exception(exc)
         pass
+
+
+
+# def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
+#     try:
+#         log.debug(f"slice {slice_comp_key} marked as {colorize("PARTIAL", Ansi.PINK_HOT , Ansi.BOLD)} Limit={limit} n_items={n_items}")
+#         log.debug(colorize(f"You may have requested a partial slice.", Ansi.BOLD))
+#         log.debug(f"Request url was: {meta.get('url')}")
+#         log.debug(f'Slice Requested: {format_ts_human(meta.get("requested_first_open", "KeyError"))} - {format_ts_human(meta.get("requested_last_open", "KeyError"))}')
+#         log.debug(f' Slice Received: {format_ts_human(meta.get("received_first_open", "KeyError"))} - {format_ts_human(meta.get("received_last_open", "KeyError"))}')
+#         log_requested_slice_size(meta.get('url')) #type:ignore
+#     except Exception as exc:
+#         log.exception(exc)
+#         pass
 
 def _add_or_update_entry_meta_contract(entry, expected_fields):
     present = set(entry.keys())
@@ -325,24 +395,6 @@ def _enumerate_expected_slices(
         )
     return slices
 
-
-def _extract_known_statuses(manifest: Dict) -> Dict[str, SliceStatus]:
-    """
-    Build a mapping of composite_key -> SliceStatus from the manifest.
-
-    Unknown statuses are treated as PENDING.
-    """
-    mapping: Dict[str, SliceStatus] = {}
-    for key, entry in manifest.get("slices", {}).items():
-        status_str = entry.get("status") or SliceStatus.PENDING.value
-        try:
-            status = SliceStatus(status_str)
-        except ValueError:
-            status = SliceStatus.PENDING
-        mapping[key] = status
-    return mapping
-
-
 def _update_summary(manifest: Dict) -> None:
     """
     Recompute summary stats based on current slice entries.
@@ -363,3 +415,4 @@ def _update_summary(manifest: Dict) -> None:
         "last_evaluated_at": _now_iso(),
     }
     log.info("Manifest Summary: %s", manifest["summary"])
+

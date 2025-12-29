@@ -4,7 +4,7 @@ from qlir.data.core.datasource import DataSource
 from qlir.data.core.instruments import CanonicalInstrument
 from qlir.time.timefreq import TimeFreq
 from qlir.time.timeunit import TimeUnit
-from afterdata.logging_setup import setup_logging, LogProfile
+from afterdata.logging.logging_setup import setup_logging, LogProfile
 from qlir.data.sources.drift.fetch.oracleorfill import OracleOrFill
 
 

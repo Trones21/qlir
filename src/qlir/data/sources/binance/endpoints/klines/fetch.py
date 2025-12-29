@@ -6,7 +6,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from urllib.parse import parse_qs, urlparse
 import logging
+
+from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
 log = logging.getLogger(__name__)
+from qlir.data.sources.binance.endpoints.klines.rest_api_contracts import audit_binance_rest_kline_invariants
 from qlir.time.iso import now_iso
 from qlir.time.timeunit import TimeUnit
 from qlir.utils.str.color import Ansi, colorize
@@ -132,6 +135,8 @@ def fetch_and_persist_slice(
 
     data = resp.json()
 
+
+
     # Binance kline format: list of lists.
     # Each entry: [ openTime, open, high, low, close, volume, closeTime, ... ]
     if isinstance(data, list) and data:
@@ -143,13 +148,18 @@ def fetch_and_persist_slice(
         received_first_open = None
         received_last_open = None
 
+    # A super light check of binance
+    interval_ms = interval_to_ms(request_slice_key.interval)
+    audit_binance_rest_kline_invariants(data, interval_ms=interval_ms, log=log)
+
+    # Prep for writing
     canonical_slice_compkey = request_slice_key.canonical_slice_composite_key()
     canonical_slice_compkey_hashed = make_canonical_slice_hash(request_slice_key)
     filename = f"{canonical_slice_compkey_hashed}.json"
     relative_path = f"responses/{filename}"
     file_path = responses_dir.joinpath(filename)
 
-    # Wrap with metadata so downstream consumers have context.
+    # Wrap response with metadata so downstream consumers have context.
     raw_response_payload: Dict[str, Any] = {
         "meta": {
             "url": url,
@@ -163,8 +173,8 @@ def fetch_and_persist_slice(
             "limit": request_slice_key.limit,
             "http_status": http_status,
             "n_items": n_items,
-            "actual_first_open": received_first_open,
-            "actual_last_open": received_last_open,
+            "received_first_open": received_first_open,
+            "received_last_open": received_last_open,
             "requested_at": requested_at,
             "completed_at": completed_at,
             "data_root": str(data_root) if data_root is not None else None,
@@ -178,9 +188,9 @@ def fetch_and_persist_slice(
         json.dump(raw_response_payload, f, indent=2)
 
     print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
-    print(term_fmt(f"    Canonical Slice Key:    {canonical_slice_compkey_hashed}"))
-    print(term_fmt(f"    first candle: {format_ts_human(received_first_open)}")) #type:ignore
-    print(term_fmt(f"    last candle:  {format_ts_human(received_last_open)}")) #type: ignore
+    print(term_fmt(f"    Canonical Slice Hash:    {canonical_slice_compkey_hashed}"))
+    print(term_fmt(f"    first candle received: {format_ts_human(received_first_open)}")) #type:ignore
+    print(term_fmt(f"    last candle received:  {format_ts_human(received_last_open)}")) #type: ignore
     
     # Return the metadata subset shape expected by worker.py
     return {
@@ -200,3 +210,5 @@ def fetch_and_persist_slice(
         "requested_at": requested_at,
         "completed_at": completed_at,
     }
+
+

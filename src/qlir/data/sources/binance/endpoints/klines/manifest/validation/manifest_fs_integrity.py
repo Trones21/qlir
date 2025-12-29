@@ -23,8 +23,10 @@ def validate_manifest_vs_responses(
         for p in responses_dir.glob("*.json")
     }
 
-    log.debug(f"Found {len(manifest_paths)} relative path entries in manifest")
-    log.debug(f"Found {len(filesystem_paths)} json files in {responses_dir}")
+    log.debug(f"Found {len(manifest_paths)} relative path entries in manifest",
+                extra={"tag": ("MANIFEST", "VALIDATION", "STRUCTURE")})
+    log.debug(f"Found {len(filesystem_paths)} json files in {responses_dir}",
+                extra={"tag": ("MANIFEST", "VALIDATION", "MANIFEST_FS_INTEGRITY")},)
 
     issues = {}
 
