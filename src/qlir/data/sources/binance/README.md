@@ -212,7 +212,7 @@ This is the “source of truth” for:
     "BTCUSDT:1m:1609459200000-1609465199999:1000": {
       "slice_id": "3af2b1e7c442b7be",
       "relative_path": "responses/3af2b1e7c442b7be.json",
-      "status": "ok",
+      "slice_status": "ok",
       "http_status": 200,
       "n_items": 1000,
       "first_ts": 1609459200000,
@@ -225,7 +225,7 @@ This is the “source of truth” for:
     "BTCUSDT:1m:1609465200000-1609471199999:1000": {
       "slice_id": "821cc2bd18cc4f12",
       "relative_path": "responses/821cc2bd18cc4f12.json",
-      "status": "failed",
+      "slice_status": "failed",
       "http_status": 500,
       "n_items": 0,
       "first_ts": null,

@@ -12,7 +12,7 @@ def validate_slice_invariants(
 ) -> list[ManifestViolation]:
     violations: list[ManifestViolation] = []
 
-    raw_status = slice_obj.get("status")
+    raw_status = slice_obj.get("slice_status")
     slice_status = SliceStatus.is_valid(raw_status)
     if not isinstance(slice_status, SliceStatus):
         violations.append(ManifestViolation(

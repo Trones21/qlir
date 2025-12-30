@@ -32,7 +32,7 @@ def classify_slices(
             result.missing.append(slice_key)
             continue
         
-        status = SliceStatus(entry.get("status"))
+        status = SliceStatus(entry.get("slice_status"))
         if status == SliceStatus.MISSING:
             result.missing.append(slice_key)
             continue

@@ -7,11 +7,12 @@ from typing import Dict, Any, Optional
 from urllib.parse import parse_qs, urlparse
 import logging
 
+from qlir.data.sources.binance.endpoints.klines.inspection_result import inspect_res
 from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
 from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval
 from qlir.data.sources.common.slices.slice_key import SliceKey
 log = logging.getLogger(__name__)
-from qlir.data.sources.binance.endpoints.klines.rest_api_contracts import audit_binance_rest_kline_invariants
+from qlir.data.sources.binance.endpoints.klines.deprec_rest_api_contracts import audit_binance_rest_kline_invariants
 from qlir.time.iso import now_iso
 from qlir.time.timeunit import TimeUnit
 from qlir.utils.str.color import Ansi, colorize
@@ -135,27 +136,15 @@ def fetch_and_persist_slice(
     resp.raise_for_status()  # will raise on 4xx/5xx
 
     data = resp.json()
+    
+    # Inspect / Get an InspectionResult
     interval_ms = interval_to_ms(request_slice_key.interval)
-
-    log.info("Fix after sleep")
-    log.debug("======================= Need to add fast path (1000 (limit amt) items in data) / slow path (partial res delivered) =================================")
-    raise NotImplementedError()
-    stats = _inspect_klines(raw=data, interval_ms=interval_ms)
-    log.debug("RAW_KLINES stats: %s", stats)
-
-    # Binance kline format: list of lists.
-    # Each entry: [ openTime, open, high, low, close, volume, closeTime, ... ]
-    if isinstance(data, list) and data:
-        n_items = len(data)
-        received_first_open = int(data[0][0])
-        received_last_open = int(data[-1][0])
-    else:
-        n_items = 0
-        received_first_open = None
-        received_last_open = None
-
-    # A super light check of binance
-    audit_binance_rest_kline_invariants(data, interval_ms=interval_ms, log=log)
+    req_last_open_implicit = floor_unix_ts_to_interval(interval_in_ms=interval_ms,value_to_floor=request_slice_key.end_ms)
+    inspection_result = inspect_res(raw=data, 
+                                    requested_first_open=request_slice_key.start_ms, 
+                                    requested_last_open_implicit=req_last_open_implicit,
+                                    limit=request_slice_key.limit,
+                                    interval_ms=interval_ms )
 
     # Prep for writing
     canonical_slice_compkey = request_slice_key.canonical_slice_composite_key()
@@ -175,13 +164,15 @@ def fetch_and_persist_slice(
             "interval": request_slice_key.interval,
             "request_param_startTime": format_ts_human(request_slice_key.start_ms),
             "request_param_endTime": format_ts_human(request_slice_key.end_ms),
-            "requested_first_open": request_slice_key.start_ms,
-            "requested_last_open_implicit": floor_unix_ts_to_interval(interval_in_ms=interval_ms,value_to_floor=request_slice_key.end_ms),
+            "requested_first_open": inspection_result.requested_first_open,
+            "requested_last_open_implicit": inspection_result.requested_last_open_implicit,
             "limit": request_slice_key.limit,
             "http_status": http_status,
-            "n_items": n_items,
-            "received_first_open": received_first_open,
-            "received_last_open": received_last_open,
+            "n_items": inspection_result.n_items,
+            "slice_status": inspection_result.slice_status.value,
+            "slice_status_reason": inspection_result.slice_status_reason.value,
+            "received_first_open": inspection_result.received_first_open,
+            "received_last_open": inspection_result.received_last_open,
             "requested_at": requested_at,
             "completed_at": completed_at,
             "data_root": str(data_root) if data_root is not None else None,
@@ -195,52 +186,30 @@ def fetch_and_persist_slice(
         json.dump(raw_response_payload, f, indent=2)
 
     print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
-    print(term_fmt(f"    Canonical Slice Hash:    {canonical_slice_compkey_hashed}"))
-    print(term_fmt(f"    first candle received: {format_ts_human(received_first_open)}")) #type:ignore
-    print(term_fmt(f"    last candle received:  {format_ts_human(received_last_open)}")) #type: ignore
-    
+
     # Return the metadata subset shape expected by worker.py
     return {
         "slice_id": canonical_slice_compkey_hashed,
         "relative_path": relative_path,
         "canonical_slice_comp_key": canonical_slice_compkey,
- 
+
         "http_status": http_status,
         "url": url,
-        "n_items": n_items,
 
-        "received_first_open": received_first_open,
-        "received_last_open": received_last_open,
-        "requested_first_open": request_slice_key.start_ms,
-        "requested_last_open_implicit": floor_unix_ts_to_interval(interval_in_ms=interval_ms,value_to_floor=request_slice_key.end_ms),
+        # --- inspection truth ---
+        "n_items": inspection_result.n_items,
+        "received_first_open": inspection_result.received_first_open,
+        "received_last_open": inspection_result.received_last_open,
+        "requested_first_open": inspection_result.requested_first_open,
+        "requested_last_open_implicit": inspection_result.requested_last_open_implicit,
+        "slice_status": inspection_result.slice_status.value,
+        "slice_status_reason": inspection_result.slice_status_reason.value,
+
+        # --- raw request ---
         "request_param_startTime": format_ts_human(request_slice_key.start_ms),
         "request_param_endTime": format_ts_human(request_slice_key.end_ms),
-        
+
         "requested_at": requested_at,
         "completed_at": completed_at,
     }
-
-
-def _inspect_klines(raw: list[list], interval_ms: int) -> dict:
-    if not raw:
-        return {"n": 0}
-
-    opens = [int(r[0]) for r in raw]  # open_time ms
-    opens_sorted = sorted(opens)
-    uniq = len(set(opens_sorted))
-
-    deltas = [opens_sorted[i+1] - opens_sorted[i] for i in range(len(opens_sorted)-1)]
-    gaps = [d for d in deltas if d != interval_ms]
-
-    return {
-        "n": len(raw),
-        "uniq_open": uniq,
-        "first_open": opens_sorted[0],
-        "last_open": opens_sorted[-1],
-        "min_delta": min(deltas) if deltas else None,
-        "max_delta": max(deltas) if deltas else None,
-        "n_gaps": len(gaps),
-        "max_gap_ms": max(gaps) if gaps else 0,
-    }
-
 

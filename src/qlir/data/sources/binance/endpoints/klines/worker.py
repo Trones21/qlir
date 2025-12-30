@@ -5,6 +5,7 @@ from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFES
 from qlir.data.sources.common.slices.slice_classification import classify_slices
 from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.data.sources.common.slices.slice_status import SliceStatus
+from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
@@ -24,7 +25,7 @@ from qlir.data.core.paths import get_data_root
 IN_PROGRESS_STALE_SEC = 300  # 5 minutes
 
 def is_stale(entry):
-    if entry["status"] != "in_progress":
+    if entry["slice_status"] != "in_progress":
         return False
     ts = entry.get("requested_at")
     if not ts:
@@ -150,19 +151,24 @@ def run_klines_worker(
             try:
                 # Skip if another proc is currently handling this 
                 # (with stale safeguard to prevent items from being locked forever, in case the proc is killed while fetch is being performed)
-                if entry.get("status") == "in_progress" and not is_stale(entry):
+                if entry.get("slice_status") == "in_progress" and not is_stale(entry):
                     continue
-
-                log.info(f"""{colorize('=== Slice entry pulled from manifest ===', Ansi.BOLD)}
+                log.info(
+                    f"Slice entry pulled from manifest | {slice_comp_key} | "
+                    f"id={entry['slice_id']} status={entry.get('slice_status')}"
+                )
+                log.debug(f"""{colorize('=== Slice entry pulled from manifest ===', Ansi.BOLD)}
 comp_key: {colorize(slice_comp_key, Ansi.BOLD)}
 hashed: {colorize(entry['slice_id'], Ansi.BOLD)}
 Full Entry: {entry}""")
                           
                 # Mark in-progress
-                entry["status"] = SliceStatus.IN_PROGRESS.value
-                
-                
-                save_manifest(manifest_path, manifest, f"slice marked as in progress")
+                entry["slice_status"] = SliceStatus.IN_PROGRESS.value     
+                save_manifest(manifest_path, manifest, f"temporarily marking slice as in progress (while fetch occurs)")
+
+                # Increment fetch counter for *any* actual fetch
+                entry.setdefault("request_count", {}).setdefault("fetches", 0)
+                entry["request_count"]["fetches"] += 1
 
                 meta = fetch_and_persist_slice(
                     request_slice_key=slice_key,
@@ -171,26 +177,29 @@ Full Entry: {entry}""")
                 )
 
                 entry["requested_at"] = now_utc().isoformat()
-                entry, new_status = _update_entry(meta, entry, limit, slice_comp_key)
+                entry = _update_entry(meta, entry)
                 manifest["slices"][slice_comp_key] = entry
 
                 _update_summary(manifest)
-                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {new_status}") #type: ignore
+                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize(entry['slice_status'], Ansi.GREEN , Ansi.BOLD)}. Slice Status Reason: {entry['slice_status_reason']}")
 
                 # Reset backoff on success
                 backoff = 1.0
 
+            # Mark slice as failed and backoff
             except Exception as exc:
-                # Mark slice as failed and backoff
-                entry = _update_entry_on_exception(manifest, slice_comp_key, meta, exc)
+                
+                entry = _update_entry_on_exception(entry, meta, exc)
+                
+                # Update and Write Manifest
                 manifest["slices"][slice_comp_key] = entry
-        
                 _update_summary(manifest)
 
                 if entry['http_status'] == 200:
-                    save_manifest(manifest_path, manifest, f"Request Succeeded (200), but exception occured - marking slice as {colorize(SliceStatus.FAILED.value, Ansi.RED , Ansi.BOLD)}")
+                    save_manifest(manifest_path, manifest, f"Request Succeeded (200), but exception occured - marking slice as {colorize(entry['slice_status'], Ansi.RED , Ansi.BOLD)}")
                 else:
-                    save_manifest(manifest_path, manifest, f"Request Failed - http_status: {entry['http_status']} - marking slice as {colorize(SliceStatus.FAILED.value, Ansi.RED , Ansi.BOLD)}")
+                    save_manifest(manifest_path, manifest, f"Request Failed - http_status: {entry['http_status']} - marking slice as {colorize(entry['slice_status'], Ansi.RED , Ansi.BOLD)}")
+                
                 log.exception(exc)
                 time.sleep(backoff)
                 backoff = min(backoff * 2.0, max_backoff_sec)
@@ -228,52 +237,40 @@ def _construct_fetch_batch(classified):
 
         return to_fetch
 
-def _update_entry_on_exception(manifest, slice_comp_key, meta, exception):
+def _update_entry_on_exception(entry, meta, exception):
+        
         now_iso = _now_iso()
-        entry = manifest["slices"].get(slice_comp_key)
+        http_status = int(meta['http_status'])
+        if  http_status < 200 or http_status > 299:
+            slice_status_reason = SliceStatusReason.HTTP_ERROR.value
+        else:
+            slice_status_reason = SliceStatusReason.EXCEPTION.value
+
         entry.update(
             {
-                "status": SliceStatus.FAILED.value,
+                "slice_status": SliceStatus.FAILED.value,
+                "slice_status_reason": slice_status_reason,
                 "http_status": (
                     meta.get("http_status")
                     if meta is not None
                     else "exception_occured_before_fetch_and_persist_slice_func_returned"
                 ),
                 "error": str(exception),
-                "completed_at": now_iso,
+                "occurred_at": now_iso,
             }
         )
         entry = _add_or_update_entry_meta_contract(entry, expected_fields=REQUIRED_FIELDS)
         return entry
 
 
-def _update_entry(meta, entry, limit, slice_comp_key) -> tuple[Any, SliceStatus]:
-                    # Check if the slice is a partial slice (or contract out of date)
-        n_items = meta.get("n_items")
-        
-        if n_items is None:
-            raise RuntimeError(
-                "meta.n_items was not returned from fetch_and_persist_slice"
-                "Partial slice logic assumes meta['n_items'] exists"
-            )
-
-        # Its important to why we received a partial slice - this should give us enough info
-        int_limit = int(limit)
-        int_n_items = int(n_items)
-        if int_n_items != int_limit:
-            _partial_slice_logging(meta, slice_comp_key, int_limit, int_n_items)
-            new_status = SliceStatus.PARTIAL
-        
-        if int_n_items == int_limit:
-            log.debug(f"slice {slice_comp_key} marked as {colorize("SUCCESSFUL", Ansi.GREEN , Ansi.BOLD)}")
-            new_status = SliceStatus.COMPLETE
-
+def _update_entry(meta, entry) -> Dict:
 
         entry.update(
             {
                 "slice_id": meta["slice_id"],
                 "relative_path": meta["relative_path"],
-                "status": new_status.value, #type:ignore
+                "slice_status": meta['slice_status'],
+                "slice_status_reason":meta['slice_status_reason'],
                 "http_status": meta.get("http_status"),
                 "n_items": meta.get("n_items"),
                 "first_ts": meta.get("first_ts"),
@@ -289,13 +286,35 @@ def _update_entry(meta, entry, limit, slice_comp_key) -> tuple[Any, SliceStatus]
             log.debug(f"[Fyi] - Not all keys returned as meta from fetch_and_persist_slice are written to disk. \n Entry Keys: {entry_keys} \n Meta Keys: {meta.keys()}")
         
         entry = _add_or_update_entry_meta_contract(entry=entry, expected_fields=REQUIRED_FIELDS)
-        return entry, new_status #type:ignore
+        return entry
+
+
+
+def inspect_klines(raw: list[list], interval_ms: int) -> dict:
+    if not raw:
+        return {"n": 0}
+
+    opens = [int(r[0]) for r in raw]  # open_time ms
+    opens_sorted = sorted(opens)
+    uniq = len(set(opens_sorted))
+
+    deltas = [opens_sorted[i+1] - opens_sorted[i] for i in range(len(opens_sorted)-1)]
+    gaps = [d for d in deltas if d != interval_ms]
+
+    return {
+        "n": len(raw),
+        "uniq_open": uniq,
+        "first_open": opens_sorted[0],
+        "last_open": opens_sorted[-1],
+        "min_delta": min(deltas) if deltas else None,
+        "max_delta": max(deltas) if deltas else None,
+        "n_gaps": len(gaps),
+        "max_gap_ms": max(gaps) if gaps else 0,
+    }
 
 
 def _partial_slice_logging(meta, slice_comp_key, limit, n_items):
-
     log.debug("======================= Need to update with SliceStatusReason =================================")
-    raise NotImplementedError()
     try:
         log.debug(
             f"slice {slice_comp_key} marked as "
@@ -413,12 +432,12 @@ def _update_summary(manifest: Dict) -> None:
     """
     slices = manifest.get("slices", {})
     total = len(slices)
-    complete = sum(1 for e in slices.values() if e.get("status") == SliceStatus.COMPLETE.value)
-    partial = sum(1 for e in slices.values() if e.get("status") == SliceStatus.PARTIAL.value)
-    failed = sum(1 for e in slices.values() if e.get("status") == SliceStatus.FAILED.value)
-    missing = sum(1 for e in slices.values() if e.get("status") == SliceStatus.MISSING.value)
-    needs_refresh = sum(1 for e in slices.values() if e.get("status") == SliceStatus.NEEDS_REFRESH.value)
-    in_progress = sum(1 for e in slices.values() if e.get("status") == SliceStatus.IN_PROGRESS.value)
+    complete = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.COMPLETE.value)
+    partial = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.PARTIAL.value)
+    failed = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.FAILED.value)
+    missing = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.MISSING.value)
+    needs_refresh = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.NEEDS_REFRESH.value)
+    in_progress = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.IN_PROGRESS.value)
 
     accounted_for = (
         complete

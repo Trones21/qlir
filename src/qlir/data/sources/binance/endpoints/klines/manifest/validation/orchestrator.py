@@ -81,7 +81,7 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
     slice_invariant_violations = []
     for slice_key, slice_obj in manifest["slices"].items():
         
-        if SliceStatus.try_parse(slice_obj['status']) == SliceStatus.MISSING.value:
+        if SliceStatus.try_parse(slice_obj['slice_status']) == SliceStatus.MISSING.value:
             # Slice exists structurally but has not yet been requested.
             # Invariants depending on requested_url are not meaningful yet.
             continue

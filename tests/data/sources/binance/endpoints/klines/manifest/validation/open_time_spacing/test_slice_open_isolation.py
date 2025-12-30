@@ -61,7 +61,7 @@ def test_isolate_open_time_from_request_url_invalid_starttime():
 
 def test_isolate_open_time_from_composite_key_happy_path():
     composite_key = "BTCUSDT:1m:1503122400000:1000"
-    slice_entry = {"status": "complete"}
+    slice_entry = {"slice_status": "complete"}
 
     open_ts, returned_slice = isolate_open_time_from_composite_key(
         composite_key,

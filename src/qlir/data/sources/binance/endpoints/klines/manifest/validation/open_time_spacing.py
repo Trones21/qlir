@@ -108,7 +108,7 @@ def extract_open_pairs_by_url_starttime(
     pairs: list[tuple[int, Any]] = []
     violations: list[ManifestViolation] = []
     for slice_key, slice_entry in slices.items():
-        if SliceStatus.try_parse(slice_entry['status']) == SliceStatus.MISSING.value:
+        if SliceStatus.try_parse(slice_entry['slice_status']) == SliceStatus.MISSING.value:
             # We cannot parse the requested url if we havent made the request yet
             continue
 

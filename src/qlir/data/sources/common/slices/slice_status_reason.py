@@ -5,7 +5,7 @@ class SliceStatusReason(str, Enum):
 
     # Retryable
     HTTP_ERROR = "http_error"
-    PARSE_ERROR = "parse_error"
+    EXCEPTION = "parse_error"
 
     # Non-retryable (terminal)
     HISTORICAL_SPARSITY = "historical_sparsity"

@@ -9,7 +9,7 @@ def test_get_distinct_top_level_metadata_structures_and_group_by_key():
             "completed_at": "2025-12-25T16:49:34Z",
             "http_status": 200,
             "n_items": 1000,
-            "status": "complete",
+            "slice_status": "complete",
         },
         "slice_b": {
             "__contract": {"status": "ok"},
@@ -17,14 +17,14 @@ def test_get_distinct_top_level_metadata_structures_and_group_by_key():
             "completed_at": "2025-12-25T16:50:10Z",
             "http_status": 200,
             "n_items": 1000,
-            "status": "complete",
+            "slice_status": "complete",
         },
         # Missing n_items + http_status → different shape
         "slice_c": {
             "__contract": {"status": "ok"},
             "__meta_contract": {"status": "ok"},
             "completed_at": "2025-12-25T16:51:00Z",
-            "status": "failed",
+            "slice_status": "failed",
             "error": "timeout",
         },
     }
@@ -45,7 +45,7 @@ def test_get_distinct_top_level_metadata_structures_and_group_by_key():
                 "completed_at",
                 "http_status",
                 "n_items",
-                "status",
+                "slice_status",
             ]
         )
     )
@@ -56,7 +56,7 @@ def test_get_distinct_top_level_metadata_structures_and_group_by_key():
                 "__contract",
                 "__meta_contract",
                 "completed_at",
-                "status",
+                "slice_status",
                 "error",
             ]
         )

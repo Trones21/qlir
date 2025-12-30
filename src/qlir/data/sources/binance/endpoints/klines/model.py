@@ -9,7 +9,7 @@ from __future__ import annotations
 REQUIRED_FIELDS = [
     "slice_id",
     "relative_path",
-    "status",
+    "slice_status",
     "http_status",
     "n_items",
     "first_ts",

@@ -1,5 +1,32 @@
 
 # Priorities
+
+qlir - Finish the slow path / fast path / slice status reasons
+
+proj - pipelines cli 
+
+qlir - etl funcs 
+
+proj - implement a simple pipeline 
+proj - prove that the cli works for 
+        - creating the user pipeline 
+        - list all pipelines
+         
+
+move all manifest validation and other "venue agnostic" code to the data.sources.common modules 
+
+manifest_validation
+    - add log to df for the slice parse and open spacing violations
+
+uklines - basically copy paste from klines worker
+    - already setu pthe pyproject.toml in afterdata (but havent moved to template)
+
+wrap fetch and persist slice with response timing logging (maybe use the same decorator pattern as in nocrud??)
+    - possibly other funcs as well... like when we are doing something fror the entire manifest... thats ~170,000 items for the 1s interval (58MB manifest)
+    - the 1s seems slow... not sure if this is my code or binance servers 
+
+
+---
 Mermaid diagram of project call usage (and maybe asscii)
 
 bash script (entrypoint specified in pyproject.toml - there are currently 3 options (by-arg, all, file-def)) 
@@ -16,18 +43,6 @@ which passes args and calls `__PROJECT_NAME.binance.etl.data_server`
  
 ---
 
-issue where the partials aren't being completed 
-
-manifest_validation
-    - add log to df for the slice parse and open spacing violations
-
-uklines - basically copy paste from klines worker
-    - already setu pthe pyproject.toml in afterdata (but havent moved to template)
-
-wrap fetch and persist slice with response timing logging (maybe use the same decorator pattern as in nocrud??)
-    - possibly other funcs as well... like when we are doing something fror the entire manifest... thats ~170,000 items for the 1s interval (58MB manifest)
-    - the 1s seems slow... not sure if this is my code or binance servers 
-
 ## Medium Term 
 - add dedicated logging to file (not just to the console)
     - this will be used for things like prometheus/grafana, so the structure needs to be tight
@@ -41,12 +56,6 @@ wrap fetch and persist slice with response timing logging (maybe use the same de
 - log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)
 - Add ability to write to a non-local location (e.g. S3 bucket)
 - metrics/helth endpoints
-
-
-## Data Integrations
-   
-- Binance uklines
-
 
 ### Ta-lib integration
 

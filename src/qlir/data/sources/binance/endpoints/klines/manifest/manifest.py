@@ -68,7 +68,7 @@ def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]
         composite_key = s.canonical_slice_composite_key()
         if composite_key not in manifest['slices']:
             manifest['slices'][composite_key] = {
-                "status": SliceStatus.MISSING.value,
+                "slice_status": SliceStatus.MISSING.value,
                 "slice_id": make_canonical_slice_hash(s),
                 "first_ts": s.start_ms,
                 "last_ts": s.end_ms,
@@ -90,23 +90,23 @@ def update_manifest_with_classification(manifest, classified: SliceClassificatio
     # mark slice-level status    
     for slice_key in classified.missing:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["status"] = SliceStatus.MISSING.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.MISSING.value
 
     for slice_key in classified.partial:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["status"] = SliceStatus.PARTIAL.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.PARTIAL.value
 
     for slice_key in classified.needs_refresh:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["status"] = SliceStatus.NEEDS_REFRESH.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.NEEDS_REFRESH.value
 
     for slice_key in classified.complete:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["status"] = SliceStatus.COMPLETE.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.COMPLETE.value
 
     for slice_key in classified.failed:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["status"] = SliceStatus.FAILED.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.FAILED.value
 
     # update summary block (very useful for debugging / dashboards)
     manifest["summary"] = {

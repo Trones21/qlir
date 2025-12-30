@@ -42,7 +42,7 @@ def iter_raw_ok_slices(raw_manifest: dict[str, Any]) -> Iterable[RawSliceRef]:
     for _key, entry in slices.items():
         if not isinstance(entry, dict):
             continue
-        if entry.get("status") != SLICE_OK:
+        if entry.get("slicestatus") != SLICE_OK:
             continue
 
         h = entry.get("slice_id")
