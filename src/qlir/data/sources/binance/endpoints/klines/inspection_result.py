@@ -3,7 +3,11 @@ from typing import Iterable, Optional, Tuple
 from dataclasses import dataclass, replace
 from enum import Enum, auto
 from typing import Optional
+import logging
 
+from qlir.utils.str.color import Ansi, colorize
+from qlir.utils.time.fmt import format_ts_human
+log = logging.getLogger(__name__)
 
 from qlir.data.sources.binance.endpoints.klines.time_range import _now_ms
 from qlir.data.sources.common.slices.slice_status import SliceStatus
@@ -240,11 +244,13 @@ def inspect_res(
 
     # ---- slow path (integrity facts) ----
     inspection.inspection_mode = InspectionMode.FULL
-    integrity = inspect_slice_integrity(raw, interval_ms)
+    inspection.integrity = inspect_slice_integrity(raw, interval_ms)
 
-
-    reason = determine_slice_status_reason_from_integrity(integrity=integrity, 
+    _partial_slice_logging(inspection, limit=limit)
+    reason = determine_slice_status_reason_from_integrity(integrity=inspection.integrity, 
                                                           requested_last_open_implicit=requested_last_open_implicit,
+                                                          limit=limit,
+                                                          interval_ms=interval_ms,
                                                           now_ms=_now_ms())
  
     slice_status = SliceStatusPolicy.from_success_reason(reason)
@@ -256,10 +262,10 @@ def inspect_res(
         received_eq_requested=False,
         requested_first_open=requested_first_open,
         requested_last_open_implicit=requested_last_open_implicit,
-        received_first_open=integrity.first_open,
-        received_last_open=integrity.last_open,
+        received_first_open=inspection.integrity.first_open,
+        received_last_open=inspection.integrity.last_open,
         inspection_mode=InspectionMode.FULL,
-        integrity=integrity,
+        integrity=inspection.integrity,
     )
 
 
@@ -267,6 +273,8 @@ def determine_slice_status_reason_from_integrity(
     *,
     integrity: SliceIntegrityDetails,
     requested_last_open_implicit: int,
+    limit: int,
+    interval_ms: int,
     now_ms: int,
 ) -> SliceStatusReason:
     """
@@ -288,48 +296,94 @@ def determine_slice_status_reason_from_integrity(
     if integrity.last_open < requested_last_open_implicit:
         if now_ms < requested_last_open_implicit:
             return SliceStatusReason.STILL_FORMING
-        else:
-            return SliceStatusReason.AWAITING_UPSTREAM
 
-    # 4. Impossible state
-    raise ValueError(
-        "Incomplete slice with no gaps and no trailing deficit; "
-        "this violates invariants"
+    # 4. No "Gaps" but missing data on either ends of the range (and this was from a long time ago (slice closed several slice intervals ago))
+    # In this case we just set a hard boundary - using offset from now
+    MAX_HISTORICAL_LAG_MULTIPLIER = 2.5  # policy constant
+    slice_span_ms = limit * interval_ms
+    historical_cutoff_ms = now_ms - (
+        slice_span_ms * MAX_HISTORICAL_LAG_MULTIPLIER
     )
+    
+    if integrity.last_open < historical_cutoff_ms:
+        n_intervals_ago = (now_ms - historical_cutoff_ms) / slice_span_ms
+        log.info(
+            "Historical sparsity inferred", extra={"last_open_received": integrity.last_open, 
+                                                   "last_open_human": format_ts_human(integrity.last_open), 
+                                                   "current_ms": now_ms,
+                                                   "current_ms_human": format_ts_human(now_ms),
+                                                   "slice_span_ms":slice_span_ms,
+                                                    "from_n_intervals_ago": n_intervals_ago}
+        )
+        return SliceStatusReason.HISTORICAL_SPARSITY
+
+            
+    return SliceStatusReason.AWAITING_UPSTREAM
+
+def _partial_slice_logging(inspection: InspectionResult, limit: int):
+    try:
+
+        log.debug(
+            f"Partial slice received Limit={limit} n_items={inspection.n_items}. (Note: This may be expected)"
+        )
+
+        rec_first =inspection.received_first_open
+        rec_last =inspection.received_last_open
+        req_first =inspection.requested_first_open
+        req_last =inspection.requested_last_open_implicit  
+
+        if any(v is None for v in (
+                                  )):
+            log.debug(
+                colorize(
+                    "Partial slice diagnostics incomplete "
+                    "(missing requested/received bounds in InspectionResult object).",
+                    Ansi.BOLD,
+                )
+            )
+
+        if inspection.received_first_open != inspection.requested_first_open:
+            log.debug(
+                "first open requested != first open recived"  
+            )
+
+        if inspection.received_last_open != inspection.requested_last_open_implicit:
+            log.debug(
+                "last open requested (implicit) != last open recived"  
+            )
+        
+        log.debug(
+            "Slice Requested: "
+            f"{format_ts_human(req_first if req_first is not None else 'KeyError')} - "
+            f"{format_ts_human(req_last  if req_last  is not None else 'KeyError')}"
+        )
+
+        log.debug(
+            "Slice Received:  "
+            f"{format_ts_human(rec_first if rec_first is not None else 'KeyError')} - "
+            f"{format_ts_human(rec_last  if rec_last  is not None else 'KeyError')}"
+        )
+
+        if inspection.integrity.has_gaps: #type: ignore (this is only on the slow path, so we know it wont be none)
+            log.debug(
+                "Gaps in slice received"  
+            )
+        
+        log.debug(inspection)
+
+    except Exception as exc:
+        log.exception(exc)
+        pass
 
 
-# def determine_slice_status_on_success(
-#     *,
-#     reason: SliceStatusReason,
-# ) -> SliceStatus:
-#     """
-#     Determine the SliceStatus for a successful (HTTP 200, parsed) fetch.
 
-#     Raises:
-#         ValueError if the (received_eq_requested, reason) combination
-#         violates expected invariants.
-#     """
+        
 
-#     if reason == SliceStatusReason.HISTORICAL_SPARSITY:
-#         return SliceStatus.COMPLETE
+# log.debug(colorize(reason_msg, Ansi.BOLD))
+# log.debug(f"Partial reason: {partial_reason}")
 
-#     if reason in (
-#         SliceStatusReason.STILL_FORMING,
-#         SliceStatusReason.AWAITING_UPSTREAM,
-#     ):
-#         return SliceStatus.PARTIAL
+# log.debug(f"Request url was: {meta.get('url')}")
 
-#     raise ValueError(
-#         f"Unhandled success-path SliceStatusReason: {reason}"
-#     )
 
-# def slice_status_from_error_reason(
-#     reason: SliceStatusReason,
-# ) -> SliceStatus:
-#     if reason in (
-#         SliceStatusReason.HTTP_ERROR,
-#         SliceStatusReason.EXCEPTION,
-#     ):
-#         return SliceStatus.FAILED
-
-#     raise ValueError(f"Invalid error-path reason: {reason}")
+# log.debug("Time Delta (startTime param to endTime param)")
+# log_requested_slice_size(meta.get("url"))  # type: ignore
