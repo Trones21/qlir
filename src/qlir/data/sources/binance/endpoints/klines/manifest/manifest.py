@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from pathlib import Path
 from typing import Dict
@@ -47,7 +48,7 @@ def load_or_create_manifest(
             "missing_slices": 0,
             "needs_refresh_slices": 0,
             "last_evaluated_at": None,
-        },
+        },  
         "slices": {},
     }
 
@@ -59,7 +60,8 @@ def save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") ->
     with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     tmp_path.replace(manifest_path)
-    print(f"[{colorize("WRITE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+    print(f"{ts} [{colorize("WROTE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
 
 
 def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]):

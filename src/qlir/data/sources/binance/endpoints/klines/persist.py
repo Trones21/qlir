@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from typing import Any, Dict
 from qlir.data.sources.common.slices.canonical_hash import make_canonical_slice_hash
@@ -45,8 +46,8 @@ def persist(data, url, request_slice_key, responses_dir, data_root, inspection_r
     responses_dir.mkdir(parents=True, exist_ok=True)
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(raw_response_payload, f, indent=2)
-
-    print(term_fmt(f"[{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+    print(term_fmt(f"{ts} [{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
 
     # Return the metadata subset shape expected by worker.py
     return {
