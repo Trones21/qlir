@@ -24,7 +24,7 @@ from typing import Any, Dict, Optional, Tuple, List
 
 from .model import REQUIRED_FIELDS #SliceStatus, classify_slices
 from .urls import generate_kline_slices
-from .fetch import log_requested_slice_size, fetch_and_persist_slice
+from .fetch_wrapper import log_requested_slice_size, fetch_and_persist_slice
 from .time_range import compute_time_range
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.orchestrator import validate_manifest_and_fs_integrity
 from qlir.data.core.paths import get_data_root
@@ -103,10 +103,7 @@ def run_klines_worker(
     backoff = 1.0
 
     while True:
-        # TODO: Update _compute_time_range 
-        # This is where any off by 1 ms will occur ... because end_ms is not last open (with current logic)
-        # Need to give a param to compute time range so that it returns first_open and last_open (the logic seems to be there but its commented out)
-        # this would be a good one to write a unit test for       
+    
         min_start_ms, max_end_ms = compute_time_range(symbol=symbol, interval=interval, limit=1000)
 
         expected_slices = _enumerate_expected_slices(

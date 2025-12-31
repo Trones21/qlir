@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict
 import logging
 
+from qlir.data.sources.common.slices.canonical_hash import make_canonical_slice_hash
 from qlir.data.sources.common.slices.manifest_serializer import deserialize_manifest
 from qlir.data.sources.common.slices.slice_classification import SliceClassification
 from qlir.data.sources.common.slices.slice_key import SliceKey
@@ -10,7 +11,6 @@ from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.time.iso import now_iso 
 log = logging.getLogger(__name__)
 
-from qlir.data.sources.binance.endpoints.klines.fetch import make_canonical_slice_hash
 from qlir.utils.str.color import Ansi, colorize
 
 

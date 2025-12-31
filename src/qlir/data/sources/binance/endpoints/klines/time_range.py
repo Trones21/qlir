@@ -170,8 +170,6 @@ def compute_time_range(
     if now_ms is None:
         now_ms = _now_ms()
 
-    interval_ms = interval_to_ms(interval)
-
     earliest = probe_earliest_open_time(
         symbol=symbol,
         interval=interval,

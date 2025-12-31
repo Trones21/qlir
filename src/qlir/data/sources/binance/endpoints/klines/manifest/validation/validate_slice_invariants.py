@@ -1,3 +1,4 @@
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.parsers.request_url_parser import RequestedURLParseError
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_invariants import canonical_slice_comp_key_from_facts, compute_slice_id_from_facts, extract_facts_from_composite_key, extract_facts_from_manifest, extract_facts_from_requested_url
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
 from qlir.data.sources.binance.intervals import interval_to_ms
@@ -37,12 +38,29 @@ def validate_slice_invariants(
         facts_url = extract_facts_from_requested_url(
             slice_obj["requested_url"]
         )
-    except Exception as e:
-        violations.append(ManifestViolation(
+    except KeyError as ke:
+        violations.append(
+            ManifestViolation(
+            rule="KeyError",
+            slice_key=slice_key,
+            message="Object key (specified in validate_slice_invariants) was not found in slice_obj",
+            extra={
+                "exception": str(ke),
+                "slice_obj": slice_obj
+            },
+        ))
+        return violations
+    except RequestedURLParseError as e:
+        violations.append(
+            ManifestViolation(
             rule="requested_url_parse_failed",
             slice_key=slice_key,
-            message="Failed to parse requested URL",
-            extra={"error": str(e)},
+            message="Requested URL failed to parse",
+            extra={
+                "reason": str(e),
+                "url": e.url,
+                "param": e.param,
+            },
         ))
         return violations
 
