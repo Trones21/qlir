@@ -1,11 +1,11 @@
 from __future__ import annotations
-from enum import Enum
-from typing import Optional
+from enum import StrEnum, auto
+from typing import Any, Optional
 import logging
 log = logging.getLogger(__name__)
 
 
-class SliceStatus(str, Enum):
+class SliceStatus(StrEnum):
     """
     Status of a single kline slice fetch.
 
@@ -16,12 +16,12 @@ class SliceStatus(str, Enum):
     - FAILED:       attempted but failed (eligible for retry)
     - IN_PROGRESS:  A worker is currently fetching 
     """
-    MISSING = "missing"
-    COMPLETE = "complete"
-    PARTIAL = "partial"
-    NEEDS_REFRESH = "needs_refresh"
-    FAILED = "failed"
-    IN_PROGRESS= "in_progress"
+    MISSING = auto()
+    COMPLETE = auto()
+    PARTIAL = auto()
+    NEEDS_REFRESH = auto()
+    FAILED = auto()
+    IN_PROGRESS= auto()
 
     @classmethod
     def try_parse(cls, raw: Optional[str]) -> SliceStatus | None:
@@ -33,12 +33,14 @@ class SliceStatus(str, Enum):
             return None
     
     @classmethod
-    def is_valid(cls, raw) -> SliceStatus:
-        try:
-            return cls(raw)
-        except ValueError as exc:
-            raise ValueError(
-                f"Invalid SliceStatus literal: {raw!r}"
-            ) from exc
+    def is_valid(cls, raw: Any) -> SliceStatus:
+        if isinstance(raw, cls):
+            return raw
+        if isinstance(raw, str):
+            try:
+                return cls(raw)
+            except ValueError as exc:
+                raise ValueError(f"Invalid SliceStatus literal: {raw!r}") from exc
+        raise ValueError(f"Invalid SliceStatus type: {type(raw).__name__}")
 
 

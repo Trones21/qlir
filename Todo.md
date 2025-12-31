@@ -1,9 +1,9 @@
+# Decisions Already Made 
+
+Program logic for enums should never use .value, always serialize/deserialize at read/write boundary
+  (Logging is the exception, b/c we want to see something meaningful, not just an int)
 
 # Priorities
-
-
-
-
 
 qlir - etl funcs 
 

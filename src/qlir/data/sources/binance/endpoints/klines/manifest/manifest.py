@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict
 import logging
 
+from qlir.data.sources.common.slices.manifest_serializer import deserialize_manifest
 from qlir.data.sources.common.slices.slice_classification import SliceClassification
 from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.data.sources.common.slices.slice_status import SliceStatus
@@ -27,8 +28,10 @@ def load_or_create_manifest(
     """
     if manifest_path.exists():
         with manifest_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-
+            manifest = json.load(f)
+        
+        deserialize_manifest(manifest)
+        return manifest
     # Fresh skeleton
     log.info("Creating fresh manifest because there was no manifest found at: %s", manifest_path)
     return {
@@ -68,7 +71,7 @@ def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]
         composite_key = s.canonical_slice_composite_key()
         if composite_key not in manifest['slices']:
             manifest['slices'][composite_key] = {
-                "slice_status": SliceStatus.MISSING.value,
+                "slice_status": SliceStatus.MISSING,
                 "slice_id": make_canonical_slice_hash(s),
                 "first_ts": s.start_ms,
                 "last_ts": s.end_ms,
@@ -90,23 +93,23 @@ def update_manifest_with_classification(manifest, classified: SliceClassificatio
     # mark slice-level status    
     for slice_key in classified.missing:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.MISSING.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.MISSING
 
     for slice_key in classified.partial:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.PARTIAL.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.PARTIAL
 
     for slice_key in classified.needs_refresh:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.NEEDS_REFRESH.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.NEEDS_REFRESH
 
     for slice_key in classified.complete:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.COMPLETE.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.COMPLETE
 
     for slice_key in classified.failed:
         slice_comp_key = slice_key.canonical_slice_composite_key()
-        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.FAILED.value
+        manifest["slices"][slice_comp_key]["slice_status"] = SliceStatus.FAILED
 
     # update summary block (very useful for debugging / dashboards)
     manifest["summary"] = {

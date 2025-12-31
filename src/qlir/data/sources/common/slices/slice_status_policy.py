@@ -44,6 +44,7 @@ class SliceStatusPolicy:
         if reason in (
             SliceStatusReason.HTTP_ERROR,
             SliceStatusReason.EXCEPTION,
+            SliceStatusReason.NETWORK_UNAVAILABLE
         ):
             return SliceStatus.FAILED
 

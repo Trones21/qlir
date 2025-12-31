@@ -1,15 +1,17 @@
-from enum import Enum
+from enum import StrEnum, auto
 
-class SliceStatusReason(str, Enum):
-    NONE = "none"  # normal fast-path completion
-
+class SliceStatusReason(StrEnum):
+    NONE = auto()  # normal fast-path completion
+    
     # Retryable
-    HTTP_ERROR = "http_error"
-    EXCEPTION = "parse_error"
+    HTTP_ERROR = auto()
+    NETWORK_UNAVAILABLE = auto()
+    EXCEPTION = auto()
+
 
     # Non-retryable (terminal)
-    HISTORICAL_SPARSITY = "historical_sparsity"
+    HISTORICAL_SPARSITY = auto()
 
     # Temporal
-    AWAITING_UPSTREAM = "awaiting_upstream" # The slice should be complete by time, but the upstream system hasn’t delivered all data yet.
-    STILL_FORMING = "still_forming"  # The slice is mathematically impossible to be complete yet.
+    AWAITING_UPSTREAM = auto() # The slice should be complete by time, but the upstream system hasn’t delivered all data yet.
+    STILL_FORMING = auto()  # The slice is mathematically impossible to be complete yet.

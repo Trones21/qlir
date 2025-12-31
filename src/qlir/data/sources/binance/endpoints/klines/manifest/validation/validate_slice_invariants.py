@@ -3,7 +3,6 @@ from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations i
 from qlir.data.sources.binance.intervals import interval_to_ms
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 
-
 def validate_slice_invariants(
     *,
     slice_key: str,

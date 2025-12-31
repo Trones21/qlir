@@ -1,12 +1,19 @@
 from __future__ import annotations
 import logging
+import random
+
+from httpx import HTTPStatusError, RequestError
 
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
+from qlir.data.sources.common.slices.entry_serializer import serialize_entry
+from qlir.data.sources.common.slices.manifest_serializer import serialize_manifest
 from qlir.data.sources.common.slices.slice_classification import classify_slices
 from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.data.sources.common.slices.slice_status import SliceStatus
+from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.time.iso import now_utc, parse_iso
+from qlir.utils.enum import enum_for_log, serialize_enum
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
 log = logging.getLogger(__name__)
@@ -140,6 +147,7 @@ def run_klines_worker(
         fetch_comp_keys = [skey.canonical_slice_composite_key() for skey in to_fetch]
         for slice_key in to_fetch:
             meta: dict | None = None
+            fetch_fail = None
             slice_comp_key = slice_key.canonical_slice_composite_key()
             print('\n')
             if slice_comp_key not in fetch_comp_keys:
@@ -152,7 +160,7 @@ def run_klines_worker(
             try:
                 # Skip if another proc is currently handling this 
                 # (with stale safeguard to prevent items from being locked forever, in case the proc is killed while fetch is being performed)
-                if entry.get("slice_status") == "in_progress" and not is_stale(entry):
+                if entry.get("slice_status") == SliceStatus.IN_PROGRESS and not is_stale(entry):
                     continue
                 log.info(
                     f"Slice entry pulled from manifest | {slice_comp_key} | "
@@ -164,25 +172,28 @@ hashed: {colorize(entry['slice_id'], Ansi.BOLD)}
 Full Entry: {entry}""")
                           
                 # Mark in-progress
-                entry["slice_status"] = SliceStatus.IN_PROGRESS.value     
+                entry["slice_status"] = SliceStatus.IN_PROGRESS     
                 save_manifest(manifest_path, manifest, f"temporarily marking slice as in progress (while fetch occurs)")
 
                 # Increment fetch counter for *any* actual fetch
                 entry.setdefault("request_count", {}).setdefault("fetches", 0)
                 entry["request_count"]["fetches"] += 1
 
-                meta = fetch_and_persist_slice(
+                meta, fetch_fail = fetch_and_persist_slice(
                     request_slice_key=slice_key,
                     data_root=root,
                     responses_dir=responses_dir,
                 )
+
+                if fetch_fail is not None:
+                    raise fetch_fail
 
                 entry["requested_at"] = now_utc().isoformat()
                 entry = _update_entry(meta, entry)
                 manifest["slices"][slice_comp_key] = entry
 
                 _update_summary(manifest)
-                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize(entry['slice_status'], Ansi.GREEN , Ansi.BOLD)}. Slice Status Reason: {entry['slice_status_reason']}")
+                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize(enum_for_log(entry['slice_status']), Ansi.GREEN , Ansi.BOLD)}. Slice Status Reason: {enum_for_log(entry['slice_status_reason'])}")
 
                 # Reset backoff on success
                 backoff = 1.0
@@ -190,25 +201,45 @@ Full Entry: {entry}""")
             # Mark slice as failed and backoff
             except Exception as exc:
                 
-                entry = _update_entry_on_exception(entry, meta, exc)
+                slice_status_reason = _get_slice_status_reason_on_exception(exc, fetch_fail)
+                entry = _update_entry_on_exception(entry=entry, meta=meta, slice_status_reason=slice_status_reason, exception=exc)
                 
                 # Update and Write Manifest
                 manifest["slices"][slice_comp_key] = entry
                 _update_summary(manifest)
 
-                if entry['http_status'] == 200:
-                    save_manifest(manifest_path, manifest, f"Request Succeeded (200), but exception occured - marking slice as {colorize(entry['slice_status'], Ansi.RED , Ansi.BOLD)}")
-                else:
-                    save_manifest(manifest_path, manifest, f"Request Failed - http_status: {entry['http_status']} - marking slice as {colorize(entry['slice_status'], Ansi.RED , Ansi.BOLD)}")
-                
+                save_manifest(
+                    manifest_path,
+                    serialize_manifest(manifest),
+                    _failure_msg(entry),
+                )
+
                 log.exception(exc)
                 time.sleep(backoff)
-                backoff = min(backoff * 2.0, max_backoff_sec)
+                backoff = _next_backoff(current=backoff, cap=max_backoff_sec)
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+def _next_backoff(current, *, base=1.0, cap=60.0):
+    next_val = min(current * 2.0, cap)
+    jitter = random.uniform(0.8, 1.2)
+    return max(base, next_val * jitter)
+
+
+
+def _failure_msg(entry) -> str:
+    status = entry.get("http_status")
+    reason = entry.get("slice_status_reason")
+    slice_status = colorize(entry["slice_status"], Ansi.RED, Ansi.BOLD)
+
+    if status is None:
+        return f"Request failed (no HTTP response, reason={reason}) - marking slice as {slice_status}"
+    else:
+        return f"Request failed (http_status={status}, reason={reason}) - marking slice as {slice_status}"
+
+
 
 def _construct_fetch_batch(classified):
         
@@ -238,18 +269,22 @@ def _construct_fetch_batch(classified):
 
         return to_fetch
 
-def _update_entry_on_exception(entry, meta, exception):
+def _get_slice_status_reason_on_exception(exc, fetch_failed):
+        if fetch_failed is not None:
+            return SliceStatusReason.NETWORK_UNAVAILABLE
+
+        if exc is HTTPStatusError:
+            return SliceStatusReason.HTTP_ERROR
+   
+        return SliceStatusReason.EXCEPTION
+
+def _update_entry_on_exception(entry, meta, slice_status_reason: SliceStatusReason, exception):
         
         now_iso = _now_iso()
-        http_status = int(meta['http_status'])
-        if  http_status < 200 or http_status > 299:
-            slice_status_reason = SliceStatusReason.HTTP_ERROR.value
-        else:
-            slice_status_reason = SliceStatusReason.EXCEPTION.value
 
         entry.update(
             {
-                "slice_status": SliceStatus.FAILED.value,
+                "slice_status": SliceStatusPolicy.from_failure_reason(slice_status_reason),
                 "slice_status_reason": slice_status_reason,
                 "http_status": (
                     meta.get("http_status")
@@ -369,12 +404,12 @@ def _update_summary(manifest: Dict) -> None:
     """
     slices = manifest.get("slices", {})
     total = len(slices)
-    complete = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.COMPLETE.value)
-    partial = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.PARTIAL.value)
-    failed = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.FAILED.value)
-    missing = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.MISSING.value)
-    needs_refresh = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.NEEDS_REFRESH.value)
-    in_progress = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.IN_PROGRESS.value)
+    complete = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.COMPLETE)
+    partial = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.PARTIAL)
+    failed = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.FAILED)
+    missing = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.MISSING)
+    needs_refresh = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.NEEDS_REFRESH)
+    in_progress = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.IN_PROGRESS)
 
     accounted_for = (
         complete

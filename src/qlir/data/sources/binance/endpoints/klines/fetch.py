@@ -3,14 +3,18 @@ from __future__ import annotations
 import json
 import hashlib
 from pathlib import Path
+import random
 from typing import Dict, Any, Optional
 from urllib.parse import parse_qs, urlparse
 import logging
+
+from httpx import HTTPStatusError, RequestError
 
 from qlir.data.sources.binance.endpoints.klines.inspection_result import inspect_res
 from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
 from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval
 from qlir.data.sources.common.slices.slice_key import SliceKey
+from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 log = logging.getLogger(__name__)
 from qlir.data.sources.binance.endpoints.klines.deprec_rest_api_contracts import audit_binance_rest_kline_invariants
 from qlir.time.iso import now_iso
@@ -30,6 +34,12 @@ except ImportError as exc:  # pragma: no cover
         "Install it with: pip install httpx"
     ) from exc
 
+class FetchFailed(Exception):
+    def __init__(self, *, reason, meta=None, exc=None):
+        self.reason = reason
+        self.meta = meta
+        self.exc = exc
+        super().__init__(str(exc) if exc else reason)
 
 def make_canonical_slice_hash(slice_key: SliceKey) -> str:
     """
@@ -80,7 +90,7 @@ def fetch_and_persist_slice(
     data_root: Optional[Path] = None,
     responses_dir: Optional[Path] = None,
     timeout_sec: float = 10.0,
-) -> Dict[str, Any]:
+) -> tuple[Dict[str,Any] | None, FetchFailed | None]:
     """
     Fetch a single kline slice from Binance and write the raw response to disk.
 
@@ -128,9 +138,37 @@ def fetch_and_persist_slice(
     )
 
     # Perform the request
-    with httpx.Client(timeout=timeout_sec) as client:
-        resp = client.get(url)
-    completed_at = now_iso()
+    completed_at = None
+    http_status = None
+
+    try:
+        with httpx.Client(timeout=timeout_sec) as client:
+            resp = client.get(url)
+            completed_at = now_iso()
+            http_status = resp.status_code
+            resp.raise_for_status()
+
+    except httpx.HTTPStatusError as exc:
+        # HTTP response exists (4xx / 5xx)
+        return None, FetchFailed(
+            reason=SliceStatusReason.HTTP_ERROR,
+            meta={
+                "http_status": exc.response.status_code,
+                "completed_at": now_iso(),
+            },
+            exc=exc,
+        )
+
+    except httpx.RequestError as exc:
+        # No HTTP response exists (DNS, timeout, TCP, TLS, etc.)
+        return None, FetchFailed(
+            reason=SliceStatusReason.NETWORK_UNAVAILABLE,
+            meta={
+                "http_status": None,
+                "completed_at": now_iso(),
+            },
+            exc=exc,
+        )
 
     http_status = resp.status_code
     resp.raise_for_status()  # will raise on 4xx/5xx
@@ -211,5 +249,5 @@ def fetch_and_persist_slice(
 
         "requested_at": requested_at,
         "completed_at": completed_at,
-    }
+    }, None
 
