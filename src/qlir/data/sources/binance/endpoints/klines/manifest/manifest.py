@@ -54,6 +54,24 @@ def load_or_create_manifest(
     }
 
 
+def load_existing_manifest(manifest_path: Path) -> Dict:
+    """
+    Load an existing manifest.json from disk.
+
+    Contract:
+    - manifest.json MUST already exist
+    - Caller is responsible for waiting until it does
+    """
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+
+    with manifest_path.open("r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    deserialize_manifest(manifest)
+    return manifest
+
+
 def _write_manifest_atomic(manifest_path: Path, manifest: Dict) -> None:
     tmp_path = manifest_path.with_suffix(".tmp")
     with tmp_path.open("w", encoding="utf-8") as f:

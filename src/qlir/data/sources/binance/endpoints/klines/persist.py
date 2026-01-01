@@ -20,7 +20,7 @@ def persist(data, url, request_slice_key, responses_dir, data_root, inspection_r
         "meta": {
             "url": url,
             "slice_actual": request_slice_key.request_slice_composite_key(),
-            "canoncal_slice": canonical_slice_compkey,
+            "slice_comp_key": canonical_slice_compkey,
             "slice_id": canonical_slice_compkey_hashed,
             "symbol": request_slice_key.symbol,
             "interval": request_slice_key.interval,
@@ -53,7 +53,7 @@ def persist(data, url, request_slice_key, responses_dir, data_root, inspection_r
     return {
         "slice_id": canonical_slice_compkey_hashed,
         "relative_path": relative_path,
-        "canonical_slice_comp_key": canonical_slice_compkey,
+        "slice_comp_key": canonical_slice_compkey,
 
         "http_status": http_status,
         "url": url,

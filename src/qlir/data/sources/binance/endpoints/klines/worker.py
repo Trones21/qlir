@@ -248,7 +248,7 @@ def run_klines_worker(
                 _update_summary(manifest)
 
                 failure_delta = {
-                    "canonical_slice_comp_key": slice_comp_key,
+                    "slice_comp_key": slice_comp_key,
                     "slice_id": slice_id,
                     "slice_status": entry["slice_status"],
                     "slice_status_reason": entry["slice_status_reason"],

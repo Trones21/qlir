@@ -1,29 +1,29 @@
 from __future__ import annotations
 
+import json
 import os
 import time
 import logging
-logger = logging.getLogger("qlir.manifest_aggregator")
+
+from qlir.data.sources.binance.server import BinanceServerConfig
+log = logging.getLogger("qlir.manifest_aggregator")
 
 from pathlib import Path
 from typing import Dict, Any, Iterable
 from datetime import datetime, timezone
 from qlir.data.core.paths import get_symbol_interval_limit_raw_dir
 from qlir.data.sources.binance.manifest_delta_log import (
-    iter_manifest_deltas,
     apply_manifest_delta,
 )
 
 
 # KLINES MANIFEST (current location)
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
-    load_or_create_manifest,
+    load_existing_manifest,
 )
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
     write_manifest_snapshot,
 )
-
-log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Snapshot policy
@@ -38,7 +38,7 @@ MAX_DELTA_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
 # Process entrypoint
 # ---------------------------------------------------------------------------
 
-def run_manifest_aggregator(job_config, data_root: Path) -> None:
+def run_manifest_aggregator(server_config: BinanceServerConfig, data_root: Path) -> None:
     """
     Long-running Binance manifest aggregation service.
 
@@ -50,15 +50,21 @@ def run_manifest_aggregator(job_config, data_root: Path) -> None:
 
     """
 
+    datasource=server_config.datasource
+    endpoint=server_config.endpoint
+    symbol=server_config.job_config.symbol
+    interval=server_config.job_config.interval
+    limit=server_config.job_config.limit
+
     # Note can refactor this to be more generic if the aggregator ever needs to do it based on something else 
     # but this combo represents a complete identyity set for the type of data we are getting  
     sym_interval_limit_raw_dir = get_symbol_interval_limit_raw_dir(
         data_root=data_root,
-        datasource=job_config.datasource, 
-        endpoint=job_config.endpoint,
-        symbol=job_config.symbol,
-        interval=job_config.interval,
-        limit=job_config.limit
+        datasource=datasource, 
+        endpoint=endpoint,
+        symbol=symbol,
+        interval=interval,
+        limit=limit
     )
 
     # To easily toggle
@@ -75,15 +81,21 @@ def run_manifest_aggregator(job_config, data_root: Path) -> None:
         sym_interval_limit_raw_dir,
     )
 
-    # ---------------------------------------------------------------------
-    # Load existing snapshot (if any)
-    # ---------------------------------------------------------------------
 
-    manifest: Dict[str, Any] = load_or_create_manifest(
-        manifest_path=manifest_path,
-        symbol=job_config.symbol,
-        interval=job_config.interval,
-        limit=job_config.limit,
+    # ---------------------------------------------------------------------
+    # Load Existing Manifest
+    # ---------------------------------------------------------------------
+    log.info("Waiting for manifest.json to exist | path=%s", manifest_path)
+    
+    while True:
+        if manifest_path.exists() and manifest_path.stat().st_size > 0:
+                break
+        time.sleep(0.5)
+
+    log.info("Loading Manifest into Aggregator")
+
+    manifest: Dict[str, Any] = load_existing_manifest(
+        manifest_path=manifest_path
     )
 
     last_snapshot_ts = time.monotonic()
@@ -91,27 +103,48 @@ def run_manifest_aggregator(job_config, data_root: Path) -> None:
     delta_log_bytes_at_snapshot = delta_log_path.stat().st_size if delta_log_path.exists() else 0
 
     # ---------------------------------------------------------------------
+    # Bootstrap: apply all existing deltas once
+    # ---------------------------------------------------------------------
+
+    log.info("Applying existing manifest deltas (bootstrap)")
+
+    delta_offset = 0
+
+    if delta_log_path.exists():
+        with delta_log_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                delta = json.loads(line)
+                apply_manifest_delta(manifest, delta)
+            delta_offset = f.tell()
+
+    log.info("Bootstrap complete | delta_offset=%d", delta_offset)
+
+
+    # ---------------------------------------------------------------------
     # Main loop
     # ---------------------------------------------------------------------
 
     try:
         while True:
-            for event in _consume_delta_log(delta_log_path):
-                apply_manifest_delta(manifest, event)
-                slice_key = event.get("slice_comp_key")
-                log.debug("Applied manifest delta | slice=%s", slice_key)
-                events_since_snapshot += 1
+            if delta_log_path.exists():
+                with delta_log_path.open("r", encoding="utf-8") as f:
+                    f.seek(delta_offset)
+                    for line in f:
+                        delta = json.loads(line)
+                        apply_manifest_delta(manifest, delta)
+                        events_since_snapshot += 1
+                    delta_offset = f.tell()
 
-                if _should_snapshot(
-                    last_snapshot_ts=last_snapshot_ts,
-                    events_since_snapshot=events_since_snapshot,
-                    delta_log_path=delta_log_path,
-                    delta_log_bytes_at_snapshot=delta_log_bytes_at_snapshot,
-                ):
-                    _write_snapshot(manifest, manifest_path)
-                    last_snapshot_ts = time.monotonic()
-                    events_since_snapshot = 0
-                    delta_log_bytes_at_snapshot = delta_log_path.stat().st_size
+            if _should_snapshot(
+                last_snapshot_ts=last_snapshot_ts,
+                events_since_snapshot=events_since_snapshot,
+                delta_log_path=delta_log_path,
+                delta_log_bytes_at_snapshot=delta_log_bytes_at_snapshot,
+            ):
+                _write_snapshot(manifest, manifest_path)
+                last_snapshot_ts = time.monotonic()
+                events_since_snapshot = 0
+                delta_log_bytes_at_snapshot = delta_log_path.stat().st_size
 
             time.sleep(0.25)
 
@@ -123,17 +156,6 @@ def run_manifest_aggregator(job_config, data_root: Path) -> None:
     except Exception:
         log.exception("Manifest aggregator crashed")
         raise
-
-
-# ---------------------------------------------------------------------------
-# Delta Log consumption
-# ---------------------------------------------------------------------------
-
-def _consume_delta_log(delta_log_path: Path) -> Iterable[Dict[str, Any]]:
-    if not delta_log_path.exists():
-        return iter(())
-    return iter_manifest_deltas(delta_log_path)
-
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +232,7 @@ def _write_snapshot(manifest: Dict[str, Any], manifest_path: Path) -> None:
 # tail the file in a separate terminal
 
 def _setup_manifest_logging(log_dir: Path) -> None:
-    logger = logging.getLogger("qlir.manifest_aggregator")
+    log = logging.getLogger("qlir.manifest_aggregator")
 
     log_path = log_dir / "manifest_aggregator.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -221,6 +243,7 @@ def _setup_manifest_logging(log_dir: Path) -> None:
     )
     handler.setFormatter(formatter)
 
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False  # 🔑 prevent stdout duplication
+    log.addHandler(handler)
+    log.setLevel(logging.DEBUG)
+    log.propagate = False  # 🔑 prevent stdout duplication
+    log.info("zkp-Setup manifest aggregator logger - qlir.manifest_aggregator")

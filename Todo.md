@@ -3,6 +3,15 @@
 Program logic for enums should never use .value, always serialize/deserialize at read/write boundary
   (Logging is the exception, b/c we want to see something meaningful, not just an int)
 
+# Known Issues
+
+Slices are getting marked as needs_refresh on restart... likely just some manifest schema issue
+
+Manifest Aggregator logs not being written to /logs 
+    - first check if manifest_aggregator._setup_manifest_logging is actually being called - maybe just raise to short circuit
+    - env variable does seem to be working  
+
+
 # Priorities
 
 qlir - etl funcs 

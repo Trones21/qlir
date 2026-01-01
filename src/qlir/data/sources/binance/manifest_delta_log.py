@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any, Iterable
 from datetime import datetime, timezone
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("qlir.manifest_delta_log")
 
 # ---------------------------------------------------------------------------
 # Delta log format
