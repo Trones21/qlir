@@ -4,7 +4,7 @@ import random
 
 from httpx import HTTPStatusError, RequestError
 
-from qlir.data.sources.binance.endpoints.klines import claims
+from qlir.data.sources.common import claims
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.data.sources.common.slices.entry_serializer import serialize_entry
 from qlir.data.sources.common.slices.manifest_serializer import serialize_manifest
@@ -28,7 +28,7 @@ from .urls import generate_kline_slices
 from .fetch_wrapper import log_requested_slice_size, fetch_and_persist_slice
 from .time_range import compute_time_range
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.orchestrator import validate_manifest_and_fs_integrity
-from qlir.data.core.paths import get_data_root
+from qlir.data.core.paths import get_data_root, get_symbol_interval_limit_raw_dir
 
 IN_PROGRESS_STALE_SEC = 300  # 5 minutes
 
@@ -42,10 +42,10 @@ def is_stale(entry):
 
 
 def run_klines_worker(
+    data_root: Path,
     symbol: str,
     interval: str,
     limit: int = 1000,
-    data_root: Optional[Path | str] = None,
     poll_interval_sec: float = 10.0,
     max_backoff_sec: float = 60.0,
 ) -> None:
@@ -89,20 +89,22 @@ def run_klines_worker(
             Upper bound for exponential backoff on repeated failures.
     """
     # Resolve data root and this symbol+interval directory
-    root = get_data_root(data_root)
-    sym_interval_limit_dir = (
-        Path(root)
-        .joinpath("binance", "klines", "raw", symbol, interval, f"limit={limit}")
-        .resolve()
+    sym_interval_limit_raw_dir = get_symbol_interval_limit_raw_dir(
+        data_root=data_root,
+        datasource="binance", 
+        endpoint="klines",
+        symbol=symbol,
+        interval=interval,
+        limit=limit
     )
-    responses_dir = sym_interval_limit_dir.joinpath("responses")
-    manifest_path = sym_interval_limit_dir.joinpath(MANIFEST_FILENAME)
+    responses_dir = sym_interval_limit_raw_dir.joinpath("responses")
+    manifest_path = sym_interval_limit_raw_dir.joinpath(MANIFEST_FILENAME)
 
-    _ensure_dir(sym_interval_limit_dir)
+    _ensure_dir(sym_interval_limit_raw_dir)
     _ensure_dir(responses_dir)
     log.info("Saving raw reponses to: %s", responses_dir)
 
-    claims_dir = sym_interval_limit_dir  # base_dir passed to claims.py
+    claims_dir = sym_interval_limit_raw_dir  # base_dir passed to claims.py
     log.debug("Locks written to: %s", claims_dir)
 
     backoff = 1.0
@@ -191,7 +193,7 @@ def run_klines_worker(
 
                 meta, fetch_fail = fetch_and_persist_slice(
                     request_slice_key=slice_key,
-                    data_root=root,
+                    data_root=data_root,
                     responses_dir=responses_dir,
                 )
 

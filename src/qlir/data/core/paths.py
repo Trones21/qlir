@@ -141,6 +141,23 @@ def get_raw_manifest_path(datasource:str, endpoint:str, symbol: str, interval: s
         raise FileNotFoundError(f"Manifest not Found at {path}")
     return path
 
+def get_symbol_interval_limit_raw_dir(data_root: Path, datasource: str, endpoint:str, symbol: str, interval: str, limit:int) -> Path:
+    """Containseverything the data server interacts with:
+        - /responses        # the raw data
+        - /claims           # locks 
+        - manifest.json     # metadata for each slice (including those without responses yet)
+        - manifest.delta    # delta log of manifest.json (batching for perf reasons -- manifest.json can be 100's of MB, and these updates would happen multiple times per second on inital fetch loop)
+        - /logs             # logs (currently only for the delta log process, not the main fetching worker)
+    """
+    root = get_data_root(data_root)
+    sym_interval_limit_dir = (
+        Path(root)
+        .joinpath(datasource, endpoint, "raw", symbol, interval, f"limit={limit}")
+        .resolve()
+    )
+    return sym_interval_limit_dir
+
+
 # ---------------------------------------------------------------------------
 # Canonical dataset path builders
 # ---------------------------------------------------------------------------
