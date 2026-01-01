@@ -29,8 +29,8 @@ from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
 # Snapshot policy
 # ---------------------------------------------------------------------------
 
-SNAPSHOT_INTERVAL_SEC = 5.0
-MAX_EVENTS_PER_SNAPSHOT = 100
+SNAPSHOT_INTERVAL_SEC = 120
+MAX_EVENTS_PER_SNAPSHOT = 500
 MAX_DELTA_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
 
 

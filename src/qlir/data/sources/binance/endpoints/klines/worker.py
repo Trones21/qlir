@@ -8,15 +8,12 @@ from httpx import HTTPStatusError, RequestError
 from qlir.data.sources.binance.manifest_delta_log import append_manifest_delta
 from qlir.data.sources.common import claims
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, write_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
-from qlir.data.sources.common.slices.entry_serializer import serialize_entry
-from qlir.data.sources.common.slices.manifest_serializer import serialize_manifest
 from qlir.data.sources.common.slices.slice_classification import classify_slices
 from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.time.iso import now_utc, parse_iso
-from qlir.utils.enum import enum_for_log, serialize_enum
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
 log = logging.getLogger(__name__)
@@ -223,7 +220,7 @@ def run_klines_worker(
 
                 append_manifest_delta(
                     delta_log_path=delta_log_path,
-                    delta=meta
+                    delta=entry
                 )
 
                 # write_manifest_snapshot(
@@ -308,10 +305,10 @@ def _construct_fetch_batch(classified):
         }
 
         to_fetch = [
-            *classified.missing,
-            *classified.partial,
             *classified.needs_refresh,
-            *classified.failed
+            *classified.missing,
+            *classified.failed,
+            *classified.partial,            
         ]
 
         log.info(f"{len(to_fetch)} slices to fetch")
@@ -361,6 +358,7 @@ def _update_entry(meta, entry) -> Dict:
         entry.update(
             {
                 "slice_id": meta["slice_id"],
+                "slice_comp_key": meta["slice_comp_key"],
                 "relative_path": meta["relative_path"],
                 "slice_status": meta['slice_status'],
                 "slice_status_reason":meta['slice_status_reason'],
