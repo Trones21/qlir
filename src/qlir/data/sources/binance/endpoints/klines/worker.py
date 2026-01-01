@@ -5,6 +5,7 @@ import random
 
 from httpx import HTTPStatusError, RequestError
 
+from qlir.data.sources.binance.endpoints.klines.fetch import FetchFailed
 from qlir.data.sources.binance.manifest_delta_log import append_manifest_delta
 from qlir.data.sources.common import claims
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, write_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
@@ -163,8 +164,8 @@ def run_klines_worker(
         
         fetch_comp_keys = [skey.canonical_slice_composite_key() for skey in to_fetch]
         for slice_key in to_fetch:
-            meta: dict | None = None
-            fetch_fail = None
+            fetch_fail: FetchFailed | None = None
+            meta: Dict[str, Any] = {}
             slice_comp_key = slice_key.canonical_slice_composite_key()
             print('\n')
             if slice_comp_key not in fetch_comp_keys:
@@ -200,17 +201,18 @@ def run_klines_worker(
                 entry.setdefault("request_count", {}).setdefault("fetches", 0)
                 entry["request_count"]["fetches"] += 1
 
-                meta, fetch_fail = fetch_and_persist_slice(
+                fetch_result = fetch_and_persist_slice(
                     request_slice_key=slice_key,
                     data_root=data_root,
                     responses_dir=responses_dir,
                 )
 
-                if fetch_fail is not None:
+                if fetch_result is FetchFailed:
+                    fetch_fail = fetch_result
                     raise fetch_fail
                 else:
-                    # better way would be to create a union type but this is fine for now
-                    assert meta is not None
+                    # this whole entire fetch, wrapper and stuff prob needs to be refactored... but it works and its not that bad...
+                    meta = fetch_result #type: ignore
 
                 entry["requested_at"] = now_utc().isoformat()
                 entry = _update_entry(meta, entry)
@@ -222,12 +224,6 @@ def run_klines_worker(
                     delta_log_path=delta_log_path,
                     delta=entry
                 )
-
-                # write_manifest_snapshot(
-                #     manifest_path,
-                #     manifest,
-                #     f"fetch slice succeeded - marking as {enum_for_log(entry['slice_status'])}",
-                # )
 
                 backoff = 1.0
 
@@ -256,12 +252,6 @@ def run_klines_worker(
                     delta_log_path=delta_log_path,
                     delta=failure_delta,
                 )
-
-                # write_manifest_snapshot(
-                #     manifest_path,
-                #     serialize_manifest(manifest),
-                #     _failure_msg(entry),
-                # )
 
                 log.exception(exc)
                 time.sleep(backoff)
@@ -323,8 +313,8 @@ def _construct_fetch_batch(classified):
 
         return to_fetch
 
-def _get_slice_status_reason_on_exception(exc, fetch_failed):
-        if fetch_failed is not None:
+def _get_slice_status_reason_on_exception(exc, fetch_fail):
+        if fetch_fail is not None:
             return SliceStatusReason.NETWORK_UNAVAILABLE
 
         if exc is HTTPStatusError:

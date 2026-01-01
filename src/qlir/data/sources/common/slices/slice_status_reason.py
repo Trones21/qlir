@@ -11,6 +11,7 @@ class SliceStatusReason(StrEnum):
 
     # Non-retryable (terminal)
     HISTORICAL_SPARSITY = auto()
+    NO_DATA = auto()
 
     # Temporal
     AWAITING_UPSTREAM = auto() # The slice should be complete by time, but the upstream system hasn’t delivered all data yet.

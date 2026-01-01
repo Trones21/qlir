@@ -19,6 +19,7 @@ class SliceStatus(StrEnum):
     MISSING = auto()
     COMPLETE = auto()
     PARTIAL = auto()
+    EMPTY = auto()
     NEEDS_REFRESH = auto()
     FAILED = auto()
     IN_PROGRESS= auto()

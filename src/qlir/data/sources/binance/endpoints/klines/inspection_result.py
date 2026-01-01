@@ -205,7 +205,7 @@ def inspect_slice_integrity(
 
 
 def inspect_res(
-    raw: list[list],
+    raw: list[list] | None,
     *,
     requested_first_open: int,
     requested_last_open_implicit: int,
@@ -219,7 +219,21 @@ def inspect_res(
     - InspectionResult is never partially mutated and returned
     """
 
-    # ---- receipt facts (always) ----
+    # handle when we receive empty data
+    if not raw:
+        return InspectionResult(
+            n_items=0,
+            requested_first_open=requested_first_open,
+            requested_last_open_implicit=requested_last_open_implicit,
+            received_eq_requested=False,
+            received_first_open=None,
+            received_last_open=None,
+            slice_status=SliceStatus.EMPTY,
+            slice_status_reason=SliceStatusReason.NO_DATA,
+            inspection_mode=InspectionMode.QUICK,
+        )
+
+    # ---- receipt facts ----
     n_items, r_first, r_last = extract_slice_receipt(raw)
 
     # ---- fast path (completeness only) ----

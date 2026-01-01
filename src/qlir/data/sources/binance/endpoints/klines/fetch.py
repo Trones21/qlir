@@ -1,4 +1,5 @@
 
+from dataclasses import dataclass
 from typing import Any, Dict
 import httpx
 
@@ -11,7 +12,6 @@ class FetchFailed(Exception):
         self.meta = meta
         self.exc = exc
         super().__init__(str(exc) if exc else reason)
-
 
 
 def fetch(url: str, timeout_sec: float) -> tuple[list[list] | None, Dict | None, FetchFailed | None]:

@@ -9,7 +9,7 @@ from qlir.data.sources.binance.endpoints.klines.inspection_result import inspect
 from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
 from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval
 from qlir.data.sources.common.slices.slice_key import SliceKey
-from qlir.data.sources.binance.endpoints.klines.fetch import fetch, FetchFailed
+from qlir.data.sources.binance.endpoints.klines.fetch import  fetch, FetchFailed
 from qlir.data.sources.binance.endpoints.klines.persist import persist
 
 log = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def fetch_and_persist_slice(
     data_root: Optional[Path] = None,
     responses_dir: Optional[Path] = None,
     timeout_sec: float = 10.0,
-) -> tuple[Dict[str,Any] | None, FetchFailed | None]:
+) -> Dict[str, Any] | FetchFailed:
     """
     Fetch a single kline slice from Binance and write the raw response to disk.
 
@@ -108,9 +108,9 @@ def fetch_and_persist_slice(
     data, success_info, fetch_fail = fetch(url=url, timeout_sec=timeout_sec)
     
     if fetch_fail:
-        return None, fetch_fail
-    
-    if success_info and data:
+        return fetch_fail
+        
+    if success_info:
         # assert data is not None # To satisfy pylance...
         http_status = success_info['http_status']
         completed_at = success_info['completed_at']
@@ -134,10 +134,8 @@ def fetch_and_persist_slice(
                 requested_at=requested_at,
                 completed_at=completed_at)
 
-        return meta, None
-    
-    raise RuntimeError("Unexpected state reached - either fetch_fail or [success_info & data] should be null, but not both")
+        return meta
 
 
-
+    raise RuntimeError("Code must have been refactored... should have taken either the fail or success path (empty res takes the success path)")  
 
