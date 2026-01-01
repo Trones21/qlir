@@ -1,11 +1,13 @@
 from __future__ import annotations
 import logging
+import os
 import random
 
 from httpx import HTTPStatusError, RequestError
 
+from qlir.data.sources.binance.manifest_delta_log import append_manifest_delta
 from qlir.data.sources.common import claims
-from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, write_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.data.sources.common.slices.entry_serializer import serialize_entry
 from qlir.data.sources.common.slices.manifest_serializer import serialize_manifest
 from qlir.data.sources.common.slices.slice_classification import classify_slices
@@ -97,15 +99,24 @@ def run_klines_worker(
         interval=interval,
         limit=limit
     )
-    responses_dir = sym_interval_limit_raw_dir.joinpath("responses")
-    manifest_path = sym_interval_limit_raw_dir.joinpath(MANIFEST_FILENAME)
 
+    # Explain 
+    responses_dir = sym_interval_limit_raw_dir.joinpath("responses")
     _ensure_dir(sym_interval_limit_raw_dir)
     _ensure_dir(responses_dir)
     log.info("Saving raw reponses to: %s", responses_dir)
 
     claims_dir = sym_interval_limit_raw_dir  # base_dir passed to claims.py
     log.debug("Locks written to: %s", claims_dir)
+
+    delta_log_path = responses_dir.parent / "manifest.delta"
+    log.debug("Manifest delta log written to: %s", delta_log_path)
+
+    manifest_path = sym_interval_limit_raw_dir.joinpath(MANIFEST_FILENAME)
+    log.debug("and the manifest aggregator batch updates manifest located at: %s", manifest_path)
+
+    if os.getenv("QLIR_MANIFEST_LOG"):
+        log.debug("manifest batch update worker logs are turned on. To view, open another terminal and use tail -f %s", manifest_path)
 
     backoff = 1.0
 
@@ -131,12 +142,13 @@ def run_klines_worker(
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
     
         if seed_manifest_with_expected_slices(manifest, expected_slices):
-            save_manifest(manifest_path, manifest, f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")  # persist full universe (for external visualization/stats - no need to see slices in memory, b/c they are all in the manifest.json)
+            save_manifest(manifest_path=manifest_path, manifest=manifest, reason=f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")
         
         
         classified = classify_slices(expected_slices, manifest)
         manifest = update_manifest_with_classification(manifest=manifest, classified=classified)
-        save_manifest(manifest_path, manifest, f"Updating Manifest with slice classifications" )
+        
+        save_manifest(manifest_path=manifest_path, manifest=manifest, reason=f"Updating Manifest with slice classifications" )
 
         to_fetch = _construct_fetch_batch(classified)
 
@@ -199,6 +211,9 @@ def run_klines_worker(
 
                 if fetch_fail is not None:
                     raise fetch_fail
+                else:
+                    # better way would be to create a union type but this is fine for now
+                    assert meta is not None
 
                 entry["requested_at"] = now_utc().isoformat()
                 entry = _update_entry(meta, entry)
@@ -206,11 +221,16 @@ def run_klines_worker(
 
                 _update_summary(manifest)
 
-                save_manifest(
-                    manifest_path,
-                    manifest,
-                    f"fetch slice succeeded - marking as {enum_for_log(entry['slice_status'])}",
+                append_manifest_delta(
+                    delta_log_path=delta_log_path,
+                    delta=meta
                 )
+
+                # write_manifest_snapshot(
+                #     manifest_path,
+                #     manifest,
+                #     f"fetch slice succeeded - marking as {enum_for_log(entry['slice_status'])}",
+                # )
 
                 backoff = 1.0
 
@@ -227,11 +247,24 @@ def run_klines_worker(
                 manifest["slices"][slice_comp_key] = entry
                 _update_summary(manifest)
 
-                save_manifest(
-                    manifest_path,
-                    serialize_manifest(manifest),
-                    _failure_msg(entry),
+                failure_delta = {
+                    "canonical_slice_comp_key": slice_comp_key,
+                    "slice_id": slice_id,
+                    "slice_status": entry["slice_status"],
+                    "slice_status_reason": entry["slice_status_reason"],
+                    "error": str(exc),
+                    "completed_at": now_utc().isoformat(),
+                }
+                append_manifest_delta(
+                    delta_log_path=delta_log_path,
+                    delta=failure_delta,
                 )
+
+                # write_manifest_snapshot(
+                #     manifest_path,
+                #     serialize_manifest(manifest),
+                #     _failure_msg(entry),
+                # )
 
                 log.exception(exc)
                 time.sleep(backoff)

@@ -53,17 +53,53 @@ def load_or_create_manifest(
         "slices": {},
     }
 
-def save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") -> None:
-    """
-    Write manifest.json to disk atomically-ish (write then replace).
-    """
+
+def _write_manifest_atomic(manifest_path: Path, manifest: Dict) -> None:
     tmp_path = manifest_path.with_suffix(".tmp")
     with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     tmp_path.replace(manifest_path)
-    
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-    print(f"{ts} [{colorize("WROTE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
+
+
+def save_manifest(
+    manifest_path: Path,
+    manifest: Dict,
+    *,
+    reason: str | None = None,
+) -> None:
+    """
+    Force-write the manifest immediately.
+
+    Intended for:
+    - bootstrap / seeding
+    - integrity repair
+    - structural updates
+    - single-writer contexts
+
+    NOT intended for:
+    - per-slice updates
+    - high-frequency writes
+    """
+    _write_manifest_atomic(manifest_path, manifest)
+
+    if reason:
+        log.info("Manifest saved | reason=%s path=%s", reason, manifest_path)
+
+
+
+def write_manifest_snapshot(
+    manifest_path: Path,
+    manifest: Dict,
+) -> None:
+    """
+    Write a snapshot of the current manifest state.
+
+    Notes:
+    - Called by the manifest aggregator
+    - Manifest is a materialized view
+    - May lag behind real-time slice updates
+    """
+    _write_manifest_atomic(manifest_path, manifest)
 
 
 def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]):

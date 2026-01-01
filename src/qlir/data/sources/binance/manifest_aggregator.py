@@ -19,7 +19,7 @@ from qlir.data.sources.binance.manifest_delta_log import (
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
     load_or_create_manifest,
 )
-from qlir.data.sources.binance.endpoints.klines.manifest.persist import (
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
     write_manifest_snapshot,
 )
 
