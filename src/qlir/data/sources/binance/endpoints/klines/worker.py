@@ -4,6 +4,7 @@ import random
 
 from httpx import HTTPStatusError, RequestError
 
+from qlir.data.sources.binance.endpoints.klines import claims
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.data.sources.common.slices.entry_serializer import serialize_entry
 from qlir.data.sources.common.slices.manifest_serializer import serialize_manifest
@@ -100,6 +101,10 @@ def run_klines_worker(
     _ensure_dir(sym_interval_limit_dir)
     _ensure_dir(responses_dir)
     log.info("Saving raw reponses to: %s", responses_dir)
+
+    claims_dir = sym_interval_limit_dir  # base_dir passed to claims.py
+    log.debug("Locks written to: %s", claims_dir)
+
     backoff = 1.0
 
     while True:
@@ -135,8 +140,12 @@ def run_klines_worker(
 
         # No work to do; reset backoff and sleep for a bit.
         if not to_fetch:
+            active = claims.list_claims(claims_dir)
+            log.info(
+                "No work to do | active_claims=%d",
+                len(active),
+            )
             backoff = 1.0
-            log.info(f"No missing or partial slices, sleeping for {poll_interval_sec} seconds")
             time.sleep(poll_interval_sec)
             print('\n')
             continue
@@ -150,29 +159,33 @@ def run_klines_worker(
             if slice_comp_key not in fetch_comp_keys:
                 log.debug(f'fetching {slice_comp_key}, but its not in to_fetch {fetch_comp_keys}')
             
-            try:
-                entry = manifest["slices"].get(slice_comp_key)
-            except Exception as exc:
-                raise KeyError(f"Unable to find a manifest entry for key: {slice_comp_key}. You have a corrupt manifest or the server passed an incorrect slice key (code error)")
-            try:
-                # Skip if another proc is currently handling this 
-                # (with stale safeguard to prevent items from being locked forever, in case the proc is killed while fetch is being performed)
-                if entry.get("slice_status") == SliceStatus.IN_PROGRESS and not is_stale(entry):
-                    continue
-                log.info(
-                    f"Slice entry pulled from manifest | {slice_comp_key} | "
-                    f"id={entry['slice_id']} status={entry.get('slice_status')}"
-                )
-                log.debug(f"""{colorize('=== Slice entry pulled from manifest ===', Ansi.BOLD)}
-comp_key: {colorize(slice_comp_key, Ansi.BOLD)}
-hashed: {colorize(entry['slice_id'], Ansi.BOLD)}
-Full Entry: {entry}""")
-                          
-                # Mark in-progress
-                entry["slice_status"] = SliceStatus.IN_PROGRESS     
-                save_manifest(manifest_path, manifest, f"temporarily marking slice as in progress (while fetch occurs)")
+            entry = manifest["slices"][slice_comp_key]
+            slice_id = entry["slice_id"]
 
-                # Increment fetch counter for *any* actual fetch
+            # ---- CLAIM GATE (replaces IN_PROGRESS logic) ----
+
+            if claims.is_claimed(claims_dir, slice_id):
+                if not claims.reclaim_if_stale(
+                    claims_dir,
+                    slice_id,
+                    ttl_sec=IN_PROGRESS_STALE_SEC,
+                ):
+                    continue
+
+            if not claims.try_claim(
+                claims_dir,
+                slice_id,
+                payload={
+                    "slice_comp_key": slice_comp_key,
+                    "symbol": symbol,
+                    "interval": interval,
+                },
+            ):
+                continue
+
+            # ---- OWNERSHIP ACQUIRED ----
+
+            try:
                 entry.setdefault("request_count", {}).setdefault("fetches", 0)
                 entry["request_count"]["fetches"] += 1
 
@@ -190,18 +203,25 @@ Full Entry: {entry}""")
                 manifest["slices"][slice_comp_key] = entry
 
                 _update_summary(manifest)
-                save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize(enum_for_log(entry['slice_status']), Ansi.GREEN , Ansi.BOLD)}. Slice Status Reason: {enum_for_log(entry['slice_status_reason'])}")
 
-                # Reset backoff on success
+                save_manifest(
+                    manifest_path,
+                    manifest,
+                    f"fetch slice succeeded - marking as {enum_for_log(entry['slice_status'])}",
+                )
+
                 backoff = 1.0
 
-            # Mark slice as failed and backoff
             except Exception as exc:
-                
                 slice_status_reason = _get_slice_status_reason_on_exception(exc, fetch_fail)
-                entry = _update_entry_on_exception(entry=entry, meta=meta, slice_status_reason=slice_status_reason, exception=exc)
-                
-                # Update and Write Manifest
+
+                entry = _update_entry_on_exception(
+                    entry=entry,
+                    meta=meta,
+                    slice_status_reason=slice_status_reason,
+                    exception=exc,
+                )
+
                 manifest["slices"][slice_comp_key] = entry
                 _update_summary(manifest)
 
@@ -214,6 +234,11 @@ Full Entry: {entry}""")
                 log.exception(exc)
                 time.sleep(backoff)
                 backoff = _next_backoff(current=backoff, cap=max_backoff_sec)
+
+            finally:
+                # 🔑 ALWAYS release the claim
+                claims.release_claim(claims_dir, slice_id)
+
 
 
 # ---------------------------------------------------------------------------
@@ -444,3 +469,18 @@ def _update_summary(manifest: Dict) -> None:
     }
     log.info("Manifest Summary: %s", manifest["summary"])
 
+
+
+
+#                 log.info(
+#                     f"Slice entry pulled from manifest | {slice_comp_key} | "
+#                     f"id={entry['slice_id']} status={entry.get('slice_status')}"
+#                 )
+#                 log.debug(f"""{colorize('=== Slice entry pulled from manifest ===', Ansi.BOLD)}
+# comp_key: {colorize(slice_comp_key, Ansi.BOLD)}
+# hashed: {colorize(entry['slice_id'], Ansi.BOLD)}
+# Full Entry: {entry}""")
+
+
+
+#  save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize(enum_for_log(entry['slice_status']), Ansi.GREEN , Ansi.BOLD)}. Slice Status Reason: {enum_for_log(entry['slice_status_reason'])}")

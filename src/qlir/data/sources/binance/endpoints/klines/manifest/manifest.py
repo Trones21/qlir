@@ -33,6 +33,7 @@ def load_or_create_manifest(
         
         deserialize_manifest(manifest)
         return manifest
+    
     # Fresh skeleton
     log.info("Creating fresh manifest because there was no manifest found at: %s", manifest_path)
     return {
@@ -60,6 +61,7 @@ def save_manifest(manifest_path: Path, manifest: Dict, log_suffix: str  = "") ->
     with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     tmp_path.replace(manifest_path)
+    
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
     print(f"{ts} [{colorize("WROTE", Ansi.BLUE)} - MANIFEST]: {manifest_path} - {log_suffix}")
 
