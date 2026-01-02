@@ -34,6 +34,9 @@ class AggManifest:
                 "updated_at": _now_iso(),
                 "parts": [],
                 "slice_failures": {},  # slice_id -> {error, failed_at, ...}
+                "head": {                 # 👈 ADD THIS
+                    "slice_ids": [],
+                },
             }
         )
 
@@ -43,6 +46,13 @@ class AggManifest:
             for h in part.get("slice_ids", []):
                 used.add(h)
         return used
+    
+    def head_slice_ids(self) -> list[str]:
+        head = self.data.get("head")
+        if not head:
+            return []
+        return list(head.get("slice_ids", []))
+
 
     def mark_slice_failed(self, slice_id: str, error: str) -> None:
         self.data.setdefault("slice_failures", {})[slice_id] = {

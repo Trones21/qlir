@@ -39,15 +39,20 @@ def _sort_dedupe(
     out = df.copy()
     out[time_col] = ensure_utc_series(out[time_col])
     assert_not_epoch_drift(out[time_col])
+    log.debug(f"Sorting {len(df)} records")
     out = out.sort_values(time_col)
 
     conflicts: list[pd.DataFrame] = []
 
+    log.debug("Finding duplicates")
     dup_mask = out.duplicated(subset=[time_col], keep=False)
+    
+
     if dup_mask.any():
         dup_df = out[dup_mask]
         to_drop_idx: list[int] = []
-
+        log.debug("Attempting to safely deduplicate. This can be slow. Note to Self todo: add TRACE logging to expose details")
+        
         for ts, group in dup_df.groupby(time_col, sort=False):
             present_cols = [c for c in OHLCV_COLS if c in group.columns]
             group_no_exact = group.drop_duplicates()
@@ -88,6 +93,7 @@ def _sort_dedupe(
 
         # Drop all safe duplicates
         if to_drop_idx:
+            log.debug(f"Safely dropping {len(to_drop_idx)} records")
             out = out.drop(index=to_drop_idx)
 
     out = out.reset_index(drop=True)
