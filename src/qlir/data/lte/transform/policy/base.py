@@ -11,7 +11,7 @@ class FillContext:
     timestamps: pd.DatetimeIndex
     interval_s: int
 
-    # volatility context (real candles only)
+    # context (real candles only)
     left_window: Sequence[pd.Series]
     right_window: Sequence[pd.Series]
 
