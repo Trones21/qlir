@@ -1,4 +1,6 @@
 import pandas as pd
+from qlir.core.constants import DEFAULT_OHLC_COLS
+from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.data.lte.transform.policy.base import FillContext, FillPolicy
 
 
@@ -9,7 +11,7 @@ class OrderedSourceFillPolicy(FillPolicy):
         self,
         *,
         sources: list[tuple[str, pd.DataFrame]],
-        ohlc_cols: tuple[str, str, str, str],
+        ohlc_cols: OHLC_Cols = DEFAULT_OHLC_COLS,
         source_col: str = "__filled_from_source__",
     ):
         """
@@ -49,14 +51,14 @@ class OrderedSourceFillPolicy(FillPolicy):
 
         for ts in ctx.timestamps:
             # Sanity check: primary must be missing here
-            if not primary_df.loc[ts, list(self.ohlc_cols)].isna().any():
+            if not primary_df.loc[ts, self.ohlc_cols].isna().any():
                 continue
 
             for source_name, src_df in self.sources[1:]:
-                row = src_df.loc[ts, list(self.ohlc_cols)]
+                row = src_df.loc[ts, self.ohlc_cols]
 
                 if not row.isna().any():
-                    out.loc[ts, list(self.ohlc_cols)] = row.values
+                    out.loc[ts, self.ohlc_cols] = row.values
                     out.loc[ts, self.source_col] = source_name
                     break
 

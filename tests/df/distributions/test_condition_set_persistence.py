@@ -1,9 +1,9 @@
 import pandas as pd
+import pytest
 
 from qlir.df.distributions.condition_set_persistence import (
     condition_set_persistence_df,
 )
-
 
 def test_condition_set_persistence_basic():
     """
