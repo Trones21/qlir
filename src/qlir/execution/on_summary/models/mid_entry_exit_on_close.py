@@ -1,12 +1,10 @@
-# execution/models/apply_mid_entry_exit_on_close.py
-
 from typing import Literal
 import pandas as pd
 
-from qlir.execution.apply_execution_model import apply_execution_model
+from qlir.execution.on_summary._core import apply_execution_model
 
 
-def apply_mid_entry_exit_on_close(
+def execute(
     paths: pd.DataFrame,
     *,
     direction: Literal["up", "down"],

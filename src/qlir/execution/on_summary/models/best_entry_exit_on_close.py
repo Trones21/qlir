@@ -1,30 +1,28 @@
 from typing import Literal
 import pandas as pd
 
-from qlir.execution.apply_execution_model import apply_execution_model
+from qlir.execution.on_summary._core import apply_execution_model
 
 
-def apply_worst_entry_exit_on_close(
+def execute(
     paths: pd.DataFrame,
     *,
     direction: Literal["up", "down"],
 ) -> pd.DataFrame:
     """
-    Worst-case execution:
-    - Entry at first candle extreme against the trader
+    Best-case execution:
+    - Entry at first candle extreme favorable to the trader
     - Exit at last close
     """
 
     if direction == "up":
-        entry_col = "first_high"
-        exit_col = "last_close"
-    else:
         entry_col = "first_low"
-        exit_col = "last_close"
+    else:
+        entry_col = "first_high"
 
     return apply_execution_model(
         paths,
         direction=direction,
         entry_col=entry_col,
-        exit_col=exit_col,
+        exit_col="last_close",
     )

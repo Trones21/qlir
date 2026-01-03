@@ -2,6 +2,11 @@ from typing import Literal
 import pandas as pd
 
 
+from typing import Callable
+
+import pandas as pd
+
+
 def apply_execution_model(
     paths: pd.DataFrame,
     *,
