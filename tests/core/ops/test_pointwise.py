@@ -3,16 +3,18 @@ import pandas as pd
 import pytest
 pytestmark = pytest.mark.local
 
-from qlir.core.ops.pointwise import (
+from qlir.core.ops.temporal import (
     with_diff,
     with_pct_change,
     with_log_return,
     with_shift,
-    with_sign,
-    with_abs,
     with_bar_direction,
 )
 
+from qlir.core.ops.non_temporal import (
+    with_sign,
+    with_abs,
+)
 def _df_basic():
     idx = pd.date_range("2024-01-01", periods=6, freq="T")
     return pd.DataFrame(

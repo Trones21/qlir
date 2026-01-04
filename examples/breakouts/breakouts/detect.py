@@ -1,6 +1,7 @@
 import pandas as pd
-import qlir.core.ops.pointwise as pt 
+import qlir.core.ops.temporal as pt 
 from qlir.utils.logdf import logdf
+
 def tag_breakouts_simple(
     df: pd.DataFrame,
     price_col: str = "close",

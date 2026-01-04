@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import logging
-from typing import Iterable, Union
+from typing import Iterable, Sequence, Union
 import pandas as pd
 
 try:
@@ -76,20 +76,20 @@ def _fmt_df(df: pd.DataFrame, max_width: int = 120) -> str:
     Formats a DataFrame into a human-readable table that fits within max_width.
     Falls back to df.to_string() if tabulate isn't available.
     """
-    df_head = df.copy()
+    df_copy = df.copy()
 
     # Detect and truncate overly wide columns
-    for col in df_head.columns:
-        df_head[col] = df_head[col].astype(str)
-        max_len = df_head[col].str.len().max()
-        if max_len > max_width // len(df_head.columns):
-            cutoff = max_width // len(df_head.columns) - 3
-            df_head[col] = df_head[col].str.slice(0, cutoff) + "…"
+    for col in df_copy.columns:
+        df_copy[col] = df_copy[col].astype(str)
+        max_len = df_copy[col].str.len().max()
+        if max_len > max_width // len(df_copy.columns):
+            cutoff = max_width // len(df_copy.columns) - 3
+            df_copy[col] = df_copy[col].str.slice(0, cutoff) + "…"
 
     if _HAS_TABULATE:
-        return tabulate(df_head, headers="keys", tablefmt="github", showindex=False)
+        return tabulate(df_copy, headers="keys", tablefmt="github", showindex=False)
     else:
-        return df_head.to_string(index=False)
+        return df_copy.to_string(index=False)
 
 
 def ensure_logging() -> None:
@@ -135,6 +135,8 @@ def logdf(
     max_rows: int = 10,
     level: str = "info",
     max_width: int = 200,
+    cols_filter_all_dfs: Sequence[str] | None = None,
+    cols_filter_by_df_idx: dict[int, Sequence[str] | None] | None = None,
 ) -> None:
     ensure_logging()
 
@@ -144,14 +146,27 @@ def logdf(
     level_str = (level or "info").lower()
     emit = getattr(logger, level_str, logger.info)
 
-    def _log_one(df: pd.DataFrame, name: str | None):
+    def _log_one(df: pd.DataFrame, 
+                 name: str | None,
+                 effective_cols: Sequence[str] | None,):
         if df is None or df.empty:
             emit(f"{name or 'DataFrame'} is empty.")
             return
 
-        header = f"\n📊 {name or 'DataFrame'} (shape={df.shape}):"
+        view = df
+        
+        if effective_cols is not None:
+            existing = [c for c in effective_cols if c in df.columns]
+            if existing:
+                view = df[existing]
+        
+        
+        col_subset_info = ""
+        if len(view.columns) != len(df.columns):
+            col_subset_info = f"(Showing {len(view.columns)} of {len(df.columns)} columns)"
+        header = f"\n📊 {name or 'DataFrame'} (original_shape={df.shape}) {col_subset_info}"
         excl_idx = from_row_idx + max_rows
-        filtered = _filter_df_by_row_idx(df, from_row_idx, excl_idx)
+        filtered = _filter_df_by_row_idx(view, from_row_idx, excl_idx)
         table = _fmt_df(filtered, max_width=max_width)
 
         footer = ""
@@ -160,25 +175,33 @@ def logdf(
 
         emit(f"\n{header}\n{table}{footer}\n")
 
+    # ---- Single DataFrame path (index = 0) ----
     if isinstance(data, pd.DataFrame):
-        _log_one(data, None)
+        effective_cols = cols_filter_all_dfs
+        if cols_filter_by_df_idx and 0 in cols_filter_by_df_idx:
+            effective_cols = cols_filter_by_df_idx[0]
+
+        _log_one(data, None, effective_cols)
         return
 
     if not isinstance(data, Iterable):
         raise TypeError(f"logdf() received unsupported type: {type(data)!r}")
 
-    for item in data:
+    # ---- Iterable path ----
+    for i, item in enumerate(data):
+        effective_cols = cols_filter_all_dfs
+        if cols_filter_by_df_idx and i in cols_filter_by_df_idx:
+            effective_cols = cols_filter_by_df_idx[i]
+
         if isinstance(item, NamedDF):
-            _log_one(item.df, item.name)
+            _log_one(item.df, item.name, effective_cols)
         elif isinstance(item, pd.DataFrame):
-            _log_one(item, None)
+            _log_one(item, None, effective_cols)
         else:
             raise TypeError(
                 f"logdf() received unsupported item type: {type(item)!r}"
             )
-
-
-
+        
 
 
 

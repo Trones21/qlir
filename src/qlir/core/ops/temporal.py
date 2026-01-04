@@ -3,37 +3,11 @@ from __future__ import annotations
 from typing import Iterable, List, Optional, Union, Sequence
 import numpy as np
 import pandas as pd
-import warnings 
+import warnings
 
-Number = Union[int, float]
-ColsLike =  Optional[Union[str, Sequence[str]]]
-
-# ----------------------------
-# Helpers
-# ----------------------------
-
-def _numeric_cols(df: pd.DataFrame) -> List[str]:
-    return [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-
-def _normalize_cols(df: pd.DataFrame, cols: ColsLike) -> List[str]:
-    if cols is None:
-        return _numeric_cols(df)
-    if isinstance(cols, str):
-        cols = [cols]
-    valid = [c for c in cols if c in df.columns]
-    invalid = [c for c in cols if c not in df.columns]
-    if invalid:
-        warnings.warn(f"Ignoring missing columns: {invalid}", RuntimeWarning)
-    return valid
-
-def _maybe_copy(df: pd.DataFrame, inplace: bool) -> pd.DataFrame:
-    return df if inplace else df.copy()
-
-def _safe_name(base: str, *parts: Union[str, int]) -> str:
-    # join non-empty parts with '__'
-    extras = [str(p) for p in parts if p is not None and str(p) != ""]
-    return f"{base}__{'__'.join(extras)}" if extras else base
-
+from qlir.core.counters.multivariate import _maybe_copy, _safe_name
+from qlir.core.ops.helpers import ColsLike, _normalize_cols
+from qlir.core.ops.non_temporal import with_sign 
 
 # ----------------------------
 # Public API (pointwise ops)
@@ -145,46 +119,6 @@ def with_shift(
     return out
 
 
-def with_sign(
-    df: pd.DataFrame,
-    cols: ColsLike = None,
-    *,
-    suffix: Optional[str] = None,
-    zero_as_zero: bool = True,
-    inplace: bool = False,
-) -> pd.DataFrame:
-    """
-    Add sign of series values: {-1, 0, +1} (or {-1, +1} if zero_as_zero=False).
-    """
-    out = _maybe_copy(df, inplace)
-    use_cols = _normalize_cols(out, cols)
-
-    for c in use_cols:
-        name = _safe_name(c, suffix or "sign")
-        s = np.sign(out[c])
-        if not zero_as_zero:
-            # map zeros to +1 (or choose your convention)
-            s = s.replace(0, 1)
-        out[name] = s.astype("Int8") if pd.api.types.is_integer_dtype(s) else s
-    return out
-
-
-def with_abs(
-    df: pd.DataFrame,
-    cols: ColsLike = None,
-    *,
-    suffix: Optional[str] = None,
-    inplace: bool = False,
-) -> pd.DataFrame:
-    """
-    Add absolute value of series.
-    """
-    out = _maybe_copy(df, inplace)
-    use_cols = _normalize_cols(out, cols)
-    for c in use_cols:
-        name = _safe_name(c, suffix or "abs")
-        out[name] = out[c].abs()
-    return out
 
 
 # ----------------------------

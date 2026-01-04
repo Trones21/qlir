@@ -11,15 +11,21 @@ Manifest Aggregator logs not being written to /logs
     - first check if manifest_aggregator._setup_manifest_logging is actually being called - maybe just raise to short circuit
     - env variable does seem to be working  
 
-
 # Priorities
 
-qlir - etl funcs 
+qlir - data_server - ability to delete and rebuild manifest from scratch
+    - try this manually (for like 1m data... delete the file then start up the server, see what happens)
 
-proj - implement a simple pipeline (just in its own form... no need for the cli yet... we want to trade!!!)
 proj - Do the SMA study!!!!
 
+proj - Do the 
+
+proj - implement a simple etl pipeline to fill the gaps
+
 proj - pipelines cli 
+
+etl funcs unit tests 
+
 proj - prove that the cli works for 
         - creating the user pipeline 
         - list all pipelines
@@ -32,10 +38,6 @@ manifest_validation
 uklines - basically copy paste from klines worker
     - already setu pthe pyproject.toml in afterdata (but havent moved to template)
 
-wrap fetch and persist slice with response timing logging (maybe use the same decorator pattern as in nocrud??)
-    - possibly other funcs as well... like when we are doing something fror the entire manifest... thats ~170,000 items for the 1s interval (58MB manifest)
-    - the 1s seems slow... not sure if this is my code or binance servers 
-
 ---
 Mermaid diagram of project call usage (and maybe asscii)
 
@@ -44,9 +46,6 @@ Note: The point of the bash script is to abstract away the params.. so you can j
 
 by_arg: use args to specify the symbol/interval/limit combos
 all: not yet implemented, but will call a get_symbols endpoint, then start one server for each
-file-def: Combos determined by the constants in etl.binance.main.py above the func `fetch_raw_default()`
-    DEFAULT_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
-    DEFAULT_INTERVALS = ["1m"] 
 
 Each of these parse the args, then call _fetch_raw_impl which loops over the combos provided and launch a new sub proc for each.
 which passes args and calls `__PROJECT_NAME.binance.etl.data_server`
