@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from qlir.df.reducers.distributions.bucketize.build_bucket_df import build_bucket_df
+from qlir.utils.logdf import NamedDF
 
 
 def bucketize_zoom_equal_width(
@@ -10,7 +11,7 @@ def bucketize_zoom_equal_width(
     threshold_pct: float = 0.9,
     max_depth: int = 6,
     dropna: bool = True,
-) -> list[tuple[pd.DataFrame, str]]:
+) -> list[NamedDF]:
     """
     Progressive zooming equal-width bucketization.
 
@@ -28,7 +29,7 @@ def bucketize_zoom_equal_width(
     if total == 0:
         return []
 
-    out: list[tuple[pd.DataFrame, str]] = []
+    out: list[NamedDF] = []
 
     current_values = values
     current_min = values.min()
@@ -48,7 +49,7 @@ def bucketize_zoom_equal_width(
             parent_bucket_id=None,
         )
 
-        out.append((df, f"zoom:depth{depth}"))
+        out.append(NamedDF(df, f"zoom:depth{depth}"))
 
         # --- find densest bucket ---
         max_idx = counts.argmax()

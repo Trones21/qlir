@@ -1,4 +1,6 @@
+from dataclasses import dataclass
 import logging
+from typing import Iterable, Union
 import pandas as pd
 
 try:
@@ -69,12 +71,12 @@ def _filter_df_by_row_idx(
 
 
 
-def _fmt_df(df: pd.DataFrame, rows: int = 10, max_width: int = 120) -> str:
+def _fmt_df(df: pd.DataFrame, max_width: int = 120) -> str:
     """
     Formats a DataFrame into a human-readable table that fits within max_width.
     Falls back to df.to_string() if tabulate isn't available.
     """
-    df_head = df.head(rows).copy()
+    df_head = df.copy()
 
     # Detect and truncate overly wide columns
     for col in df_head.columns:
@@ -114,54 +116,124 @@ def ensure_logging() -> None:
     print("[init] Logging configured (default INFO)")
 
 
+@dataclass(frozen=True)
+class NamedDF:
+    df: pd.DataFrame
+    name: str
+
+
+LogDFInput = Union[
+    pd.DataFrame,
+    Iterable[pd.DataFrame],
+    Iterable[NamedDF],
+]
+
 def logdf(
-    df: pd.DataFrame,
+    data: LogDFInput,
+    *,
     from_row_idx: int = 0,
     max_rows: int = 10,
     level: str = "info",
-    name: str | None = None,
     max_width: int = 200,
 ) -> None:
-    """
-    Log a DataFrame via the qlir logger tree.
-
-    Behavior
-    --------
-      - Messages go to `qlir.logdf` so they use the same handlers/levels
-        configured by setup_logging(LogProfile.*).
-      - If no logging is configured at all, ensure_logging() installs a basic
-        root handler so output is still visible.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        DataFrame to display.
-    from_row_idx : int
-        Zero-based starting row index (inclusive) in positional terms.
-    max_rows : int
-        Maximum number of rows to include (default 10).
-    level : str
-        Logging level ("info", "debug", etc.).
-    name : str, optional
-        Optional name/label shown before the table.
-    max_width : int
-        Max character width before truncating columns.
-    """
     ensure_logging()
 
-    # Use a child logger under the qlir namespace so it picks up qlir handlers.
     logger = logging.getLogger("qlir.logdf")
 
     # Map level string → log method with a safe default.
     level_str = (level or "info").lower()
     emit = getattr(logger, level_str, logger.info)
 
-    if df is None or df.empty:
-        emit(f"{name or 'DataFrame'} is empty.")
+    def _log_one(df: pd.DataFrame, name: str | None):
+        if df is None or df.empty:
+            emit(f"{name or 'DataFrame'} is empty.")
+            return
+
+        header = f"\n📊 {name or 'DataFrame'} (shape={df.shape}):"
+        excl_idx = from_row_idx + max_rows
+        filtered = _filter_df_by_row_idx(df, from_row_idx, excl_idx)
+        table = _fmt_df(filtered, max_width=max_width)
+
+        footer = ""
+        if len(filtered) < len(df):
+            footer = f"\n… showing rows {from_row_idx}:{min(excl_idx, len(df))} of {len(df)}"
+
+        emit(f"\n{header}\n{table}{footer}\n")
+
+    if isinstance(data, pd.DataFrame):
+        _log_one(data, None)
         return
 
-    header = f"\n📊 {name or 'DataFrame'} (shape={df.shape}):"
-    excl_idx = from_row_idx + max_rows
-    filtered_df = _filter_df_by_row_idx(df, start_incl=from_row_idx, end_excl=excl_idx) # converts to using row indices if the dataframe has an index of a different type
-    table = _fmt_df(filtered_df, max_width=max_width)
-    emit(f"{header}\n{table}")
+    if not isinstance(data, Iterable):
+        raise TypeError(f"logdf() received unsupported type: {type(data)!r}")
+
+    for item in data:
+        if isinstance(item, NamedDF):
+            _log_one(item.df, item.name)
+        elif isinstance(item, pd.DataFrame):
+            _log_one(item, None)
+        else:
+            raise TypeError(
+                f"logdf() received unsupported item type: {type(item)!r}"
+            )
+
+
+
+
+
+
+
+
+
+
+# def logdf(
+#     df: pd.DataFrame,
+#     from_row_idx: int = 0,
+#     max_rows: int = 10,
+#     level: str = "info",
+#     name: str | None = None,
+#     max_width: int = 200,
+# ) -> None:
+#     """
+#     Log a DataFrame via the qlir logger tree.
+
+#     Behavior
+#     --------
+#       - Messages go to `qlir.logdf` so they use the same handlers/levels
+#         configured by setup_logging(LogProfile.*).
+#       - If no logging is configured at all, ensure_logging() installs a basic
+#         root handler so output is still visible.
+
+#     Parameters
+#     ----------
+#     df : pd.DataFrame
+#         DataFrame to display.
+#     from_row_idx : int
+#         Zero-based starting row index (inclusive) in positional terms.
+#     max_rows : int
+#         Maximum number of rows to include (default 10).
+#     level : str
+#         Logging level ("info", "debug", etc.).
+#     name : str, optional
+#         Optional name/label shown before the table.
+#     max_width : int
+#         Max character width before truncating columns.
+#     """
+#     ensure_logging()
+
+#     # Use a child logger under the qlir namespace so it picks up qlir handlers.
+#     logger = logging.getLogger("qlir.logdf")
+
+#     # Map level string → log method with a safe default.
+#     level_str = (level or "info").lower()
+#     emit = getattr(logger, level_str, logger.info)
+
+#     if df is None or df.empty:
+#         emit(f"{name or 'DataFrame'} is empty.")
+#         return
+
+#     header = f"\n📊 {name or 'DataFrame'} (shape={df.shape}):"
+#     excl_idx = from_row_idx + max_rows
+#     filtered_df = _filter_df_by_row_idx(df, start_incl=from_row_idx, end_excl=excl_idx) # converts to using row indices if the dataframe has an index of a different type
+#     table = _fmt_df(filtered_df, max_width=max_width)
+#     emit(f"{header}\n{table}")
