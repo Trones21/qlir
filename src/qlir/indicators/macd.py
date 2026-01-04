@@ -14,7 +14,7 @@ def with_macd(
     out_macd: str = "macd",
     out_signal: str = "macd_signal",
     out_hist: str = "macd_hist",
-    in_place: bool = False,
+    in_place: bool = True,
 ) -> pd.DataFrame:
     out = df if in_place else df.copy()
     close = out[close_col].astype(float)

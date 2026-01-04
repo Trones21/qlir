@@ -15,7 +15,7 @@ def with_bollinger(
     out_upper: str = "boll_upper",
     out_lower: str = "boll_lower",
     out_valid: str | None = "boll_valid",
-    in_place: bool = False,
+    in_place: bool = True,
 ) -> pd.DataFrame:
     """
     Adds Bollinger Bands to a DataFrame.

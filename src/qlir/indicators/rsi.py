@@ -11,7 +11,7 @@ def with_rsi(
     close_col: str = "close",
     period: int = 14,
     out_col: str = "rsi",
-    in_place: bool = False,
+    in_place: bool = True,
 ) -> pd.DataFrame:
     out = df if in_place else df.copy()
     close = out[close_col].astype(float)
