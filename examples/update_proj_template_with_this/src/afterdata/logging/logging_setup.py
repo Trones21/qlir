@@ -39,8 +39,9 @@ def setup_logging(profile: LogProfile, *, enable_telemetry: bool = False) -> Non
         tlog.propagate = False
         tlog.addHandler(make_telemetry_handler(qlir_level))
 
-    dump_logging_tree("qlir")
-    dump_logging_tree()  # root
+    print("Open logging.logging_setup to debug logging (also ensure main has a logprofile chosen)")
+    # dump_logging_tree("qlir")
+    # dump_logging_tree()  # root
 
 def dump_logging_tree(prefix: str = "qlir"):
     lg = logging.getLogger(prefix)

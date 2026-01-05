@@ -96,7 +96,7 @@ def materialize_missing_rows(
         df = df.set_index(timestamp_col)
 
     if not isinstance(df.index, _pd.DatetimeIndex):
-        raise TypeError("DataFrame must be indexed by a DatetimeIndex")
+        raise TypeError(f"DataFrame must be indexed by a DatetimeIndex. Your df index is of type: {type(df.index)}")
 
     if strict and not df.index.is_monotonic_increasing:
         raise ValueError("DatetimeIndex must be strictly increasing")

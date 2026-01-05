@@ -101,5 +101,5 @@ def verify_gap_resolution(
             f"filled_rows={filled_rows}, "
             f"delta={delta}"
         )
-
+    
     return result

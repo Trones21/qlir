@@ -13,13 +13,16 @@ import string
 from qlir.data.core.paths import get_data_root
 from afterdata.logging.logging_setup import setup_logging, LogProfile
 from qlir.data.sources.binance.server import (
-    WorkerType,
-    KlinesServerConfig,
-    UIKlinesServerConfig,
-    KlinesJobConfig,
-    UIKlinesJobConfig,
     start_data_server
 )
+from qlir.data.sources.binance.server_config_models import (  
+    WorkerType,  
+    KlinesServerConfig,
+    UIKlinesServerConfig,)
+
+from qlir.data.sources.binance.job_config_models import (    
+    KlinesJobConfig,
+    UIKlinesJobConfig,)
 
 from afterdata.runtime_config import RuntimeConfig
 
@@ -93,7 +96,7 @@ def main() -> None:
         klines_server_cfg = KlinesServerConfig(
             data_root=data_root,
             worker_type=WorkerType.KLINES,
-            klines=KlinesJobConfig(
+            job_config=KlinesJobConfig(
             symbol=args.symbol,
             interval=args.interval,
             limit=args.limit,
@@ -105,7 +108,7 @@ def main() -> None:
         uiklines_server_cfg = UIKlinesServerConfig(
             data_root=data_root,
             worker_type=WorkerType.UI_KLINES,
-            ui_klines=UIKlinesJobConfig(
+            job_config=UIKlinesJobConfig(
             symbol=args.symbol,
             interval=args.interval,
             limit=args.limit,

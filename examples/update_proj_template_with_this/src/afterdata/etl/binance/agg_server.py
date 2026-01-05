@@ -19,7 +19,7 @@ from qlir.data.agg.engine import run_agg_daemon, AggConfig
 from qlir.data.agg.paths import DatasetPaths
 
 # Logging is infra-owned (same as data_server)
-setup_logging(profile=LogProfile.QLIR_INFO)
+setup_logging(profile=LogProfile.QLIR_DEBUG)
 
 def parse_args(parser: argparse.ArgumentParser):
 

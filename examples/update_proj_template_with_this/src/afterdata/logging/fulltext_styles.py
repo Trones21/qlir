@@ -4,16 +4,16 @@ FULLTEXT_STYLE_RULES = [
     {
         "match": ["PARTIAL"],
         "styles": [Ansi.PINK_HOT, Ansi.BOLD],
-        "case_sensitive": False,
+        "case_sensitive": True,
     },
     {
-        "match": ["manifest", "validation"],
+        "match": ["MANIFEST", "Manifest", "validation"],
         "styles": [Ansi.TEAL_256_LIGHT],
-        "case_sensitive": False,
+        "case_sensitive": True,
     },
     {
-        "match": ["ERROR", "exception"],
+        "match": ["ERROR", "Error", "exception"],
         "styles": [Ansi.RED, Ansi.BOLD],
-        "case_sensitive": False,
+        "case_sensitive": True,
     },
 ]
