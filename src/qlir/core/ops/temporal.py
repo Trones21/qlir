@@ -6,11 +6,11 @@ import pandas as _pd
 import warnings
 
 from qlir.core.counters.multivariate import _maybe_copy, _safe_name
-from qlir.core.ops.helpers import ColsLike, _normalize_cols
+from qlir.core.ops._helpers import ColsLike, _add_columns_from_series_map, _normalize_cols
 from qlir.core.ops.non_temporal import with_sign 
 
 # ----------------------------
-# Public API (pointwise ops)
+# Public API
 # ----------------------------
 
 def with_diff(
@@ -20,16 +20,21 @@ def with_diff(
     *,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Add first-order difference: x_t - x_{t-periods}
     """
     out = _maybe_copy(df, inplace)
     use_cols = _normalize_cols(out, cols)
-    for c in use_cols:
-        name = _safe_name(c, suffix or f"diff_{periods}")
-        out[name] = out[c].diff(periods)
-    return out
+
+    diff = out[use_cols].diff(periods)
+
+    return _add_columns_from_series_map(
+        out,
+        use_cols=use_cols,
+        series_by_col={c: diff[c] for c in use_cols},
+        suffix=suffix or f"diff_{periods}",
+    )
 
 
 def with_pct_change(
@@ -41,7 +46,7 @@ def with_pct_change(
     fill_method: Optional[str] = None,   # e.g., "ffill" before pct_change
     clip_inf_to_nan: bool = True,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Add percent change: (x_t / x_{t-periods}) - 1
     """
@@ -57,11 +62,12 @@ def with_pct_change(
     if clip_inf_to_nan:
         pct = pct.replace([_np.inf, -_np.inf], _np.nan)
 
-    for c in use_cols:
-        name = _safe_name(c, suffix or f"pct_{periods}")
-        out[name] = pct[c]
-    return out
-
+    return _add_columns_from_series_map(
+        out,
+        use_cols=use_cols,
+        series_by_col={c: pct[c] for c in use_cols},
+        suffix=suffix or f"pct_{periods}",
+    )
 
 def with_log_return(
     df: _pd.DataFrame,
@@ -73,7 +79,7 @@ def with_log_return(
     fill_method: Optional[str] = None,
     clip_inf_to_nan: bool = True,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Add log return: ln(x_t + eps) - ln(x_{t-periods} + eps)
     """
@@ -94,11 +100,13 @@ def with_log_return(
     if clip_inf_to_nan:
         lr = lr.replace([_np.inf, -_np.inf], _np.nan)
 
-    for c in use_cols:
-        name = _safe_name(c, suffix or f"logret_{periods}")
-        out[name] = lr[c]
-    return out
 
+    return _add_columns_from_series_map(
+        out,
+        use_cols=use_cols,
+        series_by_col={c: lr[c] for c in use_cols},
+        suffix=suffix or f"logret_{periods}",
+    )
 
 def with_shift(
     df: _pd.DataFrame,
@@ -107,19 +115,19 @@ def with_shift(
     *,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Add shifted copy of columns by 'periods' (positive = past).
     """
     out = _maybe_copy(df, inplace)
     use_cols = _normalize_cols(out, cols)
-    for c in use_cols:
-        name = _safe_name(c, suffix or f"shift_{periods}")
-        out[name] = out[c].shift(periods)
-    return out
-
-
-
+    shifted = out[use_cols].shift(periods)
+    return _add_columns_from_series_map(
+        out,
+        use_cols=use_cols,
+        series_by_col={c: shifted[c] for c in use_cols},
+        suffix=suffix or f"shift_{periods}",
+    )
 
 # ----------------------------
 # Convenience: “bar-to-bar” aliases
@@ -132,13 +140,20 @@ def with_bar_direction(
     periods: int = 1,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Direction of bar-to-bar change (sign of diff): {-1, 0, +1}
     Example: open_t vs open_{t-1} -> direction(open)
     """
-    out = with_diff(df, cols=[col], periods=periods, inplace=inplace)
-    diff_col = _safe_name(col, f"diff_{periods}")
+    out, diff_cols = with_diff(df, cols=[col], periods=periods, inplace=inplace)
+    (diff_col, ) = diff_cols
     # attach direction of that diff
-    out = with_sign(out, cols=[diff_col], suffix=suffix or "direction", inplace=True)
-    return out
+    out, sign_cols = with_sign(out, cols=[diff_col], suffix=suffix or "direction", inplace=True)
+    (sign_col, ) = sign_cols
+    return out, tuple([diff_col, sign_col])
+
+
+
+# We do this so that those ppl who crazily do from qlir.core.ops.temporal import * 
+# will see the public funcs 
+__all__ = ["with_bar_direction", "with_diff", "with_shift", "with_pct_change", "with_log_return"]

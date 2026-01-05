@@ -3,7 +3,7 @@ import numpy as _np
 import pandas as _pd
 
 from qlir.core.counters.multivariate import _maybe_copy, _safe_name
-from qlir.core.ops.helpers import ColsLike, _normalize_cols
+from qlir.core.ops._helpers import ColsLike, _add_columns_from_series_map, _normalize_cols
 
 
 def with_sign(
@@ -13,21 +13,29 @@ def with_sign(
     suffix: Optional[str] = None,
     zero_as_zero: bool = True,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Add sign of series values: {-1, 0, +1} (or {-1, +1} if zero_as_zero=False).
     """
     out = _maybe_copy(df, inplace)
     use_cols = _normalize_cols(out, cols)
 
-    for c in use_cols:
-        name = _safe_name(c, suffix or "sign")
-        s = _np.sign(out[c])
-        if not zero_as_zero:
-            # map zeros to +1 (or choose your convention)
-            s = s.replace(0, 1)
-        out[name] = s.astype("Int8") if _pd.api.types.is_integer_dtype(s) else s
-    return out
+    tmp = out[use_cols]
+    sign = _np.sign(tmp)
+
+    if not zero_as_zero:
+        sign = sign.replace(0, 1)
+
+    # dtype normalization
+    sign = sign.astype("Int8", errors="ignore")
+
+    return _add_columns_from_series_map(
+        out,
+        use_cols=use_cols,
+        series_by_col={c: sign[c] for c in use_cols},
+        suffix=suffix or "sign",
+    )
+
 
 
 def with_abs(
@@ -36,13 +44,20 @@ def with_abs(
     *,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Add absolute value of series.
     """
     out = _maybe_copy(df, inplace)
     use_cols = _normalize_cols(out, cols)
-    for c in use_cols:
-        name = _safe_name(c, suffix or "abs")
-        out[name] = out[c].abs()
-    return out
+
+    abs_df = out[use_cols].abs()
+
+    return _add_columns_from_series_map(
+        out,
+        use_cols=use_cols,
+        series_by_col={c: abs_df[c] for c in use_cols},
+        suffix=suffix or "abs",
+    )
+
+__all__ = ["with_sign", "with_abs"]

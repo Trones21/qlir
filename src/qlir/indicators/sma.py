@@ -2,7 +2,7 @@ import pandas as _pd
 
 
 def sma(
-    df: __pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     col: str,
     window: int,
@@ -11,7 +11,7 @@ def sma(
     min_periods: int | None = None,
     decimals: int | None = None,
     in_place: bool = True,
-) -> tuple[__pd.DataFrame, str]: # type: ignore
+) -> tuple[_pd.DataFrame, str]: # type: ignore
     """
     Compute a simple moving average (SMA) for a column.
 

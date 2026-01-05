@@ -4,7 +4,7 @@
 
 from typing import List, Optional, Sequence, Union
 import warnings
-from pandas import DataFrame, api
+from pandas import DataFrame, Series, api
 
 from qlir.core.types.union import ColsLike
 
@@ -30,3 +30,22 @@ def _safe_name(base: str, *parts: Union[str, int]) -> str:
     extras = [str(p) for p in parts if p is not None and str(p) != ""]
     return f"{base}__{'__'.join(extras)}" if extras else base
 
+# ----------------------------
+# Return Prepper 
+# ----------------------------
+
+def _add_columns_from_series_map(
+    out: DataFrame,
+    *,
+    use_cols: list[str],
+    series_by_col: dict[str, Series],
+    suffix: str,
+) -> tuple[DataFrame, tuple[str, ...]]:
+    new_col_names: list[str] = []
+
+    for c in use_cols:
+        name = _safe_name(c, suffix)
+        out[name] = series_by_col[c]
+        new_col_names.append(name)
+
+    return out, tuple(new_col_names)
