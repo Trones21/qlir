@@ -3,7 +3,7 @@ import json
 import shutil
 from typing import Any, Dict, Optional
 from httpx import Response
-import pandas as pd
+import pandas as _pd
 import logging
 
 from qlir.data.core.exponential_backoff import backoff_step
@@ -57,7 +57,7 @@ def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill, base_
     next_call_unix = intended_final_unix # seed for FIRST call only
     log.info("Paginating backwards from: %s", datetime.fromtimestamp(intended_final_unix, timezone.utc))
     
-    pages: list[pd.DataFrame] = [] 
+    pages: list[_pd.DataFrame] = [] 
     earliest_got_ts = math.inf
     current_backoff = 1
     current_retries = 0
@@ -79,7 +79,7 @@ def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill, base_
         current_retries = 0
         if response.content:
             data = json.loads(response.content.decode())
-            page = pd.DataFrame(data["records"])
+            page = _pd.DataFrame(data["records"])
 
             # Just for clarification that OracleOrFill is fill, therfore we are using the fill version of normalize drift candles... maybe i"ll refactor later so there are not two implementations of get_candles
             if oracle_or_fill != OracleOrFill.fill:
@@ -96,7 +96,7 @@ def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill, base_
             next_call_unix = earliest_got_ts - 1 # remove 1 second to avoid duplicating a row
             if len(pages) > 50:
                 data = (
-                    pd.concat(pages, ignore_index=True)
+                    _pd.concat(pages, ignore_index=True)
                     .sort_values("tz_start")
                     .drop_duplicates(subset=["tz_start"], keep="last")
                     .reset_index(drop=True)
@@ -107,7 +107,7 @@ def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill, base_
     # Gather up any extra pages that didnt make it into the last checkpoint
     if pages:
         data = (
-            pd.concat(pages, ignore_index=True)
+            _pd.concat(pages, ignore_index=True)
             .sort_values("tz_start")
             .drop_duplicates(subset=["tz_start"], keep="last")
             .reset_index(drop=True)

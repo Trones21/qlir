@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import Iterable, List, Optional, Union, Sequence
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 import warnings
 
 from qlir.core.counters.multivariate import _maybe_copy, _safe_name
@@ -14,13 +14,13 @@ from qlir.core.ops.non_temporal import with_sign
 # ----------------------------
 
 def with_diff(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
     *,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Add first-order difference: x_t - x_{t-periods}
     """
@@ -33,7 +33,7 @@ def with_diff(
 
 
 def with_pct_change(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
     *,
@@ -41,7 +41,7 @@ def with_pct_change(
     fill_method: Optional[str] = None,   # e.g., "ffill" before pct_change
     clip_inf_to_nan: bool = True,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Add percent change: (x_t / x_{t-periods}) - 1
     """
@@ -55,7 +55,7 @@ def with_pct_change(
     pct = tmp.pct_change(periods=periods)
 
     if clip_inf_to_nan:
-        pct = pct.replace([np.inf, -np.inf], np.nan)
+        pct = pct.replace([_np.inf, -_np.inf], _np.nan)
 
     for c in use_cols:
         name = _safe_name(c, suffix or f"pct_{periods}")
@@ -64,7 +64,7 @@ def with_pct_change(
 
 
 def with_log_return(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
     *,
@@ -73,7 +73,7 @@ def with_log_return(
     fill_method: Optional[str] = None,
     clip_inf_to_nan: bool = True,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Add log return: ln(x_t + eps) - ln(x_{t-periods} + eps)
     """
@@ -88,11 +88,11 @@ def with_log_return(
         tmp = tmp + epsilon
 
     # log returns = log(x) - log(x.shift)
-    logx = np.log(tmp)
+    logx = _np.log(tmp)
     lr = logx - logx.shift(periods)
 
     if clip_inf_to_nan:
-        lr = lr.replace([np.inf, -np.inf], np.nan)
+        lr = lr.replace([_np.inf, -_np.inf], _np.nan)
 
     for c in use_cols:
         name = _safe_name(c, suffix or f"logret_{periods}")
@@ -101,13 +101,13 @@ def with_log_return(
 
 
 def with_shift(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     cols: ColsLike = None,
     periods: int = 1,
     *,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Add shifted copy of columns by 'periods' (positive = past).
     """
@@ -126,13 +126,13 @@ def with_shift(
 # ----------------------------
 
 def with_bar_direction(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str,
     *,
     periods: int = 1,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Direction of bar-to-bar change (sign of diff): {-1, 0, +1}
     Example: open_t vs open_{t-1} -> direction(open)

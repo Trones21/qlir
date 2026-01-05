@@ -1,11 +1,11 @@
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 
 __all__ = ["with_macd"]
 
 
 def with_macd(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     close_col: str = "close",
     fast: int = 12,
@@ -15,7 +15,7 @@ def with_macd(
     out_signal: str = "macd_signal",
     out_hist: str = "macd_hist",
     in_place: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = df if in_place else df.copy()
     close = out[close_col].astype(float)
     

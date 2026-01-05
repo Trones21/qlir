@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
-import pandas as pd
-import numpy as np
+import pandas as _pd
+import numpy as _np
 
 
 def build_bucket_df(
     *,
-    lower_bounds: np.ndarray,
-    upper_bounds: np.ndarray,
-    counts: np.ndarray,
+    lower_bounds: _np.ndarray,
+    upper_bounds: _np.ndarray,
+    counts: _np.ndarray,
     total: int,
     depth: int = 0,
     parent_bucket_id: int | None = None,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Canonical bucket manifest → DataFrame
     """
-    df = pd.DataFrame({
+    df = _pd.DataFrame({
         "lower": lower_bounds,
         "upper": upper_bounds,
         "count": counts,

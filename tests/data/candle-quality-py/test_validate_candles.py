@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 import pytest
 pytestmark = pytest.mark.local
 
@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 
 def _make_df_with_gap():
-    return pd.DataFrame(
+    return _pd.DataFrame(
         {
             "tz_start": [
                 "2025-01-01 00:00:00",
@@ -32,11 +32,11 @@ def test_validate_candles_reports_gap():
 
     # there was exactly 1 gap
     assert report.n_gaps == 1
-    assert report.missing_starts == [pd.Timestamp("2025-01-01 00:01:00", tz="UTC")]
+    assert report.missing_starts == [_pd.Timestamp("2025-01-01 00:01:00", tz="UTC")]
 
 
 def _make_df_with_exact_duplicate():
-    return pd.DataFrame(
+    return _pd.DataFrame(
         {
             "tz_start": [
                 "2025-01-01 00:00:00",

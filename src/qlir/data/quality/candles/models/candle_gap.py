@@ -1,18 +1,18 @@
 from dataclasses import dataclass
-import pandas as pd
+import pandas as _pd
 
 from qlir.time.timefreq import TimeFreq
 
 
 @dataclass(frozen=True)
 class CandleGap:
-    start: pd.Timestamp
-    end: pd.Timestamp
+    start: _pd.Timestamp
+    end: _pd.Timestamp
     missing_count: int
 
 
 def detect_contiguous_gaps(
-    missing: list[pd.Timestamp],
+    missing: list[_pd.Timestamp],
     freq: TimeFreq,
 ) -> list[CandleGap]:
     """
@@ -28,8 +28,8 @@ def detect_contiguous_gaps(
     if not missing:
         return []
 
-    idx = pd.DatetimeIndex(sorted(missing))
-    step = pd.Timedelta(freq.as_pandas_str)
+    idx = _pd.DatetimeIndex(sorted(missing))
+    step = _pd.Timedelta(freq.as_pandas_str)
 
     gaps: list[CandleGap] = []
 
@@ -51,7 +51,7 @@ def detect_contiguous_gaps(
 
 def candle_gaps_to_df(
     gaps: list[CandleGap],
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Convert CandleGap objects into a DataFrame.
 
@@ -61,11 +61,11 @@ def candle_gaps_to_df(
       - missing_count
     """
     if not gaps:
-        return pd.DataFrame(
+        return _pd.DataFrame(
             columns=["gap_start", "gap_end", "missing_count"]
         )
 
-    return pd.DataFrame(
+    return _pd.DataFrame(
         {
             "gap_start": [g.start for g in gaps],
             "gap_end": [g.end for g in gaps],

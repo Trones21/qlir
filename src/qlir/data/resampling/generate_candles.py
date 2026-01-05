@@ -1,10 +1,10 @@
 
 from qlir.time.timefreq import TimeFreq, TimeUnit 
 from qlir.data.quality.candles.candles import infer_freq, ensure_homogeneous_candle_size, detect_missing_candles
-import pandas as pd
+import pandas as _pd
 from typing import Iterable, Dict
 
-import pandas as pd
+import pandas as _pd
 from typing import Iterable, Dict
 from dataclasses import dataclass
 
@@ -17,20 +17,20 @@ import logging
 log = logging.getLogger(__name__)
 
 def _generate(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     dataset_tf: TimeFreq,
     out_unit: TimeUnit,
     out_candle_sizes: Iterable[int],
     dt_col: str = "tz_start",
-) -> Dict[str, pd.DataFrame]:
+) -> Dict[str, _pd.DataFrame]:
     """
     Core resampling routine that uses the QLIRs TimeFreq/infer_freq
     instead of pandas' frequency inference.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Input dataframe with homogeneous time-based rows.
     inferred_tf : TimeFreq
         Result of your infer_freq(df), describes the base cadence (e.g. 1 minute).
@@ -43,7 +43,7 @@ def _generate(
 
     Returns
     -------
-    dict[str, pd.DataFrame]
+    dict[str, _pd.DataFrame]
         Keys are pandas-style frequency strings (e.g. "7min", "4H").
     """
 
@@ -74,7 +74,7 @@ def _generate(
     if out_unit.value not in unit_to_symbol:
         raise ValueError(f"Unsupported out_unit: {out_unit.value}")
 
-    out: Dict[str, pd.DataFrame] = {}
+    out: Dict[str, _pd.DataFrame] = {}
 
     for size in out_candle_sizes:
         freq_str = f"{size}{unit_to_symbol[out_unit.value]}"

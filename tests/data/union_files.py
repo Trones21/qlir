@@ -1,7 +1,7 @@
 import pytest
 pytestmark = pytest.mark.local
 
-import pandas as pd
+import pandas as _pd
 from pathlib import Path
 import logging
 
@@ -23,13 +23,13 @@ def test_union_csvs_with_different_columns(tmp_path: Path):
     data_dir = tmp_path / "csvs"
     data_dir.mkdir()
 
-    df1 = pd.DataFrame(
+    df1 = _pd.DataFrame(
         {
             "id": [1],
             "col_a": ["foo"],
         }
     )
-    df2 = pd.DataFrame(
+    df2 = _pd.DataFrame(
         {
             "id": [2],
             "col_b": ["bar"],
@@ -57,14 +57,14 @@ def test_union_csvs_with_different_columns(tmp_path: Path):
     assert r1["id"] == 1
     assert r1["col_a"] == "foo"
     # this column didn't exist in df1, so should be NaN
-    assert pd.isna(r1["col_b"])
+    assert _pd.isna(r1["col_b"])
 
     # second row came from df2
     r2 = result.iloc[1]
     assert r2["id"] == 2
     assert r2["col_b"] == "bar"
     # this column didn't exist in df2, so should be NaN
-    assert pd.isna(r2["col_a"])
+    assert _pd.isna(r2["col_a"])
 
 
 def test_union_parquet_fast_path(tmp_path: Path):
@@ -75,8 +75,8 @@ def test_union_parquet_fast_path(tmp_path: Path):
     data_dir = tmp_path / "parquet"
     data_dir.mkdir()
 
-    df1 = pd.DataFrame({"id": [1], "val": [10]})
-    df2 = pd.DataFrame({"id": [2], "val": [20]})
+    df1 = _pd.DataFrame({"id": [1], "val": [10]})
+    df2 = _pd.DataFrame({"id": [2], "val": [20]})
 
     df1.to_parquet(data_dir / "part1.parquet", index=False)
     df2.to_parquet(data_dir / "part2.parquet", index=False)

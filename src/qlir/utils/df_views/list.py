@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 from typing import Iterable
 from .common import finalize_df
 
@@ -9,11 +9,11 @@ def list_to_df(
     columns: Iterable[str] | None = None,
     sort_by: str | None = None,
     ascending: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     if not rows:
-        return pd.DataFrame(columns=list(columns or []))
+        return _pd.DataFrame(columns=list(columns or []))
 
-    df = pd.DataFrame.from_records(rows)
+    df = _pd.DataFrame.from_records(rows)
     return finalize_df(
         df,
         columns=columns,

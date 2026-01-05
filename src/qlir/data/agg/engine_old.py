@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.agg.atomic import atomic_rename, atomic_write_json
 from qlir.data.agg.manifest import AggManifest
@@ -80,7 +80,7 @@ def get_slices_needing_to_be_aggregated(
     todo.sort(key=lambda s: s.start_ms)
     return todo
 
-def write_parquet_part(df: pd.DataFrame, tmp_path: Path, final_path: Path) -> None:
+def write_parquet_part(df: _pd.DataFrame, tmp_path: Path, final_path: Path) -> None:
     tmp_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(tmp_path, index=False)
     atomic_rename(tmp_path, final_path)
@@ -123,7 +123,7 @@ def run_agg_daemon(
         slice_ids = [s.slice_id for s in batch]
 
         # Load and concatenate
-        frames: list[pd.DataFrame] = []
+        frames: list[_pd.DataFrame] = []
         for h in slice_ids:
             try:
                 raw_path = paths.raw_responses_dir / f"{h}.json"
@@ -143,7 +143,7 @@ def run_agg_daemon(
             time.sleep(cfg.sleep_partial_s)
             continue
 
-        out = pd.concat(frames, ignore_index=True)
+        out = _pd.concat(frames, ignore_index=True)
 
         # Deterministic ordering inside parts (mechanical)
         if "open_time" in out.columns:

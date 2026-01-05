@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 import pytest
 
 from qlir.data.lte.transform.gaps.materialization.materialize_missing_rows import materialize_missing_rows
@@ -12,7 +12,7 @@ def test_materialize_missing_rows_wall_clock_minutes():
 
     # 12:00, 12:01, 12:05
     # Missing: 12:02, 12:03, 12:04
-    idx = pd.to_datetime(
+    idx = _pd.to_datetime(
         [
             "2024-01-01 12:00:00",
             "2024-01-01 12:01:00",
@@ -20,7 +20,7 @@ def test_materialize_missing_rows_wall_clock_minutes():
         ]
     )
 
-    df = pd.DataFrame(
+    df = _pd.DataFrame(
         {
             "open": [100.0, 101.0, 105.0],
             "close": [100.5, 101.5, 105.5],
@@ -30,7 +30,7 @@ def test_materialize_missing_rows_wall_clock_minutes():
 
     out = materialize_missing_rows(df, interval_s=60)
 
-    expected_index = pd.date_range(
+    expected_index = _pd.date_range(
         start="2024-01-01 12:00:00",
         end="2024-01-01 12:05:00",
         freq="1min",
@@ -52,8 +52,8 @@ def test_materialize_missing_rows_wall_clock_minutes():
     assert materialized.loc["2024-01-01 12:04:00"] is True
 
     # No value filling occurs
-    assert pd.isna(out.loc["2024-01-01 12:02:00", "open"])
-    assert pd.isna(out.loc["2024-01-01 12:03:00", "close"])
+    assert _pd.isna(out.loc["2024-01-01 12:02:00", "open"])
+    assert _pd.isna(out.loc["2024-01-01 12:03:00", "close"])
 
     # Existing values unchanged
     assert out.loc["2024-01-01 12:00:00", "open"] == 100.0
@@ -61,20 +61,20 @@ def test_materialize_missing_rows_wall_clock_minutes():
 
 
 def test_materialize_empty_dataframe_returns_copy():
-    df = pd.DataFrame(columns=["open", "close"])
+    df = _pd.DataFrame(columns=["open", "close"])
     out = materialize_missing_rows(df, interval_s=60)
 
     assert out.empty
 
 
 def test_materialize_no_gaps_marks_all_false():
-    idx = pd.date_range(
+    idx = _pd.date_range(
         start="2024-01-01 12:00:00",
         periods=3,
         freq="1min",
     )
 
-    df = pd.DataFrame({"open": [1, 2, 3]}, index=idx)
+    df = _pd.DataFrame({"open": [1, 2, 3]}, index=idx)
 
     out = materialize_missing_rows(df, interval_s=60)
 
@@ -83,14 +83,14 @@ def test_materialize_no_gaps_marks_all_false():
 
 
 def test_materialize_strict_requires_monotonic_index():
-    idx = pd.to_datetime(
+    idx = _pd.to_datetime(
         [
             "2024-01-01 12:01:00",
             "2024-01-01 12:00:00",
         ]
     )
 
-    df = pd.DataFrame({"open": [1, 2]}, index=idx)
+    df = _pd.DataFrame({"open": [1, 2]}, index=idx)
 
     with pytest.raises(ValueError):
         materialize_missing_rows(df, interval_s=60, strict=True)

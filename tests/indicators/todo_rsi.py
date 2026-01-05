@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as _np
 from qlir.indicators.rsi import with_rsi
 
 

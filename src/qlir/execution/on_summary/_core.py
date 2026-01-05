@@ -1,19 +1,19 @@
 from typing import Literal
-import pandas as pd
+import pandas as _pd
 
 
 from typing import Callable
 
-import pandas as pd
+import pandas as _pd
 
 
 def apply_execution_model(
-    paths: pd.DataFrame,
+    paths: _pd.DataFrame,
     *,
     direction: Literal["up", "down"],
     entry_col: str,
     exit_col: str,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Apply an execution model to summarized paths.
     """

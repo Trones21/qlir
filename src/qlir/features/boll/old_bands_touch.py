@@ -1,11 +1,11 @@
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 
 __all__ = ["with_boll_touch_squeeze_flags"]
 
 
 def with_boll_touch_squeeze_flags(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     close_col: str = "close",
     mid_col: str = "boll_mid",
@@ -13,7 +13,7 @@ def with_boll_touch_squeeze_flags(
     lower_col: str = "boll_lower",
     out_prefix: str = "boll_",
     squeeze_window: int = 20,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = df.copy()
     close = out[close_col]
     out[f"{out_prefix}touch_upper"] = (close >= out[upper_col]).astype("int8")

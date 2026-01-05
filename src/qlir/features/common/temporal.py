@@ -1,11 +1,11 @@
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 from typing import Iterable
 import logging
 logg = logging.getLogger(__name__)
 
 def series_angle(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     cols: Iterable[str],
     window: int,
@@ -13,7 +13,7 @@ def series_angle(
     log: bool = True,
     degrees: bool = True,
     in_place: bool = False,
-) -> tuple[pd.DataFrame, tuple[str, ...]]:
+) -> tuple[_pd.DataFrame, tuple[str, ...]]:
     """
     Compute geometric angle of a series over a window.
 
@@ -33,13 +33,13 @@ def series_angle(
         base = f"{prefix + '_' if prefix else ''}{col}"
         name = f"{base}_w{window}_angle"
 
-        s = np.log(out[col]) if log else out[col]
+        s = _np.log(out[col]) if log else out[col]
         slope = (s - s.shift(window)) / window
-        angle = np.arctan(slope)
+        angle = _np.arctan(slope)
 
         if degrees:
             logg.info("Using degrees")
-            angle = np.degrees(angle)
+            angle = _np.degrees(angle)
             name += "_deg"
 
         out[name] = angle

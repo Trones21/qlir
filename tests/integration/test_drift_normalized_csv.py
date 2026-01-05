@@ -3,7 +3,7 @@ import logging
 log = logging.getLogger(__name__)
 
 import os
-import pandas as pd
+import pandas as _pd
 import pytest
 
 from qlir.io.writer import write
@@ -23,14 +23,14 @@ from qlir.data.sources.drift.fetch import get_candles_all
 #     log.info("Data shape after normalization: %s", normalized)
 
 #     # 3. Read CSV back in (mimic downstream consumer)
-#     back = pd.read_csv(out_path, parse_dates=["tz_start", "tz_end"])
+#     back = _pd.read_csv(out_path, parse_dates=["tz_start", "tz_end"])
 
 #     validate_contract(back)
 
 #     # # Optional: roundtrip equality check
-#     # pd.testing.assert_index_equal(normalized.index, back.index, obj="index equality")
+#     # _pd.testing.assert_index_equal(normalized.index, back.index, obj="index equality")
 #     # for col in ["open", "high", "low", "close", "volume"]:
-#     #     pd.testing.assert_series_equal(
+#     #     _pd.testing.assert_series_equal(
 #     #         normalized[col].astype(float),
 #     #         back[col].astype(float),
 #     #         check_exact=False,
@@ -38,7 +38,7 @@ from qlir.data.sources.drift.fetch import get_candles_all
 #     #         obj=f"column {col}",
 #     #     )
     
-def validate_contract(df: pd.DataFrame):
+def validate_contract(df: _pd.DataFrame):
     """Validate schema, types, and logical consistency."""
     required = {"tz_start", "tz_end", "open", "high", "low", "close", "volume"}
     assert required.issubset(df.columns), f"Missing columns: {required - set(df.columns)}"

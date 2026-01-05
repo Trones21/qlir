@@ -26,7 +26,7 @@ from __future__ import annotations
 from datetime import time
 from zoneinfo import ZoneInfo
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
@@ -34,21 +34,21 @@ from qlir.time.ensure_utc import ensure_utc_df_strict
 
 
 
-def _add_session_label(df: pd.DataFrame, label: str) -> pd.DataFrame:
+def _add_session_label(df: _pd.DataFrame, label: str) -> _pd.DataFrame:
     out = df.copy()
     out["session"] = label
     return out
 
 
 def in_session(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     start_t: time,
     end_t: time,
     tz: str,
     col: str = DEFAULT_TS_COL,
     add_label: str | None = None,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Generic session filter with wraparound support.
     """
@@ -68,7 +68,7 @@ def in_session(
     return res
 
 
-def ny_cash_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def ny_cash_session(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     return in_session(
         df,
         start_t=time(9, 30),
@@ -79,7 +79,7 @@ def ny_cash_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: b
     )
 
 
-def ny_premarket(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def ny_premarket(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     return in_session(
         df,
         start_t=time(4, 0),
@@ -90,7 +90,7 @@ def ny_premarket(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool
     )
 
 
-def ny_afterhours(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def ny_afterhours(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     return in_session(
         df,
         start_t=time(16, 0),
@@ -101,12 +101,12 @@ def ny_afterhours(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: boo
     )
 
 
-def ny_extended(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def ny_extended(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     pre = ny_premarket(df, col=col, add_label=False)
     cash = ny_cash_session(df, col=col, add_label=False)
     aft = ny_afterhours(df, col=col, add_label=False)
     merged = (
-        pd.concat([pre, cash, aft], ignore_index=True)
+        _pd.concat([pre, cash, aft], ignore_index=True)
         .drop_duplicates(subset=[col])
         .sort_values(col)
         .reset_index(drop=True)
@@ -116,7 +116,7 @@ def ny_extended(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool 
     return merged
 
 
-def frankfurt_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def frankfurt_session(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     return in_session(
         df,
         start_t=time(9, 0),
@@ -127,7 +127,7 @@ def frankfurt_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label:
     )
 
 
-def london_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def london_session(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     return in_session(
         df,
         start_t=time(8, 0),
@@ -138,7 +138,7 @@ def london_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bo
     )
 
 
-def tokyo_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def tokyo_session(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     return in_session(
         df,
         start_t=time(9, 0),
@@ -149,7 +149,7 @@ def tokyo_session(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: boo
     )
 
 
-def london_newyork_overlap(df: pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> pd.DataFrame:
+def london_newyork_overlap(df: _pd.DataFrame, col: str = DEFAULT_TS_COL, *, add_label: bool = True) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
 
     london_local = df[col].dt.tz_convert(ZoneInfo("Europe/London"))

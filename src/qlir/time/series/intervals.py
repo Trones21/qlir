@@ -1,8 +1,8 @@
-import pandas as pd
+import pandas as _pd
 
 
 def unexpected_interval_mask(
-    ts: pd.Series,
+    ts: _pd.Series,
     expected_interval_s: int,
-) -> pd.Series:
+) -> _pd.Series:
     return ts.diff() != expected_interval_s

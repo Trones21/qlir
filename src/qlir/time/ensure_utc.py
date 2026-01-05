@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 from typing import Union
 from qlir.time.constants import DEFAULT_TS_COL
 
@@ -6,7 +6,7 @@ from qlir.time.constants import DEFAULT_TS_COL
 #  Series-level utilities
 # ============================================================
 
-def ensure_utc_series(s: pd.Series) -> pd.Series:
+def ensure_utc_series(s: _pd.Series) -> _pd.Series:
     """
     Normalize a timestamp Series to timezone-aware UTC datetimes.
 
@@ -41,12 +41,12 @@ def ensure_utc_series(s: pd.Series) -> pd.Series:
 
     Parameters
     ----------
-    s : pd.Series
+    s : _pd.Series
         Series containing timestamps.
 
     Returns
     -------
-    pd.Series
+    _pd.Series
         Timezone-aware UTC timestamps.
 
     Raises
@@ -54,17 +54,17 @@ def ensure_utc_series(s: pd.Series) -> pd.Series:
     ValueError
         If any timestamps cannot be parsed or normalized.
     """
-    if pd.api.types.is_datetime64_any_dtype(s):
+    if _pd.api.types.is_datetime64_any_dtype(s):
         if s.dt.tz is None:
             return s.dt.tz_localize("UTC")
         return s.dt.tz_convert("UTC")
 
-    if pd.api.types.is_integer_dtype(s):
+    if _pd.api.types.is_integer_dtype(s):
         unit = "ms" if s.max() > 1e12 else "s"
-        return pd.to_datetime(s, unit=unit, utc=True)
+        return _pd.to_datetime(s, unit=unit, utc=True)
 
     # strings or mixed objects
-    out = pd.to_datetime(s, utc=True, errors="coerce")
+    out = _pd.to_datetime(s, utc=True, errors="coerce")
 
     if out.isna().any():
         raise ValueError("Invalid timestamps during UTC normalization")
@@ -73,7 +73,7 @@ def ensure_utc_series(s: pd.Series) -> pd.Series:
 
 
 
-def ensure_utc_series_strict_string(s: pd.Series) -> pd.Series:
+def ensure_utc_series_strict_string(s: _pd.Series) -> _pd.Series:
     """
     Convert a Series to UTC, enforcing the exact format "%Y-%m-%d %H:%M:%S".
 
@@ -82,13 +82,13 @@ def ensure_utc_series_strict_string(s: pd.Series) -> pd.Series:
 
     Examples
     --------
-    >>> s = pd.Series(["2025-01-05 12:30:00", "2025-01-06 00:00:00"])
+    >>> s = _pd.Series(["2025-01-05 12:30:00", "2025-01-06 00:00:00"])
     >>> ensure_utc_series_strict(s)
     0   2025-01-05 12:30:00+00:00
     1   2025-01-06 00:00:00+00:00
     dtype: datetime64[ns, UTC]
     """
-    out = pd.to_datetime(
+    out = _pd.to_datetime(
         s,
         utc=True,
         errors="coerce",
@@ -103,7 +103,7 @@ def ensure_utc_series_strict_string(s: pd.Series) -> pd.Series:
     return out
 
 
-def assert_not_epoch_drift(s: pd.Series, *, min_year=2000) -> None:
+def assert_not_epoch_drift(s: _pd.Series, *, min_year=2000) -> None:
     if s.min().year < min_year:
         raise ValueError(
             f"Timestamp drift detected (min year={s.min().year}). "
@@ -114,7 +114,7 @@ def assert_not_epoch_drift(s: pd.Series, *, min_year=2000) -> None:
 #  DataFrame-level utilities
 # ============================================================
 
-def ensure_utc_df(df: pd.DataFrame, col: str) -> pd.DataFrame:
+def ensure_utc_df(df: _pd.DataFrame, col: str) -> _pd.DataFrame:
     """
     Return a copy of the DataFrame with df[col] normalized to UTC (loose).
     """
@@ -125,7 +125,7 @@ def ensure_utc_df(df: pd.DataFrame, col: str) -> pd.DataFrame:
     return out
 
 
-def ensure_utc_df_strict(df: pd.DataFrame, col: str) -> pd.DataFrame:
+def ensure_utc_df_strict(df: _pd.DataFrame, col: str) -> _pd.DataFrame:
     """
     Return a copy of the DataFrame with df[col] normalized to UTC (strict).
     Requires exact match to '%Y-%m-%d %H:%M:%S'.

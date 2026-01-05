@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 
 
 # Synthetic construction assumes complete time indices but allows incomplete values.
@@ -21,11 +21,11 @@ import pandas as pd
 
 def construct(
     *,
-    sources: dict[str, pd.DataFrame],
+    sources: dict[str, _pd.DataFrame],
     policy: "SyntheticConstructionPolicy",
     ohlc_cols: tuple[str, str, str, str],
     interval_s: int,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Construct a synthetic price source from multiple aligned sources.
 
@@ -46,7 +46,7 @@ def construct(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         A new DataFrame representing a synthetic source.
     """
     assert all(

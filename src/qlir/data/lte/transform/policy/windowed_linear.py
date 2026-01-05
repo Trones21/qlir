@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Sequence
 
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 
 from .base import FillPolicy, FillContext
 
@@ -52,16 +52,16 @@ class WindowedLinearFillPolicy(FillPolicy):
     # Core API
     # ------------------------------------------------------------------
 
-    def generate(self, ctx: FillContext) -> pd.DataFrame:
+    def generate(self, ctx: FillContext) -> _pd.DataFrame:
         n = len(ctx.timestamps)
 
         if n == 0:
-            return pd.DataFrame()
+            return _pd.DataFrame()
 
         # --------------------------------------------------------------
         # 1. Linear close path
         # --------------------------------------------------------------
-        closes = np.linspace(
+        closes = _np.linspace(
             ctx.left["close"],
             ctx.right["open"],
             n + 2,
@@ -103,7 +103,7 @@ class WindowedLinearFillPolicy(FillPolicy):
             prev_close = close
 
         return (
-            pd.DataFrame(rows)
+            _pd.DataFrame(rows)
             .set_index("timestamp")
         )
 
@@ -130,7 +130,7 @@ class WindowedLinearFillPolicy(FillPolicy):
         if not diffs:
             return 0.0
 
-        return float(np.mean(diffs))
+        return float(_np.mean(diffs))
 
     def _collect_left_closes(self, ctx: FillContext) -> list[float]:
         """

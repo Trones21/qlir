@@ -4,7 +4,7 @@ Data is normalized before written to flat files, currently just calling normaliz
 
 ```python
 # data/drift.py
-import requests, pandas as pd
+import requests, pandas as _pd
 from typing import Any, Dict, Optional
 from .normalize import normalize_candles
 
@@ -20,7 +20,7 @@ def fetch_drift_candles(
     timeout: float = 15.0,
     *,
     include_partial: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     sess = session or requests.Session()
     url = f"{DRIFT_BASE}/market/{symbol}/candles/{resolution}"
     params: Dict[str, Any] = {}
@@ -32,7 +32,7 @@ def fetch_drift_candles(
     r.raise_for_status()
     payload = r.json()
     records = payload.get("records", payload)
-    df = pd.DataFrame(records)
+    df = _pd.DataFrame(records)
     if df.empty:
         return df
 
@@ -60,7 +60,7 @@ make run ARGS="fetch --out ./example.csv"
 
 
 ```python
-import pandas as pd
+import pandas as _pd
 from trading.api import with_vwap_feature_block, with_rsi_feature_block
 from trading.signals import with_vwap_rejection_signal, with_combo_signal
 
@@ -77,18 +77,18 @@ out = with_combo_signal(out)
 
 ```python
 # tests/test_vwap_block.py
-import pandas as pd
+import pandas as _pd
 import numpy as np
 from trading.features.vwap.block import with_vwap_feature_block
 
 def test_runs():
-    idx = pd.date_range("2025-01-01", periods=100, freq="1min", tz="UTC")
-    df = pd.DataFrame({
+    idx = _pd.date_range("2025-01-01", periods=100, freq="1min", tz="UTC")
+    df = _pd.DataFrame({
         "timestamp": idx,
-        "open": np.linspace(100, 101, len(idx)),
-        "high": np.linspace(100.5, 101.5, len(idx)),
-        "low":  np.linspace(99.5, 100.5, len(idx)),
-        "close": np.linspace(100, 101, len(idx)),
+        "open": _np.linspace(100, 101, len(idx)),
+        "high": _np.linspace(100.5, 101.5, len(idx)),
+        "low":  _np.linspace(99.5, 100.5, len(idx)),
+        "close": _np.linspace(100, 101, len(idx)),
         "volume": 1000,
     })
     out = with_vwap_feature_block(df, tz="UTC")
@@ -107,12 +107,12 @@ For Example:
 
 ```python
 def with_vwap_feature_block(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     tz: str = "UTC",
     touch_eps: float = 5e-4,
     norm_window: int | None = 200,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = with_vwap_session(df, tz=tz)
     out = flag_relations(out, touch_eps=touch_eps)
     out = with_session_id(out, tz=tz)

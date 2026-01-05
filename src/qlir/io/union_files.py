@@ -1,5 +1,5 @@
 import pathlib
-import pandas as pd
+import pandas as _pd
 from .helpers import detect_homogeneous_filetype
 from .filetype import FileType
 from .reader import read
@@ -8,7 +8,7 @@ import pyarrow.dataset as ds
 import logging
 log = logging.getLogger(__name__)
 
-def union_file_datasets(dir_path: str | Path) -> pd.DataFrame: # type: ignore
+def union_file_datasets(dir_path: str | Path) -> _pd.DataFrame: # type: ignore
     log.info(dir_path)
     dir = Path(dir_path)
     log.info(f"Unioning files in {dir_path}")
@@ -18,10 +18,10 @@ def union_file_datasets(dir_path: str | Path) -> pd.DataFrame: # type: ignore
     #if heterogenous extensions, then warn, but proceed file by file 
     if filetype is None:
         log.info("Multiple file types found in: %s", dir_path)
-        dfs: list[pd.DataFrame] = []
+        dfs: list[_pd.DataFrame] = []
         for file in dir.iterdir():
             dfs.append(read(file))
-        data = pd.concat(dfs, ignore_index=True)
+        data = _pd.concat(dfs, ignore_index=True)
         return data
     
     # Process Homogeneous 
@@ -34,10 +34,10 @@ def union_file_datasets(dir_path: str | Path) -> pd.DataFrame: # type: ignore
             return df
         else:
             # Going for a list of dataframes rather than straight append for debuggability purposes
-            dfs: list[pd.DataFrame] = []
+            dfs: list[_pd.DataFrame] = []
             for file in dir.iterdir():
                 dfs.append(read(file))
-            data = pd.concat(dfs, ignore_index=True)
+            data = _pd.concat(dfs, ignore_index=True)
             return data
 
         

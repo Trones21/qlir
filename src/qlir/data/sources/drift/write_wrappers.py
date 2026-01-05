@@ -1,5 +1,5 @@
 from pathlib import Path
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.core.instruments import CanonicalInstrument
 from qlir.data.core.paths import candles_path
@@ -8,7 +8,7 @@ from qlir.time.timefreq import TimeFreq
 import logging
 log = logging.getLogger(__name__)
 
-def writedf_and_metadata(df: pd.DataFrame, base_resolution: TimeFreq, symbol: CanonicalInstrument, dir_suffix_str: str | None = None):
+def writedf_and_metadata(df: _pd.DataFrame, base_resolution: TimeFreq, symbol: CanonicalInstrument, dir_suffix_str: str | None = None):
     canonical_instr = symbol.value
     canonical_resolution_str = base_resolution.to_canonical_resolution_str()
     

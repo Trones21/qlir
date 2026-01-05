@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 from qlir.data.agg.engine_old import AggConfig
 from qlir.data.agg.manifest import AggManifest
 from qlir.data.agg.paths import DatasetPaths
@@ -8,7 +8,7 @@ def create_or_update_head(
     *,
     agg: AggManifest,
     paths: DatasetPaths,
-    new_frames: list[pd.DataFrame],
+    new_frames: list[_pd.DataFrame],
     new_slice_ids: list[str],
     cfg: AggConfig,
 ) -> None:
@@ -22,7 +22,7 @@ def create_or_update_head(
 
     if head_meta and head_meta["slice_ids"]:
         head_path = paths.agg_parts_dir / "head.parquet"
-        head_df = pd.read_parquet(head_path)
+        head_df = _pd.read_parquet(head_path)
 
     # Merge Frames
     frames = []
@@ -35,7 +35,7 @@ def create_or_update_head(
     frames.extend(new_frames)
     slice_ids.extend(new_slice_ids)
 
-    out = pd.concat(frames, ignore_index=True)
+    out = _pd.concat(frames, ignore_index=True)
 
     while len(slice_ids) >= cfg.batch_slices:
         part_slice_ids = slice_ids[:cfg.batch_slices]

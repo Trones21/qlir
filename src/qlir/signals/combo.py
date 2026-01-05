@@ -1,14 +1,14 @@
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 
 __all__ = ["with_combo_signal"]
 
 
 def with_combo_signal(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     out_col: str = "sig_combo",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """Example: VWAP rejection aligned with RSI regime and MACD hist sign."""
     out = df.copy()
     cond_long = (

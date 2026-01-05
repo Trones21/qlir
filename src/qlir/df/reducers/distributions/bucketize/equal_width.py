@@ -1,11 +1,11 @@
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 from qlir.df.reducers.distributions.bucketize.build_bucket_df import build_bucket_df
 from qlir.utils.logdf import NamedDF
 
 
 def bucketize_zoom_equal_width(
-    s: pd.Series,
+    s: _pd.Series,
     *,
     buckets: int = 20,
     threshold_pct: float = 0.9,
@@ -37,8 +37,8 @@ def bucketize_zoom_equal_width(
 
     for depth in range(max_depth):
         # --- bucketize current range ---
-        edges = np.linspace(current_min, current_max, buckets + 1)
-        counts, _ = np.histogram(current_values, bins=edges)
+        edges = _np.linspace(current_min, current_max, buckets + 1)
+        counts, _ = _np.histogram(current_values, bins=edges)
 
         df = build_bucket_df(
             lower_bounds=edges[:-1],

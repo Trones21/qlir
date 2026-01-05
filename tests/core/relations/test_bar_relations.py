@@ -1,5 +1,5 @@
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 import pytest
 pytestmark = pytest.mark.local
 
@@ -28,8 +28,8 @@ def _ohlc_df():
         [10.7, 12.0,  9.2, 11.9],  # t3  outside (>=,<=) vs t2
         [10.7, 12.0, 10.0, 10.7],  # t4  same high as t3, higher low
     ]
-    df = pd.DataFrame(data, columns=["open", "high", "low", "close"])
-    df.index = pd.RangeIndex(len(df))
+    df = _pd.DataFrame(data, columns=["open", "high", "low", "close"])
+    df.index = _pd.RangeIndex(len(df))
     return df
 
 # -------------------------
@@ -42,23 +42,23 @@ def test_higher_and_lower_relations_basic():
     out = with_higher_high(df.copy())
     assert "high__higher_high" in out
     # t1 high > t0 high -> True; t2 high < t1 -> False; t3 > t2 -> True; t4 == t3 -> False
-    expected_hh = pd.Series([False, True, False, True, False], dtype="boolean")
+    expected_hh = _pd.Series([False, True, False, True, False], dtype="boolean")
     assert out["high__higher_high"].equals(expected_hh)
 
     out = with_lower_low(df.copy())
     assert "low__lower_low" in out
     # t1 low > t0 -> False; t2 low > t1 -> False; t3 low < t2 -> True; t4 low > t3 -> False
-    expected_ll = pd.Series([False, False, False, True, False], dtype="boolean")
+    expected_ll = _pd.Series([False, False, False, True, False], dtype="boolean")
     assert out["low__lower_low"].equals(expected_ll)
 
     out = with_higher_open(df.copy())
     assert "open__higher_open" in out
-    expected_ho = pd.Series([False, True, False, True, False], dtype="boolean")
+    expected_ho = _pd.Series([False, True, False, True, False], dtype="boolean")
     assert out["open__higher_open"].equals(expected_ho)
 
     out = with_lower_close(df.copy())
     assert "close__lower_close" in out
-    expected_lc = pd.Series([False, False, True, False, True], dtype="boolean")
+    expected_lc = _pd.Series([False, False, True, False, True], dtype="boolean")
     assert out["close__lower_close"].equals(expected_lc)
 
 def test_custom_name_and_inplace():
@@ -77,7 +77,7 @@ def test_inside_bar_inclusive_and_strict():
     out_inc = with_inside_bar(df.copy(), inclusive="both")
     col = "inside_bar"
     # Check that our crafted t2 is inside t1 (<= and >=)
-    expected_inc = pd.Series([False, False, True, False, False], dtype="boolean")
+    expected_inc = _pd.Series([False, False, True, False, False], dtype="boolean")
     assert out_inc[col].equals(expected_inc)
 
     out_strict = with_inside_bar(df.copy(), inclusive="strict")
@@ -91,7 +91,7 @@ def test_outside_bar_inclusive_and_strict():
     out_inc = with_outside_bar(df.copy(), inclusive="both")
     col = "outside_bar"
     # t3 engulfs t2 (>=,<=) -> True
-    expected_inc = pd.Series([False, False, False, True, False], dtype="boolean")
+    expected_inc = _pd.Series([False, False, False, True, False], dtype="boolean")
     assert out_inc[col].equals(expected_inc)
 
     out_strict = with_outside_bar(df.copy(), inclusive="strict")
@@ -108,12 +108,12 @@ def test_bullish_bearish_allow_equal():
 
     out_bull = with_bullish_bar(df.copy())
     # bullish when close > open: t0,t2,t3,t4
-    expected = pd.Series([True, False, True, True, False], dtype="boolean")
+    expected = _pd.Series([True, False, True, True, False], dtype="boolean")
     assert out_bull["bullish_bar"].equals(expected)
 
     out_bear = with_bearish_bar(df.copy(), allow_equal=True)
     # bearish when close <= open: t1,t4
-    expected_bear = pd.Series([False, True, False, False, True], dtype="boolean")
+    expected_bear = _pd.Series([False, True, False, False, True], dtype="boolean")
     assert out_bear["bearish_bar"].equals(expected_bear)
 
 # -------------------------

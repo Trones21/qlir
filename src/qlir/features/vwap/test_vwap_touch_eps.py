@@ -1,5 +1,5 @@
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 from qlir.indicators.vwap import with_vwap_hlc3_session
 from qlir.features.vwap.relations import flag_relations
 import pytest
@@ -7,8 +7,8 @@ pytestmark = pytest.mark.local
 
 def test_touch_eps_threshold():
     # Build two bars where close is nearly equal to vwap within tolerance
-    idx = pd.date_range("2025-01-01", periods=2, freq="1min", tz="UTC")
-    df = pd.DataFrame({
+    idx = _pd.date_range("2025-01-01", periods=2, freq="1min", tz="UTC")
+    df = _pd.DataFrame({
         "timestamp": idx,
         "open": [100, 100],
         "high": [100, 100],

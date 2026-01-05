@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Tuple
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.lte.transform.gaps.materialization.assert_materialization_complete import assert_materialization_complete
 
@@ -14,13 +14,13 @@ from ...policy.base import FillPolicy
 
 
 def apply_fill_policy(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     ohlc_cols: Tuple[str, str, str, str] = DEFAULT_OHLC_COLS,
     interval_s: int,
     policy: FillPolicy,
     strict: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Apply a fill policy to materialized (missing) rows.
 
@@ -38,7 +38,7 @@ def apply_fill_policy(
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Materialized DataFrame.
     ts_col : str
         Name of the timestamp column or index name.
@@ -53,7 +53,7 @@ def apply_fill_policy(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         DataFrame with filled OHLC values.
     """
     assert_materialization_complete(df)

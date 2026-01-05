@@ -1,14 +1,14 @@
 from typing import Literal
-import pandas as pd
+import pandas as _pd
 
 from qlir.execution.on_summary._core import apply_execution_model
 
 
 def execute(
-    paths: pd.DataFrame,
+    paths: _pd.DataFrame,
     *,
     direction: Literal["up", "down"],
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Worst-case execution:
     - Entry at first candle extreme against the trader

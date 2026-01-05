@@ -6,9 +6,7 @@ from typing import List, Optional, Sequence, Union
 import warnings
 from pandas import DataFrame, api
 
-
-Number = Union[int, float]
-ColsLike =  Optional[Union[str, Sequence[str]]]
+from qlir.core.types.union import ColsLike
 
 def _numeric_cols(df: DataFrame) -> List[str]:
     return [c for c in df.columns if api.types.is_numeric_dtype(df[c])]

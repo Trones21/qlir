@@ -46,7 +46,7 @@ def normalize_drift_resolution_token(res: str | int) -> str:
     )
 
 
-def infer_drift_resolution_token_from_df(df: pd.DataFrame) -> str:
+def infer_drift_resolution_token_from_df(df: _pd.DataFrame) -> str:
     """
     Infer Drift resolution token from tz_start diffs.
     Returns one of {"1","5","15","60","240","D","W","M"}.
@@ -54,7 +54,7 @@ def infer_drift_resolution_token_from_df(df: pd.DataFrame) -> str:
     if df.empty:
         raise ValueError("Cannot infer resolution from empty DataFrame.")
 
-    ts = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
+    ts = _pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
     if len(ts) < 2:
         raise ValueError("Need at least two rows to infer resolution.")
 

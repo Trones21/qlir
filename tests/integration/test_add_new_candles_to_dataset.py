@@ -1,7 +1,7 @@
 # tests/integration/test_add_new_candles_to_dataset.py
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import pandas as pd
+import pandas as _pd
 import pytest
 from qlir.data.sources.drift.fetch import add_new_candles_to_dataset
 from qlir.io.writer import write, write_dataset_meta 
@@ -21,7 +21,7 @@ def test_add_new_candles_to_dataset_grows_file(tmp_path: Path):
     now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
     start = now - timedelta(minutes=60)
 
-    existing_df = pd.DataFrame(
+    existing_df = _pd.DataFrame(
         {
             "tz_start": [
                 start,

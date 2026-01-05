@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Literal, Optional
-import pandas as pd
+import pandas as _pd
 
 OHLCV_REQ = ("open", "high", "low", "close")
 TIME_REQ  = ("tz_start", "tz_end")  # tz_end may be NaT for partials
@@ -13,10 +13,10 @@ class OhlcvContract:
     allow_partials: bool = True            # if False: tz_end must be non-null for all rows
     index_by: Optional[Literal["tz_end","tz_start"]] = None  # loader convenience
 
-def _tz_aware(series: pd.Series) -> bool:
-    return pd.api.types.is_datetime64tz_dtype(series)
+def _tz_aware(series: _pd.Series) -> bool:
+    return _pd.api.types.is_datetime64tz_dtype(series)
 
-def validate_ohlcv(df: pd.DataFrame, *, cfg: OhlcvContract = OhlcvContract()) -> None:
+def validate_ohlcv(df: _pd.DataFrame, *, cfg: OhlcvContract = OhlcvContract()) -> None:
     """
     Validate canonical OHLCV schema:
       - tz_start, tz_end exist and are tz-aware UTC datetimes (tz_end may be NaT if allow_partials)
@@ -62,5 +62,5 @@ def validate_ohlcv(df: pd.DataFrame, *, cfg: OhlcvContract = OhlcvContract()) ->
 
     # numeric sanity (don’t cast—just check)
     for c in OHLCV_REQ + (("volume",) if "volume" in df.columns else ()):
-        if c in df.columns and not pd.api.types.is_numeric_dtype(df[c]):
+        if c in df.columns and not _pd.api.types.is_numeric_dtype(df[c]):
             raise TypeError(f"{c} must be numeric dtype (got {df[c].dtype}).")

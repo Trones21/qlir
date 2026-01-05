@@ -1,23 +1,23 @@
 from dataclasses import dataclass
 from typing import Sequence
 
-import pandas as pd
+import pandas as _pd
 
 
 @dataclass
 class FillContext:
-    left: pd.Series
-    right: pd.Series
-    timestamps: pd.DatetimeIndex
+    left: _pd.Series
+    right: _pd.Series
+    timestamps: _pd.DatetimeIndex
     interval_s: int
 
     # context (real candles only)
-    left_window: Sequence[pd.Series]
-    right_window: Sequence[pd.Series]
+    left_window: Sequence[_pd.Series]
+    right_window: Sequence[_pd.Series]
 
 
 class FillPolicy:
     name: str
 
-    def generate(self, ctx: FillContext) -> pd.DataFrame:
+    def generate(self, ctx: FillContext) -> _pd.DataFrame:
         raise NotImplementedError

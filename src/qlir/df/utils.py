@@ -1,11 +1,11 @@
-import pandas as pd
+import pandas as _pd
 
 
-def union_and_sort(dfs: list[pd.DataFrame], sort_by: list[str] | None = None) -> pd.DataFrame:
+def union_and_sort(dfs: list[_pd.DataFrame], sort_by: list[str] | None = None) -> _pd.DataFrame:
     """
     Union multiple DataFrames and return a sorted, deduplicated result.
     """
-    df = pd.concat(dfs, ignore_index=True)
+    df = _pd.concat(dfs, ignore_index=True)
     
     # Drop duplicates (optional, common for unions)
     df = df.drop_duplicates().reset_index(drop=True)
@@ -17,14 +17,14 @@ def union_and_sort(dfs: list[pd.DataFrame], sort_by: list[str] | None = None) ->
     return df
 
 
-def materialize_index(df, name: str = "tz_start") -> pd.DataFrame:
+def materialize_index(df, name: str = "tz_start") -> _pd.DataFrame:
     """
     Ensure the DataFrame's index is also available as a column,
     and move it to the first position (in-place).
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Target DataFrame with a DatetimeIndex or similar.
     name : str, default="tz_start"
         Name for the materialized index column.
@@ -47,7 +47,7 @@ def materialize_index(df, name: str = "tz_start") -> pd.DataFrame:
 
 
 
-def move_column(df, col: str, to_idx: int = 0) -> pd.DataFrame:
+def move_column(df, col: str, to_idx: int = 0) -> _pd.DataFrame:
     """
     Move an existing column to a new ordinal position
     Note: This is basically just an verbosity reducer and its efficent b/c 
@@ -55,7 +55,7 @@ def move_column(df, col: str, to_idx: int = 0) -> pd.DataFrame:
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Target DataFrame.
     col : str
         Name of the column to move. Must already exist.
@@ -75,7 +75,7 @@ def move_column(df, col: str, to_idx: int = 0) -> pd.DataFrame:
 
     return df
 
-def insert_column(df, col: str, values, to_idx: int = 0) -> pd.DataFrame:
+def insert_column(df, col: str, values, to_idx: int = 0) -> _pd.DataFrame:
     """
     Insert a new column at a given ordinal position (in-place).
     
@@ -84,7 +84,7 @@ def insert_column(df, col: str, values, to_idx: int = 0) -> pd.DataFrame:
     
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Target DataFrame.
     col : str
         Name of the new column.

@@ -1,12 +1,12 @@
 from __future__ import annotations
-import pandas as pd
-import numpy as np
+import pandas as _pd
+import numpy as _np
 
 __all__ = ["with_bollinger"]
 
 
 def with_bollinger(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     close_col: str = "close",
     period: int = 20,
@@ -16,13 +16,13 @@ def with_bollinger(
     out_lower: str = "boll_lower",
     out_valid: str | None = "boll_valid",
     in_place: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Adds Bollinger Bands to a DataFrame.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Must contain a `close_col` column.
     close_col : str
         Column name containing closing prices.
@@ -51,6 +51,6 @@ def with_bollinger(
     # --- optional validity flag ---
     if out_valid:
         # Strictly valid only after `period - 1` rows
-        out[out_valid] = np.arange(len(out)) >= (period - 1)
+        out[out_valid] = _np.arange(len(out)) >= (period - 1)
 
     return out

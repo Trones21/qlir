@@ -3,7 +3,7 @@ import os
 import sys
 import subprocess
 from time import sleep
-import pandas as pd
+import pandas as _pd
 from qlir.time.timefreq import TimeFreq
 from qlir.data.core.instruments import CanonicalInstrument
 from afterdata.etl.binance.agg_server import parse_args as parse_agg_server_args
@@ -141,14 +141,14 @@ def aggregate_raw_specific():
     )
 
 
-def normalize(raw: pd.DataFrame) -> pd.DataFrame:
+def normalize(raw: _pd.DataFrame) -> _pd.DataFrame:
     """Load agg parquet files from this venue/source into canonical candle schema."""
     raise NotImplementedError("Normlization not yet implemented")
 
-# def validate_clean(clean: pd.DataFrame, base_resolution: TimeFreq) -> tuple[pd.DataFrame, CandlesDQReport | None]:
+# def validate_clean(clean: _pd.DataFrame, base_resolution: TimeFreq) -> tuple[_pd.DataFrame, CandlesDQReport | None]:
 #     """Run shared validation, returns (possibly adjusted df, report)."""
 #     raise NotImplementedError("Validation not yet implemented")
 
-def write_clean(clean: pd.DataFrame, symbol: CanonicalInstrument, base_resolution: TimeFreq) -> None:
+def write_clean(clean: _pd.DataFrame, symbol: CanonicalInstrument, base_resolution: TimeFreq) -> None:
     """Canonical path + metadata write."""
     raise NotImplementedError("Clean data write not yet implemented")

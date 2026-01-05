@@ -1,7 +1,7 @@
 # tests/indicators/test_with_atr_math.py
 import pytest
-import pandas as pd
-import numpy as np
+import pandas as _pd
+import numpy as _np
 
 from qlir.indicators.atr import with_atr
 
@@ -9,17 +9,17 @@ from qlir.indicators.atr import with_atr
 pytest.importorskip("talib")
 
 
-def _make_small_ohlc() -> pd.DataFrame:
+def _make_small_ohlc() -> _pd.DataFrame:
     # Chosen so the math stays clean
     # idx: 0      1     2     3     4
     high  = [10.0, 11.0, 12.0, 11.5, 12.2]
     low   = [ 9.0,  9.5, 10.5, 10.8, 11.7]
     close = [ 9.5, 10.5, 11.0, 11.2, 12.0]
-    idx = pd.date_range("2025-01-01", periods=5, freq="D")
-    return pd.DataFrame({"high": high, "low": low, "close": close}, index=idx)
+    idx = _pd.date_range("2025-01-01", periods=5, freq="D")
+    return _pd.DataFrame({"high": high, "low": low, "close": close}, index=idx)
 
 
-def _manual_wilder_atr(df: pd.DataFrame, period: int) -> pd.Series:
+def _manual_wilder_atr(df: _pd.DataFrame, period: int) -> _pd.Series:
     """
     Manual ATR so we can assert on actual math.
 
@@ -49,9 +49,9 @@ def _manual_wilder_atr(df: pd.DataFrame, period: int) -> pd.Series:
             )
             tr.append(tr_i)
 
-    tr = pd.Series(tr, index=df.index, name="tr")
+    tr = _pd.Series(tr, index=df.index, name="tr")
 
-    atr_vals = [np.nan] * len(df)
+    atr_vals = [_np.nan] * len(df)
 
     # seed ATR at index = period-1
     seed_idx = period - 1
@@ -63,7 +63,7 @@ def _manual_wilder_atr(df: pd.DataFrame, period: int) -> pd.Series:
         prev_atr = atr_vals[i - 1]
         atr_vals[i] = (prev_atr * (period - 1) + tr.iloc[i]) / period
 
-    return pd.Series(atr_vals, index=df.index, name=f"atr_{period}")
+    return _pd.Series(atr_vals, index=df.index, name=f"atr_{period}")
 
 
 def test_with_atr_matches_manual_wilder_math():
@@ -81,4 +81,4 @@ def test_with_atr_matches_manual_wilder_math():
     assert list(got.index) == list(expected.index)
 
     # compare values (allow NaN at the top)
-    np.testing.assert_allclose(got.values, expected.values, rtol=1e-6, atol=1e-6, equal_nan=True)
+    _np.testing.assert_allclose(got.values, expected.values, rtol=1e-6, atol=1e-6, equal_nan=True)

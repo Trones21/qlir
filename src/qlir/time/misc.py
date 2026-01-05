@@ -1,17 +1,17 @@
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 
 __all__ = ["ensure_tzaware", "session_floor"]
 
 
-def ensure_tzaware(df: pd.DataFrame, ts_col: str = "timestamp") -> None:
+def ensure_tzaware(df: _pd.DataFrame, ts_col: str = "timestamp") -> None:
     ts = df[ts_col]
-    if not isinstance(ts.dtype, pd.DatetimeTZDtype):
+    if not isinstance(ts.dtype, _pd.DatetimeTZDtype):
         raise ValueError(f"{ts_col} must be tz-aware (got {ts.dtype})")
 
 
 # src/qlir/utils/time.py
-import pandas as pd
+import pandas as _pd
 
 def session_floor(df, tz="UTC", ts_col: str | None = "timestamp", *, bar_semantics: str = "end"):
     """
@@ -22,9 +22,9 @@ def session_floor(df, tz="UTC", ts_col: str | None = "timestamp", *, bar_semanti
     """
     # get timestamp series (column if present, else index)
     if ts_col and ts_col in df.columns:
-        ts = pd.to_datetime(df[ts_col], utc=True)
+        ts = _pd.to_datetime(df[ts_col], utc=True)
     else:
-        ts = pd.to_datetime(df.index, utc=True)
+        ts = _pd.to_datetime(df.index, utc=True)
 
     # Convert to local tz
     local = ts.dt.tz_convert(tz)
@@ -32,7 +32,7 @@ def session_floor(df, tz="UTC", ts_col: str | None = "timestamp", *, bar_semanti
     if bar_semantics == "start":
         # Shift to end-of-bar for session bucketing (needs bar freq)
         raise NotImplementedError("Provide bar freq if you need 'start' semantics.")
-        # e.g., local = local + pd.Timedelta(minutes=1)
+        # e.g., local = local + _pd.Timedelta(minutes=1)
 
     # For 'end' semantics we do nothing special:
     # bars at exactly 00:00 belong to the new calendar day.

@@ -1,6 +1,6 @@
 # tests/conftest.py
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 import pytest
 from pathlib  import Path
 from qlir.io.reader import read
@@ -8,7 +8,7 @@ import logging
 log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session")
-def static_data() -> pd.DataFrame:
+def static_data() -> _pd.DataFrame:
     """
     Loads the canonical static dataset for tests once per session.
     """
@@ -29,35 +29,35 @@ def static_data() -> pd.DataFrame:
 #     vol_std=30,
 #     zero_vol_idx=(),
 #     with_timestamp_col=False,
-# ) -> pd.DataFrame:
+# ) -> _pd.DataFrame:
 #     """
 #     Deterministic synthetic OHLCV generator (tz-aware index).
 #     - Price is a bounded random walk around `base`.
 #     - High/Low wrap open/close with a small spread.
 #     - Volume is positive except at `zero_vol_idx`.
 #     """
-#     rng = np.random.default_rng(seed)
-#     ts = pd.date_range(start=start, periods=periods, freq=freq, tz=tz)
+#     rng = _np.random.default_rng(seed)
+#     ts = _pd.date_range(start=start, periods=periods, freq=freq, tz=tz)
 
 #     # Random walk for close
 #     steps = rng.normal(0, 0.2, size=periods)  # gentle 1-min drift
-#     close = base + np.cumsum(steps)
+#     close = base + _np.cumsum(steps)
 
 #     # Open is prior close (first equals first close for simplicity)
-#     open_ = np.r_[close[0], close[:-1]]
+#     open_ = _np.r_[close[0], close[:-1]]
 
 #     # Small spread around max/min(open, close)
-#     spread = np.abs(rng.normal(0.05, 0.02, size=periods))
-#     high = np.maximum(open_, close) + spread
-#     low = np.minimum(open_, close) - spread
+#     spread = _np.abs(rng.normal(0.05, 0.02, size=periods))
+#     high = _np.maximum(open_, close) + spread
+#     low = _np.minimum(open_, close) - spread
 
 #     # Volume
-#     volume = np.maximum(0, rng.normal(vol_mean, vol_std, size=periods)).astype(int)
+#     volume = _np.maximum(0, rng.normal(vol_mean, vol_std, size=periods)).astype(int)
 #     if zero_vol_idx:
 #         volume = volume.astype(float)  # avoid int assignment issues
 #         volume[list(zero_vol_idx)] = 0
 
-#     df = pd.DataFrame(
+#     df = _pd.DataFrame(
 #         {"open": open_, "high": high, "low": low, "close": close, "volume": volume},
 #         index=ts,
 #     )
@@ -70,7 +70,7 @@ def static_data() -> pd.DataFrame:
 
 
 # @pytest.fixture
-# def ohlcv_1m_100() -> pd.DataFrame:
+# def ohlcv_1m_100() -> _pd.DataFrame:
 #     """
 #     100 rows of 1-minute OHLCV, tz-aware UTC index, all rows have volume > 0.
 #     Used by: test_vwap_hlc3_basic, test_vwap_hlc3_idempotent
@@ -79,7 +79,7 @@ def static_data() -> pd.DataFrame:
 
 
 # @pytest.fixture
-# def ohlcv_with_zero_vol() -> pd.DataFrame:
+# def ohlcv_with_zero_vol() -> _pd.DataFrame:
 #     """
 #     Like ohlcv_1m_100 but injects zero-volume rows (not at index 0).
 #     Used by: test_vwap_hlc3_zero_volume
@@ -93,7 +93,7 @@ def static_data() -> pd.DataFrame:
 
 
 # @pytest.fixture
-# def ohlcv_1m_cross_midnight() -> pd.DataFrame:
+# def ohlcv_1m_cross_midnight() -> _pd.DataFrame:
 #     """
 #     Minimal data that crosses a session boundary in UTC.
 #     Used if you want to parametrize session reset tests.
@@ -102,7 +102,7 @@ def static_data() -> pd.DataFrame:
 
 
 # @pytest.fixture
-# def ohlcv_1m_100_tscol() -> pd.DataFrame:
+# def ohlcv_1m_100_tscol() -> _pd.DataFrame:
 #     """
 #     Same as ohlcv_1m_100, but with a concrete 'timestamp' column
 #     (no DatetimeIndex). Useful if your code supports both styles.

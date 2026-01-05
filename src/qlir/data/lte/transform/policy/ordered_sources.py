@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.data.lte.transform.policy.base import FillContext, FillPolicy
@@ -10,7 +10,7 @@ class OrderedSourceFillPolicy(FillPolicy):
     def __init__(
         self,
         *,
-        sources: list[tuple[str, pd.DataFrame]],
+        sources: list[tuple[str, _pd.DataFrame]],
         ohlc_cols: OHLC_Cols = DEFAULT_OHLC_COLS,
         source_col: str = "__filled_from_source__",
     ):
@@ -30,7 +30,7 @@ class OrderedSourceFillPolicy(FillPolicy):
         self.ohlc_cols = ohlc_cols
         self.source_col = source_col
 
-    def generate(self, ctx: FillContext) -> pd.DataFrame:
+    def generate(self, ctx: FillContext) -> _pd.DataFrame:
         """
         Generate replacement OHLC values for missing rows using
         ordered fallback sources.
@@ -43,7 +43,7 @@ class OrderedSourceFillPolicy(FillPolicy):
         """
         primary_name, primary_df = self.sources[0]
 
-        out = pd.DataFrame(
+        out = _pd.DataFrame(
             index=ctx.timestamps,
             columns=list(self.ohlc_cols) + [self.source_col],
             dtype="float64",

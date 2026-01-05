@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-import pandas as pd
+import pandas as _pd
 import requests
 import logging
 log = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def probe_candles_any_le(
     if not records:
         return None
 
-    df = pd.DataFrame(records)
+    df = _pd.DataFrame(records)
     if df.empty:
         return None
     else:

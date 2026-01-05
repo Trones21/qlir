@@ -1,13 +1,13 @@
-import pandas as pd
+import pandas as _pd
 from typing import Dict
 
 def generate_offset_candles(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     period: int,
     unit: str = "minute",
     dt_col: str = "timestamp",
-) -> Dict[str, pd.DataFrame]:
+) -> Dict[str, _pd.DataFrame]:
     """
     From base-frequency data (usually 1m), generate all phase-shifted
     versions of a single period, e.g. all 7-minute alignments.
@@ -21,7 +21,7 @@ def generate_offset_candles(
       }
     """
     if df.index.name != dt_col:
-        df = df.set_index(pd.DatetimeIndex(df[dt_col], name=dt_col))
+        df = df.set_index(_pd.DatetimeIndex(df[dt_col], name=dt_col))
     df = df.sort_index()
 
     # standard OHLCV
@@ -36,14 +36,14 @@ def generate_offset_candles(
     # turn (period, unit) into pandas freq
     if unit == "minute":
         freq_str = f"{period}min"
-        step = pd.Timedelta(minutes=1)
+        step = _pd.Timedelta(minutes=1)
     elif unit == "second":
         freq_str = f"{period}S"
-        step = pd.Timedelta(seconds=1)
+        step = _pd.Timedelta(seconds=1)
     else:
         raise ValueError("for offsets we usually want minute/second base")
 
-    out: Dict[str, pd.DataFrame] = {}
+    out: Dict[str, _pd.DataFrame] = {}
 
     for offset in range(period):
         shifted = df.copy()

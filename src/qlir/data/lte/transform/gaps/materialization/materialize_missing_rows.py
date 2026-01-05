@@ -37,7 +37,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.lte.transform.gaps.materialization.markers import ROW_MATERIALIZED_COL
 
@@ -46,12 +46,12 @@ from qlir.data.lte.transform.gaps.materialization.markers import ROW_MATERIALIZE
 
 
 def materialize_missing_rows(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     interval_s: int,
     timestamp_col: Optional[str] = None,
     strict: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Materialize missing rows at a fixed wall-clock interval.
 
@@ -69,7 +69,7 @@ def materialize_missing_rows(
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Input DataFrame. Must be time-indexed or contain a timestamp column.
     interval_s : int
         Fixed wall-clock interval in seconds (e.g. 60 for 1-minute data).
@@ -80,7 +80,7 @@ def materialize_missing_rows(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         DataFrame with missing rows materialized and internally marked.
     """
 
@@ -95,7 +95,7 @@ def materialize_missing_rows(
             raise KeyError(f"timestamp_col '{timestamp_col}' not found in DataFrame")
         df = df.set_index(timestamp_col)
 
-    if not isinstance(df.index, pd.DatetimeIndex):
+    if not isinstance(df.index, _pd.DatetimeIndex):
         raise TypeError("DataFrame must be indexed by a DatetimeIndex")
 
     if strict and not df.index.is_monotonic_increasing:
@@ -109,8 +109,8 @@ def materialize_missing_rows(
     start = df.index.min()
     end = df.index.max()
 
-    freq = pd.to_timedelta(interval_s, unit="s")
-    full_index = pd.date_range(start=start, end=end, freq=freq)
+    freq = _pd.to_timedelta(interval_s, unit="s")
+    full_index = _pd.date_range(start=start, end=end, freq=freq)
 
     # Fast path: nothing missing
     if len(full_index) == len(df.index):

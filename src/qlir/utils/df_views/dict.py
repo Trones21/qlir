@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 from typing import Mapping, Iterable
 from .common import finalize_df
 
@@ -10,12 +10,12 @@ def dict_to_df(
     columns: Iterable[str] | None = None,
     sort_by: str | None = None,
     ascending: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     if not data:
         base_cols = list(columns or [])
         if include_key:
             base_cols = [include_key] + base_cols
-        return pd.DataFrame(columns=base_cols)
+        return _pd.DataFrame(columns=base_cols)
 
     records = []
     for key, record in data.items():
@@ -24,7 +24,7 @@ def dict_to_df(
             row[include_key] = key
         records.append(row)
 
-    df = pd.DataFrame.from_records(records)
+    df = _pd.DataFrame.from_records(records)
 
     return finalize_df(
         df,

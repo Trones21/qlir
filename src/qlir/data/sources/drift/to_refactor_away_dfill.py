@@ -1,7 +1,7 @@
 # qlir/data/drift_fill.py
 from __future__ import annotations
 from typing import Optional, List, Tuple
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.quality.candles.candles import detect_missing_candles
 
@@ -10,7 +10,7 @@ _STEP_SEC = {"1":60,"5":300,"15":900,"60":3600,"240":14400}
 def _step_seconds(token: str) -> Optional[int]:
     return _STEP_SEC.get(token)
 
-def _rewrite_gap_windows(missing_starts: List[pd.Timestamp], token: str) -> List[Tuple[pd.Timestamp, pd.Timestamp]]:
+def _rewrite_gap_windows(missing_starts: List[_pd.Timestamp], token: str) -> List[Tuple[_pd.Timestamp, _pd.Timestamp]]:
     """
     Collapse individual missing tz_start stamps into continuous windows to fetch.
     For D/W/M we fetch one-by-one (variable length); for minute/hour tokens we batch.
@@ -20,13 +20,13 @@ def _rewrite_gap_windows(missing_starts: List[pd.Timestamp], token: str) -> List
     if not missing_starts:
         return []
 
-    ms = sorted(pd.to_datetime(missing_starts, utc=True))
+    ms = sorted(_pd.to_datetime(missing_starts, utc=True))
     if step is None:
         # D/W/M: variable—fetch each start individually as [start, start] window
         return [(t, t) for t in ms]
 
     # minute tokens: coalesce consecutive gaps
-    out: List[Tuple[pd.Timestamp, pd.Timestamp]] = []
+    out: List[Tuple[_pd.Timestamp, _pd.Timestamp]] = []
     run_start = ms[0]
     prev = ms[0]
     for t in ms[1:]:
@@ -44,7 +44,7 @@ def _rewrite_gap_windows(missing_starts: List[pd.Timestamp], token: str) -> List
 ## Rewrite b/c chatgpt sucks at clean code / separation of cconcerns
 
 # def backfill_gaps(
-#     df: pd.DataFrame,
+#     df: _pd.DataFrame,
 #     symbol: str,
 #     token: str,  # Drift token: 1,5,15,60,240,D,W,M
 #     *,
@@ -53,7 +53,7 @@ def _rewrite_gap_windows(missing_starts: List[pd.Timestamp], token: str) -> List
 #     include_partial: bool = True,
 #     sleep_s: float = 0.15,
 #     timeout: float = 15.0,
-# ) -> pd.DataFrame:
+# ) -> _pd.DataFrame:
 #     """
 #     Detect gaps in df and fetch just those missing ranges from Drift, then merge.
 #     Does not fabricate data.
@@ -68,7 +68,7 @@ def _rewrite_gap_windows(missing_starts: List[pd.Timestamp], token: str) -> List
 
 #     print(f"[candles_fill] Found {len(missing)} missing bars — fetching them from Drift…")
 #     windows = _gap_windows(missing, tok)
-#     pulled: List[pd.DataFrame] = []
+#     pulled: List[_pd.DataFrame] = []
 
 #     for (wstart, wend) in windows:
 #         # For variable D/W/M, set end=wstart to fetch that single bar; for minute tokens, use actual window
@@ -95,9 +95,9 @@ def _rewrite_gap_windows(missing_starts: List[pd.Timestamp], token: str) -> List
 #         print("[candles_fill] ⚠️ No data returned for gaps (API may be missing those bars).")
 #         return df
 
-#     add = pd.concat(pulled, ignore_index=True)
+#     add = _pd.concat(pulled, ignore_index=True)
 #     out = (
-#         pd.concat([df, add], ignore_index=True)
+#         _pd.concat([df, add], ignore_index=True)
 #           .sort_values("tz_start")
 #           .drop_duplicates(subset=["tz_start"], keep="last")
 #           .reset_index(drop=True)

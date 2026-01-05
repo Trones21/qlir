@@ -13,7 +13,7 @@ from qlir.io.union_files import union_file_datasets
 import time
 from datetime import datetime, timezone
 import math
-import pandas as pd
+import pandas as _pd
 import logging
 log = logging.getLogger(__name__)
 
@@ -53,14 +53,14 @@ def test_loop_candles():
 
     log.info("Anchor time: %s",  datetime.fromtimestamp(anchor_ts, timezone.utc))
     
-    pages: list[pd.DataFrame] = [] 
+    pages: list[_pd.DataFrame] = [] 
     earliest_got_ts = math.inf
     while earliest_got_ts > anchor_ts:
         #log.info(f"earliest_got_ts: {earliest_got_ts} > anchor_ts: {math.floor(time.time())}")
         resp = get_market_symbol_candles_resolution.sync(symbol, client=client, resolution=GetMarketSymbolCandlesResolutionResolution(resolution), limit=20, start_ts=next_call_ts-1)
         if resp.records:
             resp_as_dict = resp.to_dict()
-            page = pd.DataFrame(resp_as_dict["records"])
+            page = _pd.DataFrame(resp_as_dict["records"])
             clean = normalize_candles(page, venue="drift", resolution="60", keep_ts_start_unix=True, include_partial=False)
             sorted = clean.sort_values("tz_start").reset_index(drop=True)
             pages.append(sorted)
@@ -74,7 +74,7 @@ def test_loop_candles():
             next_call_ts = earliest_got_ts - 1 # remove 1 second to avoid duplicating a row
             if len(pages) > 2:
                 data = (
-                    pd.concat(pages, ignore_index=True)
+                    _pd.concat(pages, ignore_index=True)
                     .sort_values("tz_start")
                     .drop_duplicates(subset=["tz_start"], keep="last")
                     .reset_index(drop=True)
@@ -84,7 +84,7 @@ def test_loop_candles():
 
     if pages:
         data = (
-            pd.concat(pages, ignore_index=True)
+            _pd.concat(pages, ignore_index=True)
             .sort_values("tz_start")
             .drop_duplicates(subset=["tz_start"], keep="last")
             .reset_index(drop=True)

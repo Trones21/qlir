@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Optional, Literal
-import pandas as pd
+import pandas as _pd
 
 BoolDtype = "boolean"
 
@@ -10,22 +10,22 @@ BoolDtype = "boolean"
 # helpers
 # ----------------------------
 
-def _maybe_copy(df: pd.DataFrame, inplace: bool) -> pd.DataFrame:
+def _maybe_copy(df: _pd.DataFrame, inplace: bool) -> _pd.DataFrame:
     return df if inplace else df.copy()
 
 def _safe_name(*parts: object, sep: str = "__") -> str:
     toks = [str(p) for p in parts if p is not None and str(p) != ""]
     return sep.join(toks)
 
-def _as_series(df: pd.DataFrame, col: str) -> pd.Series:
+def _as_series(df: _pd.DataFrame, col: str) -> _pd.Series:
     if col not in df.columns:
         raise KeyError(f"column '{col}' not in DataFrame")
     return df[col]
 
-def _shift(s: pd.Series, n: int = 1) -> pd.Series:
+def _shift(s: _pd.Series, n: int = 1) -> _pd.Series:
     return s.shift(n)
 
-def _safe_bool(s: pd.Series) -> pd.Series:
+def _safe_bool(s: _pd.Series) -> _pd.Series:
     # Normalize to pandas nullable boolean and fill NaNs→False for determinism
     if s.dtype != BoolDtype:
         s = s.astype(BoolDtype)
@@ -36,72 +36,72 @@ def _safe_bool(s: pd.Series) -> pd.Series:
 # ----------------------------
 
 def with_higher_high(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     high_col: str = "high",
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = _maybe_copy(df, inplace)
     h = _as_series(out, high_col)
     out[name or _safe_name(high_col, "higher_high")] = _safe_bool(h > _shift(h))
     return out
 
 def with_lower_low(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     low_col: str = "low",
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = _maybe_copy(df, inplace)
     l = _as_series(out, low_col)
     out[name or _safe_name(low_col, "lower_low")] = _safe_bool(l < _shift(l))
     return out
 
 def with_higher_close(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     close_col: str = "close",
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = _maybe_copy(df, inplace)
     c = _as_series(out, close_col)
     out[name or _safe_name(close_col, "higher_close")] = _safe_bool(c > _shift(c))
     return out
 
 def with_lower_close(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     close_col: str = "close",
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = _maybe_copy(df, inplace)
     c = _as_series(out, close_col)
     out[name or _safe_name(close_col, "lower_close")] = _safe_bool(c < _shift(c))
     return out
 
 def with_higher_open(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     open_col: str = "open",
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = _maybe_copy(df, inplace)
     o = _as_series(out, open_col)
     out[name or _safe_name(open_col, "higher_open")] = _safe_bool(o > _shift(o))
     return out
 
 def with_lower_open(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     open_col: str = "open",
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = _maybe_copy(df, inplace)
     o = _as_series(out, open_col)
     out[name or _safe_name(open_col, "lower_open")] = _safe_bool(o < _shift(o))
@@ -112,14 +112,14 @@ def with_lower_open(
 # ----------------------------
 
 def with_inside_bar(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
     *,
     name: Optional[str] = None,
     inclusive: Literal["both", "strict"] = "both",
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Inside bar: current range is within prior range.
     - inclusive="both": high_t <= high_{t-1} and low_t >= low_{t-1}
@@ -137,14 +137,14 @@ def with_inside_bar(
     return out
 
 def with_outside_bar(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
     *,
     name: Optional[str] = None,
     inclusive: Literal["both", "strict"] = "both",
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Outside bar: current range engulfs prior range.
     - inclusive="both": high_t >= high_{t-1} and low_t <= low_{t-1}
@@ -166,14 +166,14 @@ def with_outside_bar(
 # ----------------------------
 
 def with_bullish_bar(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     open_col: str = "open",
     close_col: str = "close",
     *,
     name: Optional[str] = None,
     allow_equal: bool = False,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Bullish bar (close > open). If allow_equal=True, uses >=.
     """
@@ -184,14 +184,14 @@ def with_bullish_bar(
     return out
 
 def with_bearish_bar(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     open_col: str = "open",
     close_col: str = "close",
     *,
     name: Optional[str] = None,
     allow_equal: bool = False,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Bearish bar (close < open). If allow_equal=True, uses <=.
     """
@@ -206,14 +206,14 @@ def with_bearish_bar(
 # ----------------------------
 
 def with_true_range(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
     close_col: str = "close",
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Wilder's True Range:
       TR_t = max( high_t - low_t, abs(high_t - close_{t-1}), abs(low_t - close_{t-1}) )
@@ -221,19 +221,19 @@ def with_true_range(
     out = _maybe_copy(df, inplace)
     h, l, c = _as_series(out, high_col), _as_series(out, low_col), _as_series(out, close_col)
     prev_c = _shift(c)
-    tr = pd.concat([(h - l).abs(), (h - prev_c).abs(), (l - prev_c).abs()], axis=1).max(axis=1)
+    tr = _pd.concat([(h - l).abs(), (h - prev_c).abs(), (l - prev_c).abs()], axis=1).max(axis=1)
     out[name or _safe_name("true_range")] = tr
     return out
 
 def with_range_expansion_vs_prev(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     high_col: str = "high",
     low_col: str = "low",
     *,
     name: Optional[str] = None,
     method: Literal["highlow", "tr"] = "highlow",
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Range expansion vs previous bar:
     - method="highlow": (high-low)_t > (high-low)_{t-1}

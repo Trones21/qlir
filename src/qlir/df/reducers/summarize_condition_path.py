@@ -1,5 +1,5 @@
 from typing import Literal
-import pandas as pd
+import pandas as _pd
 
 from qlir.core.constants import DEFAULT_OHLC_COLS, DEFAULT_OPEN_TIMESTAMP_COL
 from qlir.core.types.OHLC_Cols import OHLC_Cols
@@ -8,13 +8,13 @@ from qlir.df.condition_set.assign_group_ids import assign_condition_group_id
 
 
 def summarize_condition_paths(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     condition_col: str,
     ts_col: str = DEFAULT_OPEN_TIMESTAMP_COL,
     ohlc_cols: OHLC_Cols = DEFAULT_OHLC_COLS,
     group_col: str = "condition_group_id",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Summarize all contiguous condition-true paths in a DataFrame.
     """
@@ -46,11 +46,11 @@ def summarize_condition_paths(
 
 
 def summarize_condition_path(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     ts_col: str = DEFAULT_OPEN_TIMESTAMP_COL,
     ohlc_cols: OHLC_Cols = DEFAULT_OHLC_COLS
-) -> pd.Series:
+) -> _pd.Series:
     """
     Summarize a contiguous condition-true price path.
 
@@ -63,7 +63,7 @@ def summarize_condition_path(
     first = df.iloc[0]
     last = df.iloc[-1]
 
-    return pd.Series({
+    return _pd.Series({
         "start_time": first[ts_col],
         "end_time": last[ts_col],
         "bars": len(df),

@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 import pytest
 
 from qlir.df.distributions.condition_set_persistence import (
@@ -16,7 +16,7 @@ def test_condition_set_persistence_basic():
         - length 3
     """
 
-    df = pd.DataFrame(
+    df = _pd.DataFrame(
         {
             "cond": [
                 False,
@@ -31,7 +31,7 @@ def test_condition_set_persistence_basic():
                 False,
             ]
         },
-        index=pd.date_range("2024-01-01", periods=10, freq="T"),
+        index=_pd.date_range("2024-01-01", periods=10, freq="T"),
     )
 
     result = condition_set_persistence_df(
@@ -42,7 +42,7 @@ def test_condition_set_persistence_basic():
 
     # Expected run-length counts
     # lengths: [1, 2, 3] → counts all 1
-    expected = pd.DataFrame(
+    expected = _pd.DataFrame(
         {
             "condition_set": ["test_condition"] * 3,
             "duration_bars": [1, 2, 3],
@@ -59,24 +59,24 @@ def test_condition_set_persistence_basic():
     assert list(result.columns) == list(expected.columns)
 
     # Exact matches where appropriate
-    pd.testing.assert_series_equal(
+    _pd.testing.assert_series_equal(
         result["duration_bars"], expected["duration_bars"], check_dtype=False
     )
-    pd.testing.assert_series_equal(
+    _pd.testing.assert_series_equal(
         result["count"], expected["count"], check_dtype=False
     )
-    pd.testing.assert_series_equal(
+    _pd.testing.assert_series_equal(
         result["condition_set"], expected["condition_set"]
     )
 
     # Floating comparisons
-    pd.testing.assert_series_equal(
+    _pd.testing.assert_series_equal(
         result["pct_of_groups"],
         expected["pct_of_groups"],
         check_exact=False,
         rtol=1e-8,
     )
-    pd.testing.assert_series_equal(
+    _pd.testing.assert_series_equal(
         result["pct_of_groups_running"],
         expected["pct_of_groups_running"],
         check_exact=False,

@@ -16,7 +16,7 @@ Manifest Aggregator logs not being written to /logs
 come up with an import / export policy (qlir imports should look clean to the end user, no leaking of pandas etc.)
 Options:
 
-see chatgpt for implementation details 
+see chatgpt for implementation details: https://chatgpt.com/c/695b5d5d-9f74-8325-a6ec-fdc61066733a
 
 # Priorities
 

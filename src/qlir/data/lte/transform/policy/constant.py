@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pandas as pd
+import pandas as _pd
 
 from .base import FillPolicy, FillContext
 
@@ -14,9 +14,9 @@ class ConstantFillPolicy(FillPolicy):
 
     name = "constant"
 
-    def generate(self, ctx: FillContext) -> pd.DataFrame:
+    def generate(self, ctx: FillContext) -> _pd.DataFrame:
         if len(ctx.timestamps) == 0:
-            return pd.DataFrame()
+            return _pd.DataFrame()
 
         rows = []
         prev_close = ctx.left["close"]
@@ -33,6 +33,6 @@ class ConstantFillPolicy(FillPolicy):
             )
 
         return (
-            pd.DataFrame(rows)
+            _pd.DataFrame(rows)
             .set_index("timestamp")
         )

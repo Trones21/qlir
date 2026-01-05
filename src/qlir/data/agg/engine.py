@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.agg.atomic import atomic_rename, atomic_write_json
 from qlir.data.agg.manifest import AggManifest
@@ -80,7 +80,7 @@ def get_slices_needing_to_be_aggregated(
     return todo
 
 
-def write_parquet_atomic(df: pd.DataFrame, final_path: Path) -> None:
+def write_parquet_atomic(df: _pd.DataFrame, final_path: Path) -> None:
     final_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = final_path.with_suffix(final_path.suffix + ".tmp")
     df.to_parquet(tmp_path, index=False)
@@ -128,7 +128,7 @@ def _set_head_items(
     agg: AggManifest,
     items: list[dict[str, Any]] | None,
     *,
-    head_df: pd.DataFrame | None,
+    head_df: _pd.DataFrame | None,
 ) -> None:
     """
     Update agg.data["head"] (or remove it if empty).
@@ -162,7 +162,7 @@ def create_or_update_head(
     *,
     agg: AggManifest,
     paths: DatasetPaths,
-    new_frames: list[pd.DataFrame],
+    new_frames: list[_pd.DataFrame],
     new_slice_ids: list[str],
     cfg: AggConfig,
 ) -> None:
@@ -185,7 +185,7 @@ def create_or_update_head(
     head_pq = _head_path(paths)
     if head_items and head_pq.exists():
         try:
-            head_df = pd.read_parquet(head_pq)
+            head_df = _pd.read_parquet(head_pq)
         except Exception as exc:
             # If head is corrupt, safest recovery is to rebuild it from raw JSON
             # by discarding head parquet but keeping head slice IDs.
@@ -198,7 +198,7 @@ def create_or_update_head(
 
     # Combine head + new (in slice order)
     combined_items: list[dict[str, Any]] = []
-    combined_frames: list[pd.DataFrame] = []
+    combined_frames: list[_pd.DataFrame] = []
 
     if head_df is not None and head_items:
         combined_items.extend(head_items)
@@ -208,7 +208,7 @@ def create_or_update_head(
         combined_items.append({"slice_id": sid, "row_count": int(len(df))})
         combined_frames.append(df)
 
-    combined = pd.concat(combined_frames, ignore_index=True)
+    combined = _pd.concat(combined_frames, ignore_index=True)
 
     # Helper to slice off the first K slices worth of rows (preserving boundaries)
     def rows_for_first_k_slices(items: list[dict[str, Any]], k: int) -> int:
@@ -314,7 +314,7 @@ def run_agg_daemon(
 
         # Load some new slices this loop (tunable; correctness does not depend on it)
         batch = todo[: cfg.ingest_chunk_slices]
-        new_frames: list[pd.DataFrame] = []
+        new_frames: list[_pd.DataFrame] = []
         new_slice_ids: list[str] = []
 
         for s in batch:

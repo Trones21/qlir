@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 from qlir.features.vwap.block import with_vwap_feature_block
 import pytest
 pytestmark = pytest.mark.local
@@ -15,7 +15,7 @@ FLAG_COLS = ["cross_up", "cross_down", "reject_up", "reject_down"]
 
 def test_vwap_block_contract_columns_and_types():
     # Arrange
-    df = pd.DataFrame([
+    df = _pd.DataFrame([
         {"tz_start":"2024-01-01 00:00:00", "open":10, "high":11, "low": 9, "close":10.5, "volume":100},
         {"tz_start":"2024-01-01 00:01:00", "open":10, "high":12, "low": 8, "close":11.0, "volume":120},
     ])

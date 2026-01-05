@@ -1,5 +1,5 @@
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 from ...indicators.vwap import with_vwap_hlc3_session
 from .relations import flag_relations
 from ..common.session import with_session_id
@@ -11,12 +11,12 @@ __all__ = ["with_vwap_feature_block"]
 
 
 def with_vwap_feature_block(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     tz: str = "UTC",
     touch_eps: float = 5e-4,
     norm_window: int | None = 200,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = with_vwap_hlc3_session(df, tz=tz)
     out = flag_relations(out, touch_eps=touch_eps)
     out = with_session_id(out, tz=tz)

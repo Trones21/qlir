@@ -2,8 +2,8 @@ import logging
 from qlir.indicators.vwap import with_vwap_cum_hlc3
 from qlir.features.common.distances import with_distance
 from qlir.utils.logdf import logdf
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 import pytest
 pytestmark = pytest.mark.local
 
@@ -14,8 +14,8 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 def distance_ref(close, vwap):
     out = []
     for x, m in zip(close, vwap):
-        out.append(np.nan if (m is None or m == 0 or x is None) else (x - m) / m)
-    return pd.Series(out, name="pct")
+        out.append(_np.nan if (m is None or m == 0 or x is None) else (x - m) / m)
+    return _pd.Series(out, name="pct")
 
 def test_distance_against_reference(static_data):
     # Arrange - Get vwap since we are going to use that 
@@ -31,12 +31,12 @@ def test_distance_against_reference(static_data):
     ref_series = ref.reset_index(drop=True)
 
     try:
-        pd.testing.assert_series_equal(
+        _pd.testing.assert_series_equal(
             got_series, ref_series,
             rtol=1e-10, atol=1e-12, check_names=False
         )
     except AssertionError:
-        diff = pd.DataFrame({
+        diff = _pd.DataFrame({
             "got": got_series,
             "ref": ref_series,
             "diff": got_series - ref_series,

@@ -1,13 +1,13 @@
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 from qlir.indicators.vwap import with_vwap_hlc3_session
 import pytest
 pytestmark = pytest.mark.local
 
 def test_vwap_hlc3_resets_each_session_minimal():
     # 3 bars on day 1 at ~10, 2 bars on day 2 at ~20
-    ts = pd.date_range("2025-01-01 23:58:00Z", periods=5, freq="1min")
-    df = pd.DataFrame(
+    ts = _pd.date_range("2025-01-01 23:58:00Z", periods=5, freq="1min")
+    df = _pd.DataFrame(
         {
             "open":  [10, 10, 10, 20, 20],
             "high":  [10, 11, 12, 20, 30],
@@ -21,17 +21,17 @@ def test_vwap_hlc3_resets_each_session_minimal():
     out = with_vwap_hlc3_session(df, tz="UTC")  # this one uses time utils
     print(out)
     v = out["vwap"]
-    assert np.allclose(v.iloc[:3], 10.0)
-    assert np.allclose(v.iloc[3:], 20.0)
+    assert _np.allclose(v.iloc[:3], 10.0)
+    assert _np.allclose(v.iloc[3:], 20.0)
 
 
 
 def test_vwap_session_midnight_end_semantics():
-    ts = pd.to_datetime([
+    ts = _pd.to_datetime([
         "2025-01-01 23:59:00Z",  # day 1
         "2025-01-02 00:00:00Z",  # should be day 2 under 'end' semantics
     ])
-    df = pd.DataFrame(
+    df = _pd.DataFrame(
         {
             "open":  [10, 20],
             "high":  [10, 20],
@@ -46,5 +46,5 @@ def test_vwap_session_midnight_end_semantics():
 
     # independent ground truth
     # day1 vwap = 10; day2 vwap = 20 (each is a single bar)
-    np.testing.assert_allclose(v, [10.0, 20.0], atol=1e-12)
+    _np.testing.assert_allclose(v, [10.0, 20.0], atol=1e-12)
 

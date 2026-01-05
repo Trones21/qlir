@@ -1,12 +1,12 @@
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 import logging
 log = logging.getLogger(__name__)
 from qlir.utils.pdtools import null_if
 from qlir.utils.logdf import logdf
 
 def ref_imp_with_candle_line_relations(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     high_col="high",
     low_col="low",
@@ -17,23 +17,23 @@ def ref_imp_with_candle_line_relations(
     touch_bps: float = 0.001,  # 0.1% of band width as tolerance
     abs_eps: float = 1e-9,     # fallback if width is ~0
     prefix: str = "bb"
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = df.copy()
 
     H, L, C = out[high_col].values, out[low_col].values, out[close_col].values
     lo, md, up = out[lower_col].values, out[mid_col].values, out[upper_col].values
 
-    width = np.maximum(up - lo, 0.0)
-    eps = np.maximum(touch_bps * width, abs_eps)
+    width = _np.maximum(up - lo, 0.0)
+    eps = _np.maximum(touch_bps * width, abs_eps)
 
     def three_state(B):
         # touch if range straddles B or close is within eps
-        touch = ((L <= B) & (B <= H)) | (np.abs(C - B) <= eps)
+        touch = ((L <= B) & (B <= H)) | (_np.abs(C - B) <= eps)
         above = (L > B) & ~touch
         below = (H < B) & ~touch
         # map to labels
-        state = np.where(touch, "touch",
-                 np.where(above, "above", "below"))
+        state = _np.where(touch, "touch",
+                 _np.where(above, "above", "below"))
         return state
 
     out[f"{prefix}_lower_state"] = three_state(lo)
@@ -45,13 +45,13 @@ def ref_imp_with_candle_line_relations(
     # Optional: compsssssact numeric flags {-1,0,1} matching below/touch/above
     # mapping = {"below": -1, "touch": 0, "above": 1}
     # for col in [f"{prefix}_lower_state", f"{prefix}_mid_state", f"{prefix}_upper_state"]:
-    #     out[col + "_flag"] = pd.Categorical(out[col], categories=["below","touch","above"])
+    #     out[col + "_flag"] = _pd.Categorical(out[col], categories=["below","touch","above"])
     #     out[col + "_flag"] = out[col].map(mapping).astype("int8")
 
     return out
 
 def ref_imp_with_candle_relation_mece(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     high_col="high",
     low_col="low",
@@ -63,7 +63,7 @@ def ref_imp_with_candle_relation_mece(
     touch_bps: float = 0.001,  # 0.1% of band width
     abs_eps: float = 0.0,      # fallback epsilon if width==0
     out_col="boll_position"
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Adds a single-column categorical feature representing the
     **Mutually Exclusive, Collectively Exhaustive (MECE)** set of possible
@@ -98,7 +98,7 @@ def ref_imp_with_candle_relation_mece(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         Input DataFrame with one additional categorical column:
         - `boll_position` (default name, can be overridden via `out_col`)
 
@@ -118,13 +118,13 @@ def ref_imp_with_candle_relation_mece(
     md = out[mid_col].values
     up = out[upper_col].values
 
-    width = np.maximum(up - lo, 0.0)
-    eps = np.maximum(touch_bps * width, abs_eps)
+    width = _np.maximum(up - lo, 0.0)
+    eps = _np.maximum(touch_bps * width, abs_eps)
 
     # --- touches (range crosses band OR close is very near the band)
-    t_lo = ((L <= lo) & (lo <= H)) | (np.abs(C - lo) <= eps)
-    t_md = ((L <= md) & (md <= H)) | (np.abs(C - md) <= eps)
-    t_up = ((L <= up) & (up <= H)) | (np.abs(C - up) <= eps)
+    t_lo = ((L <= lo) & (lo <= H)) | (_np.abs(C - lo) <= eps)
+    t_md = ((L <= md) & (md <= H)) | (_np.abs(C - md) <= eps)
+    t_up = ((L <= up) & (up <= H)) | (_np.abs(C - up) <= eps)
 
     # --- outside / inside ranges (no touch implied)
     fully_below = H < (lo - eps)
@@ -138,7 +138,7 @@ def ref_imp_with_candle_relation_mece(
 
     # --- consolidated label precedence:
     # multi-touch first, then single-touch, then outside/inside buckets
-    labels = np.full(len(out), "unknown", dtype=object)
+    labels = _np.full(len(out), "unknown", dtype=object)
 
     # multi-touch combos
     labels[mask_bits == 7] = "touch_all"          # lower+mid+upper
@@ -187,7 +187,7 @@ def ref_imp_with_candle_relation_mece(
         "fully_above",
         "touch_all",   # rare, but keep explicit
     ]
-    out[out_col] = pd.Categorical(labels, categories=cats, ordered=True)
+    out[out_col] = _pd.Categorical(labels, categories=cats, ordered=True)
 
     # invalidate where bands aren't valid
     if valid_col in out:
@@ -195,7 +195,7 @@ def ref_imp_with_candle_relation_mece(
         out.loc[m, [out_col,
                     "bb_touch_lower","bb_touch_mid","bb_touch_upper",
                     "bb_within_lower_rng","bb_within_upper_rng",
-                    "bb_fully_below","bb_fully_above"]] = pd.NA
+                    "bb_fully_below","bb_fully_above"]] = _pd.NA
 
     return out
 

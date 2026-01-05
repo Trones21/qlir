@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, Literal, Optional
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.quality.candles.candles import validate_candles
 
@@ -12,17 +12,17 @@ def _as_path(path: str | Path) -> Path:
 
 
 # ---------- Explicit readers ----------
-def read_csv(path: str | Path, **kwargs) -> pd.DataFrame:
+def read_csv(path: str | Path, **kwargs) -> _pd.DataFrame:
     """Read CSV into DataFrame. Extra kwargs forwarded to pandas.read_csv."""
-    return pd.read_csv(_as_path(path), **kwargs)
+    return _pd.read_csv(_as_path(path), **kwargs)
 
 
-def read_parquet(path: str | Path, **kwargs) -> pd.DataFrame:
+def read_parquet(path: str | Path, **kwargs) -> _pd.DataFrame:
     """Read Parquet into DataFrame. Extra kwargs forwarded to pandas.read_parquet."""
-    return pd.read_parquet(_as_path(path), **kwargs)
+    return _pd.read_parquet(_as_path(path), **kwargs)
 
 
-def read_json(path: str | Path, **kwargs) -> pd.DataFrame:
+def read_json(path: str | Path, **kwargs) -> _pd.DataFrame:
     """
     Read JSON into DataFrame.
     Common kwargs:
@@ -30,11 +30,11 @@ def read_json(path: str | Path, **kwargs) -> pd.DataFrame:
       - lines (True for JSONL)
       - dtype, convert_dates, etc.
     """
-    return pd.read_json(_as_path(path), **kwargs)
+    return _pd.read_json(_as_path(path), **kwargs)
 
 
 # ---------- Dispatcher ----------
-def read(path: str | Path, **kwargs) -> pd.DataFrame:
+def read(path: str | Path, **kwargs) -> _pd.DataFrame:
     """
     Dispatch by file extension:
       .csv      -> read_csv
@@ -76,7 +76,7 @@ def read(path: str | Path, **kwargs) -> pd.DataFrame:
 #     token: Optional[str] = None,        # Drift token; improves gap detection
 #     fetch_kwargs: Optional[Dict[str, Any]] = None,  # passed to backfill_gaps_drift
 #     **read_kwargs,
-# ) -> pd.DataFrame:
+# ) -> _pd.DataFrame:
 #     """
 #     Read candles from CSV/Parquet/JSON, validate, and optionally fetch-fill real gaps from Drift.
 #     """

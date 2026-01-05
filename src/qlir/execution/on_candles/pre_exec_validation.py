@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import wraps
 from typing import Optional
 
-import pandas as pd
+import pandas as _pd
 
 
 # ---------------------------------------------------------------------
@@ -41,17 +41,17 @@ class CandleValidationPolicy:
 # ---------------------------------------------------------------------
 
 def _resolve_time_index(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     time_spec: CandleTimeSpec,
-) -> pd.DatetimeIndex:
+) -> _pd.DatetimeIndex:
     """
     Resolve the time index used for validation.
 
     Returns a DatetimeIndex (may be derived from a column).
     """
     if time_spec.require_index:
-        if not isinstance(df.index, pd.DatetimeIndex):
+        if not isinstance(df.index, _pd.DatetimeIndex):
             raise ValueError(
                 "Candle execution requires DatetimeIndex. "
                 "If time is stored in a column, set "
@@ -69,8 +69,8 @@ def _resolve_time_index(
             f"Timestamp column '{time_spec.ts_col}' not found in DataFrame"
         )
 
-    ts = pd.to_datetime(df[time_spec.ts_col], errors="raise")
-    return pd.DatetimeIndex(ts)
+    ts = _pd.to_datetime(df[time_spec.ts_col], errors="raise")
+    return _pd.DatetimeIndex(ts)
 
 
 # ---------------------------------------------------------------------
@@ -78,7 +78,7 @@ def _resolve_time_index(
 # ---------------------------------------------------------------------
 
 def validate_candle_frame(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     interval_s: int,
     time_spec: CandleTimeSpec = CandleTimeSpec(),
@@ -102,7 +102,7 @@ def validate_candle_frame(
         raise ValueError("Candle timestamps are not monotonic increasing")
 
     deltas = ts.to_series().diff().dropna()
-    expected = pd.Timedelta(seconds=interval_s)
+    expected = _pd.Timedelta(seconds=interval_s)
 
     if policy.require_fixed_interval:
         if not (deltas == expected).all():

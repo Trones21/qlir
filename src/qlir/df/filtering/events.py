@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence, Mapping, Iterable
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
@@ -31,13 +31,13 @@ def _as_utc(dt: datetime) -> datetime:
 
 
 def _normalize_events(
-    events: Sequence[datetime] | Sequence[Mapping[str, Any]] | pd.DataFrame,
+    events: Sequence[datetime] | Sequence[Mapping[str, Any]] | _pd.DataFrame,
     ts_key: str = "ts",
 ) -> list[dict[str, Any]]:
     norm: list[dict[str, Any]] = []
-    if isinstance(events, pd.DataFrame):
+    if isinstance(events, _pd.DataFrame):
         for _, row in events.iterrows():
-            ts = pd.to_datetime(row[ts_key], utc=True).to_pydatetime()
+            ts = _pd.to_datetime(row[ts_key], utc=True).to_pydatetime()
             d = row.to_dict()
             d["ts"] = ts
             norm.append(d)
@@ -126,7 +126,7 @@ def make_after_windows_from_events(events: Sequence[dict[str, Any]], after: time
 # --------- dataframe filters --------- #
 
 def around_anchors(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     anchors,
     *,
     before: timedelta,
@@ -135,7 +135,7 @@ def around_anchors(
     add_event_id: bool = False,
     event_label_prefix: str = "event_",
     ts_key: str = "ts",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     ts = df[col]
 
@@ -146,7 +146,7 @@ def around_anchors(
         start, end = windows[0]
         return df[(ts >= start) & (ts <= end)]
 
-    mask = pd.Series(False, index=df.index)
+    mask = _pd.Series(False, index=df.index)
     event_ids: list[int | None] = [None] * len(df)
 
     for idx, (start, end) in enumerate(windows):
@@ -161,32 +161,32 @@ def around_anchors(
     filtered = df[mask]
 
     if add_event_id:
-        event_series = pd.Series(event_ids, index=df.index, dtype="Int64").loc[filtered.index]
+        event_series = _pd.Series(event_ids, index=df.index, dtype="Int64").loc[filtered.index]
         filtered = filtered.copy()
         filtered["event_id"] = event_series
         filtered["event_label"] = filtered["event_id"].apply(
-            lambda x: f"{event_label_prefix}{x}" if pd.notna(x) else None
+            lambda x: f"{event_label_prefix}{x}" if _pd.notna(x) else None
         )
 
     return filtered
 
 
 def before_anchors(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     anchors,
     *,
     before: timedelta,
     col: str = DEFAULT_TS_COL,
     add_event_id: bool = False,
     ts_key: str = "ts",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     ts = df[col]
 
     events = _normalize_events(anchors, ts_key=ts_key)
     windows = make_before_windows_from_events(events, before)
 
-    mask = pd.Series(False, index=df.index)
+    mask = _pd.Series(False, index=df.index)
     event_ids: list[int | None] = [None] * len(df)
 
     for idx, (start, end) in enumerate(windows):
@@ -200,28 +200,28 @@ def before_anchors(
 
     filtered = df[mask]
     if add_event_id:
-        event_series = pd.Series(event_ids, index=df.index, dtype="Int64").loc[filtered.index]
+        event_series = _pd.Series(event_ids, index=df.index, dtype="Int64").loc[filtered.index]
         filtered = filtered.copy()
         filtered["event_id"] = event_series
     return filtered
 
 
 def after_anchors(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     anchors,
     *,
     after: timedelta,
     col: str = DEFAULT_TS_COL,
     add_event_id: bool = False,
     ts_key: str = "ts",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     ts = df[col]
 
     events = _normalize_events(anchors, ts_key=ts_key)
     windows = make_after_windows_from_events(events, after)
 
-    mask = pd.Series(False, index=df.index)
+    mask = _pd.Series(False, index=df.index)
     event_ids: list[int | None] = [None] * len(df)
 
     for idx, (start, end) in enumerate(windows):
@@ -235,7 +235,7 @@ def after_anchors(
 
     filtered = df[mask]
     if add_event_id:
-        event_series = pd.Series(event_ids, index=df.index, dtype="Int64").loc[filtered.index]
+        event_series = _pd.Series(event_ids, index=df.index, dtype="Int64").loc[filtered.index]
         filtered = filtered.copy()
         filtered["event_id"] = event_series
     return filtered

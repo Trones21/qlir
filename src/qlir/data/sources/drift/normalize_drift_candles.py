@@ -6,7 +6,7 @@ from collections import deque
 from typing import Optional
 import logging
 from qlir.utils.logdf import logdf
-import pandas as pd
+import pandas as _pd
 
 log = logging.getLogger(__name__)
 
@@ -43,20 +43,20 @@ _ROLLING_LAST_CLOSE: bool = True
 
 # ---- Small helpers ---------------------------------------------------------
 
-def _get_candle_size(resolution: str) -> pd.Timedelta:
+def _get_candle_size(resolution: str) -> _pd.Timedelta:
     key = _RESOLUTION_SIZES.get(str(resolution))
     
     if key is None:
         raise ValueError(f"Unknown resolution {resolution!r}")
     
-    off = pd.to_timedelta(key)
+    off = _pd.to_timedelta(key)
 
     # Always return scalar Timedelta
-    if isinstance(off, pd.Timedelta):
+    if isinstance(off, _pd.Timedelta):
         return off
     return off[0]   # e.g., if off is a TimedeltaIndex of length 1
 
-def rename_by_index(df: pd.DataFrame, old_cols, new_cols):
+def rename_by_index(df: _pd.DataFrame, old_cols, new_cols):
     if len(old_cols) != len(new_cols):
         raise ValueError("old_cols and new_cols must be same length")
     return df.rename(columns=dict(zip(old_cols, new_cols)))
@@ -64,14 +64,14 @@ def rename_by_index(df: pd.DataFrame, old_cols, new_cols):
 # ---- Public API ------------------------------------------------------------
 
 def normalize_drift_candles(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     resolution: str,
     keep_oracle: bool,
     keep_fills: bool,
     keep_ts_start_unix: bool = False,
     include_partial: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Normalize raw Drift candles into canonical OHLCV format.
 
@@ -112,12 +112,12 @@ def normalize_drift_candles(
 
     # ---- Timestamp → UTC-aware ----
     ts = out["ts"]
-    if pd.api.types.is_numeric_dtype(ts):
+    if _pd.api.types.is_numeric_dtype(ts):
         # crude but effective heuristic: < 1e11 ≈ seconds, else ms
         unit = "s" if float(ts.max()) < 1e11 else "ms"
-        ts = pd.to_datetime(ts, unit=unit, utc=True, errors="coerce")
+        ts = _pd.to_datetime(ts, unit=unit, utc=True, errors="coerce")
     else:
-        ts = pd.to_datetime(ts, utc=True, errors="coerce")
+        ts = _pd.to_datetime(ts, utc=True, errors="coerce")
     out["ts"] = ts
 
     # ---- Bounds from semantics ----
@@ -132,11 +132,11 @@ def normalize_drift_candles(
 
     # Mark partial last candle if tz_end in future (rolling)
     # if _ROLLING_LAST_CLOSE:
-    #     now = pd.Timestamp.now(tz="UTC")
+    #     now = _pd.Timestamp.now(tz="UTC")
     #     mask_future = out["tz_end"] > now
-    #     out.loc[mask_future, "tz_end"] = pd.NaT
+    #     out.loc[mask_future, "tz_end"] = _pd.NaT
     #     # enforce: partials must have close = NaN (prevents accidental use)
-    #     out.loc[out["tz_end"].isna(), "close"] = pd.NA
+    #     out.loc[out["tz_end"].isna(), "close"] = _pd.NA
 
     if not include_partial:
         out = out[out["tz_end"].notna()]

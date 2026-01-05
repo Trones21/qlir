@@ -1,15 +1,15 @@
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 
 __all__ = ["with_vwap_rejection_signal"]
 
 
 def with_vwap_rejection_signal(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     need_slope_same_side: bool = True,
     out_col: str = "sig_vwap_reject",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = df.copy()
     long_cond = out.get("reject_up", 0).eq(1)
     short_cond = out.get("reject_down", 0).eq(1)

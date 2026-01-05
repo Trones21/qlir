@@ -1,5 +1,5 @@
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 import pytest
 pytestmark = pytest.mark.local
 
@@ -16,8 +16,8 @@ from qlir.core.ops.non_temporal import (
     with_abs,
 )
 def _df_basic():
-    idx = pd.date_range("2024-01-01", periods=6, freq="T")
-    return pd.DataFrame(
+    idx = _pd.date_range("2024-01-01", periods=6, freq="T")
+    return _pd.DataFrame(
         {
             "open":  [10.0, 10.0, 11.0, 10.0,  0.0,  0.0],
             "close": [10.0, 11.0, 11.0, 12.0, 12.0,  0.0],
@@ -39,7 +39,7 @@ def test_with_diff_default_numeric_autopick_and_suffix():
     assert "txt__diff_1" not in out
 
     # spot-check values
-    assert out["open__diff_1"].iloc[0] is np.nan
+    assert out["open__diff_1"].iloc[0] is _np.nan
     assert out["open__diff_1"].iloc[2] == 1.0  # 11 - 10
     assert out["close__diff_1"].iloc[3] == 1.0  # 12 - 11
 
@@ -62,7 +62,7 @@ def test_with_pct_change_basic_clip_inf_and_fill():
     col = "open__pct_1"
     assert col in out
     # at t=5 prior open=0 -> (0/0)-1 => NaN after clip/prop
-    assert np.isnan(out[col].iloc[5])
+    assert _np.isnan(out[col].iloc[5])
 
     # With fill forward, the 0→0 segment becomes stable => pct 0.0 at last row
     out2 = with_pct_change(df, cols=["open"], periods=1, fill_method="ffill", clip_inf_to_nan=True)
@@ -85,11 +85,11 @@ def test_with_log_return_clip_vs_epsilon_guard():
     # Case 1: no epsilon -> log(0) appears -> should be NaN (clipped)
     out = with_log_return(df, cols=["open"], periods=1, clip_inf_to_nan=True)
     col = "open__logret_1"
-    assert np.isnan(out[col].iloc[4]) or np.isnan(out[col].iloc[5])
+    assert _np.isnan(out[col].iloc[4]) or _np.isnan(out[col].iloc[5])
 
     # Case 2: small epsilon guards zeros -> finite value
     out2 = with_log_return(df, cols=["open"], periods=1, epsilon=1e-9, clip_inf_to_nan=True)
-    assert np.isfinite(out2[col].iloc[5])
+    assert _np.isfinite(out2[col].iloc[5])
 
 def test_with_log_return_suffix_and_periods():
     df = _df_basic()
@@ -115,7 +115,7 @@ def test_with_shift_basic_and_inplace():
 # ---------------------------
 
 def test_with_sign_zero_convention_true_and_false():
-    df = pd.DataFrame({"x": [-2.0, 0.0, 3.0]})
+    df = _pd.DataFrame({"x": [-2.0, 0.0, 3.0]})
     out = with_sign(df, cols=["x"])
     assert list(out["x__sign"].tolist()) == [-1.0, 0.0, 1.0]  # dtype may be float from numpy.sign
 
@@ -124,7 +124,7 @@ def test_with_sign_zero_convention_true_and_false():
     assert list(out2["x__sign"].tolist()) == [-1.0, 1.0, 1.0]
 
 def test_with_sign_multi_numeric_autopick():
-    df = pd.DataFrame({"a": [1, -1, 0], "b": [0.0, 2.0, -3.0], "s": ["x", "y", "z"]})
+    df = _pd.DataFrame({"a": [1, -1, 0], "b": [0.0, 2.0, -3.0], "s": ["x", "y", "z"]})
     out = with_sign(df)  # auto-picks numeric cols a,b
     assert "a__sign" in out and "b__sign" in out and "s__sign" not in out
 
@@ -133,7 +133,7 @@ def test_with_sign_multi_numeric_autopick():
 # ---------------------------
 
 def test_with_abs_basic_and_suffix():
-    df = pd.DataFrame({"a": [-1.0, 0.0, 2.5]})
+    df = _pd.DataFrame({"a": [-1.0, 0.0, 2.5]})
     out = with_abs(df, cols=["a"], suffix="ABS")
     assert "a__ABS" in out
     assert out["a__ABS"].tolist() == [1.0, 0.0, 2.5]
@@ -143,16 +143,16 @@ def test_with_abs_basic_and_suffix():
 # ---------------------------
 
 def test_with_bar_direction_pipeline():
-    df = pd.DataFrame({"open": [10, 10, 11, 10, 12]})
+    df = _pd.DataFrame({"open": [10, 10, 11, 10, 12]})
     out = with_bar_direction(df, col="open")
     # should create open__diff_1 and open__direction
     assert "open__diff_1" in out and "open__direction" in out
     # diffs: [NaN,0,1,-1,2] -> signs: [NaN,0,1,-1,1]
-    expected = [np.nan, 0, 1, -1, 1]
+    expected = [_np.nan, 0, 1, -1, 1]
     got = out["open__direction"].astype("float64").tolist()
     # compare element-wise allowing NaN
     for g, e in zip(got, expected):
-        if np.isnan(e):
-            assert np.isnan(g)
+        if _np.isnan(e):
+            assert _np.isnan(g)
         else:
             assert g == e

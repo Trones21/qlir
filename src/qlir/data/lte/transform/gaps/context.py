@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.lte.transform.policy.base import FillContext
 
@@ -13,7 +13,7 @@ from .materialization.markers import DEFAULT_OHLC_COLS, ROW_MATERIALIZED_COL
 
 def build_fill_context(
     *,
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     block: MissingBlock,
     ohlc_cols: Tuple[str, str, str, str] = DEFAULT_OHLC_COLS,
     interval_s: int,
@@ -66,15 +66,15 @@ def build_fill_context(
     # ------------------------------------------------------------------
     # Invariant 4: timestamps must be strictly contiguous at interval_s
     # ------------------------------------------------------------------
-    if not isinstance(df.index, pd.DatetimeIndex):
+    if not isinstance(df.index, _pd.DatetimeIndex):
         raise TypeError("DataFrame must be indexed by DatetimeIndex.")
 
     timestamps = df.index[start : end + 1]
 
-    expected = pd.date_range(
+    expected = _pd.date_range(
         start=timestamps[0],
         periods=len(timestamps),
-        freq=pd.to_timedelta(interval_s, unit="s"),
+        freq=_pd.to_timedelta(interval_s, unit="s"),
     )
 
     if strict and not timestamps.equals(expected):
@@ -124,16 +124,16 @@ def build_fill_context(
 
 def _collect_real_window(
     *,
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     start_idx: int,
     direction: int,
     limit: int,
-) -> list[pd.Series]:
+) -> list[_pd.Series]:
     """
     Collect up to `limit` real (non-materialized) rows walking
     forward (direction=+1) or backward (direction=-1).
     """
-    rows: list[pd.Series] = []
+    rows: list[_pd.Series] = []
 
     i = start_idx
     while 0 <= i < len(df) and len(rows) < limit:

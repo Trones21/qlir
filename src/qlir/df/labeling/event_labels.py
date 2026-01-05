@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence, Mapping
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
@@ -15,13 +15,13 @@ def _as_utc(dt: datetime) -> datetime:
 
 
 def _normalize_events(
-    events: Sequence[datetime] | Sequence[Mapping[str, Any]] | pd.DataFrame,
+    events: Sequence[datetime] | Sequence[Mapping[str, Any]] | _pd.DataFrame,
     ts_key: str = "ts",
 ) -> list[dict[str, Any]]:
     norm: list[dict[str, Any]] = []
-    if isinstance(events, pd.DataFrame):
+    if isinstance(events, _pd.DataFrame):
         for _, row in events.iterrows():
-            ts = pd.to_datetime(row[ts_key], utc=True).to_pydatetime()
+            ts = _pd.to_datetime(row[ts_key], utc=True).to_pydatetime()
             d = row.to_dict()
             d["ts"] = ts
             norm.append(d)
@@ -39,7 +39,7 @@ def _normalize_events(
 
 
 def mark_around_events(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     events,
     *,
     before: timedelta,
@@ -47,7 +47,7 @@ def mark_around_events(
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_event_window",
     add_event_id: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Add a boolean column marking rows within any event window.
     Optionally add event_id to say *which* event window matched first.
@@ -59,7 +59,7 @@ def mark_around_events(
     out = df.copy()
     out[out_col] = False
     if add_event_id:
-        out["event_id"] = pd.Series([None] * len(out), index=out.index, dtype="Int64")
+        out["event_id"] = _pd.Series([None] * len(out), index=out.index, dtype="Int64")
 
     for idx, e in enumerate(evs):
         start = e["ts"] - before

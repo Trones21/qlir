@@ -1,6 +1,6 @@
 from typing import Callable
 
-import pandas as pd
+import pandas as _pd
 
 
 class DIYSummaryExecutionRegistry:
@@ -11,12 +11,12 @@ class DIYSummaryExecutionRegistry:
     """
 
     def __init__(self):
-        self._models: dict[str, Callable[[pd.DataFrame], pd.DataFrame]] = {}
+        self._models: dict[str, Callable[[_pd.DataFrame], _pd.DataFrame]] = {}
 
     def register(
         self,
         name: str,
-        fn: Callable[[pd.DataFrame], pd.DataFrame],
+        fn: Callable[[_pd.DataFrame], _pd.DataFrame],
         *,
         overwrite: bool = False,
     ) -> None:
@@ -26,7 +26,7 @@ class DIYSummaryExecutionRegistry:
             )
         self._models[name] = fn
 
-    def get(self, name: str) -> Callable[[pd.DataFrame], pd.DataFrame]:
+    def get(self, name: str) -> Callable[[_pd.DataFrame], _pd.DataFrame]:
         try:
             return self._models[name]
         except KeyError:

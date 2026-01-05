@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
 
 def add_calendar_labels(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     *,
     year: bool = True,
@@ -16,7 +16,7 @@ def add_calendar_labels(
     dow: bool = True,
     hour: bool = True,
     minute: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Add common calendar/intraday columns to the df.
     """

@@ -1,12 +1,12 @@
-import pandas as pd
+import pandas as _pd
 
 
 def condition_set_persistence_df(
     *,
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     condition_col: str,
     condition_set_name: str,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Summarize persistence of a condition set as a run-length distribution.
 
@@ -25,7 +25,7 @@ def condition_set_persistence_df(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         Columns:
         - condition_set
         - duration_bars
@@ -39,7 +39,7 @@ def condition_set_persistence_df(
     s = df[condition_col].astype(bool)
 
     if s.empty:
-        return pd.DataFrame(
+        return _pd.DataFrame(
             columns=[
                 "condition_set",
                 "duration_bars",
@@ -60,7 +60,7 @@ def condition_set_persistence_df(
     )
 
     if run_lengths.empty:
-        return pd.DataFrame(
+        return _pd.DataFrame(
             {
                 "condition_set": [condition_set_name],
                 "duration_bars": [],

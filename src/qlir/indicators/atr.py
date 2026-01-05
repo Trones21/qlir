@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import Optional
 
-import pandas as pd
+import pandas as _pd
 
 try:
     import talib
@@ -11,20 +11,20 @@ except ImportError:
 
 
 def with_atr(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     high_col: str = "high",
     low_col: str = "low",
     close_col: str = "close",
     period: int = 14,
     out_col: Optional[str] = None,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Return a DataFrame with a TA-Lib ATR column appended.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Must contain high/low/close columns.
     high_col, low_col, close_col : str
         Column names for the OHLC data.
@@ -35,7 +35,7 @@ def with_atr(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         Same DataFrame object with the ATR column added.
 
     Raises

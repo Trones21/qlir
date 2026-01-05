@@ -1,6 +1,6 @@
 from typing import Any
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.execution.on_summary.execution_models import (
     SummaryExecutionModel,
@@ -10,11 +10,11 @@ from qlir.execution.on_summary.diy import diy
 
 
 def execute_summary(
-    paths: pd.DataFrame,
+    paths: _pd.DataFrame,
     *,
     model: SummaryExecutionModel | tuple[str, str],
     **kwargs: Any,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Execute a summary-level execution model.
 

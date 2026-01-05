@@ -5,7 +5,7 @@ from afterdata.logging.logging_setup import setup_logging, LogProfile
 # See logging_setup.py for logging options (LogProfile enum) 
 setup_logging(profile=LogProfile.QLIR_INFO)
 
-import pandas as pd
+import pandas as _pd
 import qlir.data.sources.load as load
 from qlir.data.core.paths import get_agg_dir_path
 from qlir.data.core.instruments import CanonicalInstrument
@@ -64,7 +64,7 @@ def entrypoint():
     DQ.log_candle_dq_issues(dq_report)
     logdf(fixed_df, name="After DQ  ")
 
-def main(df: pd.DataFrame):
+def main(df: _pd.DataFrame):
     '''
     Core analysis body.
 

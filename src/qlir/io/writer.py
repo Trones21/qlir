@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Optional
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.core.naming import sidecar_metadata
 
@@ -14,7 +14,7 @@ def _prep_path(path: str | Path) -> Path:
 
 
 # ---------- Explicit writers ----------
-def write_csv(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
+def write_csv(df: _pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """Write DataFrame to CSV (overwrite). Extra kwargs forwarded to DataFrame.to_csv."""
     path = _prep_path(path)
     df.to_csv(path, index=False, **kwargs)
@@ -22,7 +22,7 @@ def write_csv(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
     return path
 
 
-def write_parquet(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
+def write_parquet(df: _pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """Write DataFrame to Parquet (overwrite). Extra kwargs forwarded to DataFrame.to_parquet."""
     path = _prep_path(path)
     df.to_parquet(path, index=False, **kwargs)
@@ -30,7 +30,7 @@ def write_parquet(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
     return path
 
 
-def write_json(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
+def write_json(df: _pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """
     Write DataFrame to JSON (overwrite).
     Common kwargs: orient="records", indent=2, lines=False, date_format="iso"
@@ -42,7 +42,7 @@ def write_json(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
 
 
 # ---------- Dispatcher ----------
-def write(df: pd.DataFrame, path: str | Path, **kwargs) -> Path:
+def write(df: _pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """
     Dispatch by file extension:
       .csv      -> write_csv

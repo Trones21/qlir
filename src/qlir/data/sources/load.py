@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional
-import pandas as pd
+import pandas as _pd
 
 from qlir import io
 from qlir.data.core.instruments import CanonicalInstrument
@@ -190,7 +190,7 @@ def old_load_ohlcv(
     allow_partials: bool = True,
     index_by: Optional[str] = None,         # 'tz_end' or 'tz_start'
     drop_partials: bool = False,            # convenience: filter tz_end.isna()
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Load a canonical OHLCV file and validate it against the contract.
     This does NOT normalize — it only validates and (optionally) filters/indexes.
@@ -201,10 +201,10 @@ def old_load_ohlcv(
     # Light coercions so files that are "almost right" pass (no normalization here)
     for col in ("tz_start","tz_end"):
         if col in df:
-            df[col] = pd.to_datetime(df[col], utc=True, errors="coerce")
+            df[col] = _pd.to_datetime(df[col], utc=True, errors="coerce")
     for c in ("open","high","low","close","volume"):
         if c in df:
-            df[c] = pd.to_numeric(df[c], errors="coerce")
+            df[c] = _pd.to_numeric(df[c], errors="coerce")
 
     validate_ohlcv(df, cfg=OhlcvContract(require_volume=require_volume, allow_partials=allow_partials))
 
@@ -258,7 +258,7 @@ def old_load_ohlcv(
 #     # 4. Fallback: check column (rare)
 #     if p.suffix in (".csv", ".json"):
 #         try:
-#             df = pd.read_json(p) if p.suffix == ".json" else pd.read_csv(p)
+#             df = _pd.read_json(p) if p.suffix == ".json" else _pd.read_csv(p)
 #             if "symbol" in df.columns:
 #                 uniq = df["symbol"].dropna().unique()
 #                 if len(uniq) == 1:

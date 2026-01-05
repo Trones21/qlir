@@ -1,9 +1,9 @@
-import pandas as pd
+import pandas as _pd
 import qlir.core.ops.temporal as pt 
 from qlir.utils.logdf import logdf
 
 def tag_breakouts_simple(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     price_col: str = "close",
     *,
     lookback: int = 5,
@@ -11,7 +11,7 @@ def tag_breakouts_simple(
     up_col: str = "breakout_up",
     down_col: str = "breakout_down",
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Adds two columns:
       - up_col:   True where pct_change >= +min_move

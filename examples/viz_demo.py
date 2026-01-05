@@ -27,8 +27,8 @@ import matplotlib
 
 matplotlib.use("Agg")  # headless-safe
 
-import pandas as pd
-import numpy as np
+import pandas as _pd
+import numpy as _np
 import matplotlib.pyplot as plt
 
 # --- QLIR imports ---
@@ -50,18 +50,18 @@ except Exception:
 # Data sources
 # -----------------------------
 
-def make_synth(rows: int, seed: int = 42) -> pd.DataFrame:
+def make_synth(rows: int, seed: int = 42) -> _pd.DataFrame:
     """Create a synthetic OHLCV dataset for demonstration."""
-    rng = np.random.default_rng(seed)
-    idx = pd.date_range("2025-01-01 06:00", periods=rows, freq="1min")
+    rng = _np.random.default_rng(seed)
+    idx = _pd.date_range("2025-01-01 06:00", periods=rows, freq="1min")
 
-    close = 100 + np.cumsum(rng.normal(0.0, 0.2, size=rows))
+    close = 100 + _np.cumsum(rng.normal(0.0, 0.2, size=rows))
     high = close + rng.normal(0.1, 0.05, size=rows)
     low = close - rng.normal(0.1, 0.05, size=rows)
     open_ = close + rng.normal(0.0, 0.03, size=rows)
     volume = rng.integers(100, 1000, size=rows)
 
-    df = pd.DataFrame({
+    df = _pd.DataFrame({
         "open": open_,
         "high": high,
         "low": low,
@@ -73,13 +73,13 @@ def make_synth(rows: int, seed: int = 42) -> pd.DataFrame:
     return df
 
 
-def load_file(path: str) -> pd.DataFrame:
+def load_file(path: str) -> _pd.DataFrame:
     """Load file via qlir.io.reader.read dispatcher (csv, parquet, json)."""
     df = read(path)
     # Ensure datetime index
-    if not isinstance(df.index, pd.DatetimeIndex):
+    if not isinstance(df.index, _pd.DatetimeIndex):
         if "time" in df.columns:
-            df = df.set_index(pd.to_datetime(df["time"]))
+            df = df.set_index(_pd.to_datetime(df["time"]))
         else:
             raise ValueError("File must have datetime index or 'time' column.")
     # Ensure VWAP exists
@@ -88,7 +88,7 @@ def load_file(path: str) -> pd.DataFrame:
     return df
 
 
-def fetch(symbol: str, resolution: str, limit: int) -> pd.DataFrame:
+def fetch(symbol: str, resolution: str, limit: int) -> _pd.DataFrame:
     if fetch_drift_candles is None:
         raise RuntimeError("CLI fetch not available: qlir.data.drift.fetch_drift_candles not importable")
     df = fetch_drift_candles(symbol=symbol, resolution=resolution, limit=limit)

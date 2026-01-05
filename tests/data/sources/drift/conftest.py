@@ -1,9 +1,9 @@
-import pandas as pd
+import pandas as _pd
 import pytest
 
 @pytest.fixture
 def drift_candles_df():
-    return pd.DataFrame([
+    return _pd.DataFrame([
         {
             "ts": 1763596800,
             "fillOpen": 136.900000,

@@ -24,7 +24,7 @@ from typing import Any, Optional, Dict, Tuple
 
 import json
 
-import pandas as pd
+import pandas as _pd
 import pyarrow.parquet as pq
 
 from qlir.data.core.naming import split_candle_stem
@@ -115,9 +115,9 @@ def infer_instrument_id(file_path: str | Path) -> Optional[str]:
     if file_path.suffix in (".csv", ".json"):
         try:
             if file_path.suffix == ".json":
-                df = pd.read_json(file_path)
+                df = _pd.read_json(file_path)
             else:
-                df = pd.read_csv(file_path)
+                df = _pd.read_csv(file_path)
 
             for col in ("instrument_id", "symbol"):
                 if col in df.columns:

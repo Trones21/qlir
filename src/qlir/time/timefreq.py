@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.core.naming_constants import CANONICAL_RESOLUTION_UNIT_MAP, REVERSE_CANONICAL_RESOLUTION_UNIT_MAP
 from qlir.time.timeunit import TimeUnit
@@ -14,7 +14,7 @@ from qlir.time.timeunit import TimeUnit
 class TimeFreq:
     count: int
     unit: TimeUnit               # 'second' | 'minute' | 'hour' | 'day'
-    pandas_offset: Optional[pd.tseries.offsets.BaseOffset] = None
+    pandas_offset: Optional[_pd.tseries.offsets.BaseOffset] = None
 
 
     @property

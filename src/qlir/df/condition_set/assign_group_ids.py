@@ -1,12 +1,12 @@
-import pandas as pd
+import pandas as _pd
 
 
 def assign_condition_group_id(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     condition_col: str,
     group_col: str = "condition_group_id",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Assign monotonically increasing IDs to contiguous True runs.
 

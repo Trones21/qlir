@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 import pytest
 pytestmark = pytest.mark.local
 
@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def _candles(timestamps):
-    return pd.DataFrame(
+    return _pd.DataFrame(
         {
             "tz_start": timestamps,
             "open": [1.0] * len(timestamps),
@@ -45,7 +45,7 @@ def test_detect_candle_gaps_finds_gap_minutely():
     )
     tf = TimeFreq(count=1, unit=TimeUnit.MINUTE)
     missing = detect_missing_candles(df, freq=tf)
-    assert missing == [pd.Timestamp("2025-01-01 00:01:00", tz="UTC")]
+    assert missing == [_pd.Timestamp("2025-01-01 00:01:00", tz="UTC")]
 
 
 def test_detect_candle_gaps_returns_empty_when_no_freq_or_too_short():

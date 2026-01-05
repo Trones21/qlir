@@ -1,18 +1,18 @@
 # qlir/df/group_aligned/abs_to_unit.py
 
-import pandas as pd
+import pandas as _pd
 from qlir.core.types.UnitEnum import UnitEnum
 from qlir.df.scalars.units import abs_to_bps, abs_to_pct
 
 
 def abs_to_unit(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     value_col: str,
     ref_col: str,
     unit: UnitEnum,
     out_col: str | None = None,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Group-aligned normalization.
     All rows are normalized against the first row of the group.

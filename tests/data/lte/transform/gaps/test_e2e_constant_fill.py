@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.lte.transform.gaps.materialization.materialize_missing_rows import (
     materialize_missing_rows,
@@ -26,7 +26,7 @@ def test_end_to_end_constant_fill_policy():
     # ------------------------------------------------------------
     # Step 1: Build sparse input (missing middle candles)
     # ------------------------------------------------------------
-    df = pd.DataFrame(
+    df = _pd.DataFrame(
         {
             "timestamp": [
                 "2024-01-01 10:00:00",
@@ -39,7 +39,7 @@ def test_end_to_end_constant_fill_policy():
         }
     )
 
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    df["timestamp"] = _pd.to_datetime(df["timestamp"], utc=True)
     df = df.set_index("timestamp")
 
     # ------------------------------------------------------------
@@ -89,5 +89,5 @@ def test_end_to_end_constant_fill_policy():
     # ------------------------------------------------------------
     # Step 5: Index semantics sanity check
     # ------------------------------------------------------------
-    assert isinstance(df.index, pd.DatetimeIndex)
+    assert isinstance(df.index, _pd.DatetimeIndex)
     assert df.index.tz is not None

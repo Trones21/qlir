@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import logging
 from typing import Iterable, Sequence, Union
-import pandas as pd
+import pandas as _pd
 
 try:
     from tabulate import tabulate
@@ -15,10 +15,10 @@ log = logging.getLogger(__name__)
 
 
 def _filter_df_by_row_idx(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     start_incl: int,
     end_excl: int,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Slice a DataFrame by *positional* row indices, safely.
 
@@ -30,7 +30,7 @@ def _filter_df_by_row_idx(
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         The dataframe to slice.
     start_incl : int
         Start index, inclusive.
@@ -39,7 +39,7 @@ def _filter_df_by_row_idx(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         The sliced DataFrame (possibly empty).
     """
     if df is None or len(df) == 0:
@@ -71,7 +71,7 @@ def _filter_df_by_row_idx(
 
 
 
-def _fmt_df(df: pd.DataFrame, max_width: int = 120) -> str:
+def _fmt_df(df: _pd.DataFrame, max_width: int = 120) -> str:
     """
     Formats a DataFrame into a human-readable table that fits within max_width.
     Falls back to df.to_string() if tabulate isn't available.
@@ -118,13 +118,13 @@ def ensure_logging() -> None:
 
 @dataclass(frozen=True)
 class NamedDF:
-    df: pd.DataFrame
+    df: _pd.DataFrame
     name: str
 
 
 LogDFInput = Union[
-    pd.DataFrame,
-    Iterable[pd.DataFrame],
+    _pd.DataFrame,
+    Iterable[_pd.DataFrame],
     Iterable[NamedDF],
 ]
 
@@ -146,7 +146,7 @@ def logdf(
     level_str = (level or "info").lower()
     emit = getattr(logger, level_str, logger.info)
 
-    def _log_one(df: pd.DataFrame, 
+    def _log_one(df: _pd.DataFrame, 
                  name: str | None,
                  effective_cols: Sequence[str] | None,):
         if df is None or df.empty:
@@ -176,7 +176,7 @@ def logdf(
         emit(f"\n{header}\n{table}{footer}\n")
 
     # ---- Single DataFrame path (index = 0) ----
-    if isinstance(data, pd.DataFrame):
+    if isinstance(data, _pd.DataFrame):
         effective_cols = cols_filter_all_dfs
         if cols_filter_by_df_idx and 0 in cols_filter_by_df_idx:
             effective_cols = cols_filter_by_df_idx[0]
@@ -195,7 +195,7 @@ def logdf(
 
         if isinstance(item, NamedDF):
             _log_one(item.df, item.name, effective_cols)
-        elif isinstance(item, pd.DataFrame):
+        elif isinstance(item, _pd.DataFrame):
             _log_one(item, None, effective_cols)
         else:
             raise TypeError(
@@ -210,7 +210,7 @@ def logdf(
 
 
 # def logdf(
-#     df: pd.DataFrame,
+#     df: _pd.DataFrame,
 #     from_row_idx: int = 0,
 #     max_rows: int = 10,
 #     level: str = "info",
@@ -229,7 +229,7 @@ def logdf(
 
 #     Parameters
 #     ----------
-#     df : pd.DataFrame
+#     df : _pd.DataFrame
 #         DataFrame to display.
 #     from_row_idx : int
 #         Zero-based starting row index (inclusive) in positional terms.

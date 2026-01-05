@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.df.filtering import session as fsession
 from qlir.time.constants import DEFAULT_TS_COL
@@ -10,13 +10,13 @@ from qlir.time.ensure_utc import ensure_utc_df_strict
 
 
 def _left_mark(
-    df: pd.DataFrame,
-    subset: pd.DataFrame,
+    df: _pd.DataFrame,
+    subset: _pd.DataFrame,
     *,
     key: str,
     out_col: str,
     value=True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Generic "filter then self-join" marker.
     df: full dataframe
@@ -35,10 +35,10 @@ def _left_mark(
 
 
 def mark_ny_cash(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ny_cash",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Mark rows that are inside NY cash session (09:30–16:00 America/New_York).
     Uses filtering.session.ny_cash_session(...) under the hood.
@@ -49,69 +49,69 @@ def mark_ny_cash(
 
 
 def mark_ny_premarket(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ny_premarket",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     pre_df = fsession.ny_premarket(df, col=col, add_label=False)
     return _left_mark(df, pre_df, key=col, out_col=out_col, value=True)
 
 
 def mark_ny_afterhours(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ny_afterhours",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     aft_df = fsession.ny_afterhours(df, col=col, add_label=False)
     return _left_mark(df, aft_df, key=col, out_col=out_col, value=True)
 
 
 def mark_ny_extended(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ny_extended",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     ext_df = fsession.ny_extended(df, col=col, add_label=False)
     return _left_mark(df, ext_df, key=col, out_col=out_col, value=True)
 
 
 def mark_london(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_london_session",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     ldn_df = fsession.london_session(df, col=col, add_label=False)
     return _left_mark(df, ldn_df, key=col, out_col=out_col, value=True)
 
 
 def mark_frankfurt(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_frankfurt_session",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     ffm_df = fsession.frankfurt_session(df, col=col, add_label=False)
     return _left_mark(df, ffm_df, key=col, out_col=out_col, value=True)
 
 
 def mark_london_ny_overlap(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
     out_col: str = "in_ldn_ny_overlap",
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
     ov_df = fsession.london_newyork_overlap(df, col=col, add_label=False)
     return _left_mark(df, ov_df, key=col, out_col=out_col, value=True)
 
 
 def mark_all_common_sessions(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     col: str = DEFAULT_TS_COL,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Convenience: add a bunch of common session flags in one call.
     """

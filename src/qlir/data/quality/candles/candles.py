@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import Optional, List
 import logging
 
-import numpy as np
-import pandas as pd
+import numpy as _np
+import pandas as _pd
 
 from qlir.data.quality.candles.models.candles_dq_report import CandlesDQReport
 from qlir.data.quality.candles.models.candle_gap import CandleGap, candle_gaps_to_df, detect_contiguous_gaps
@@ -23,9 +23,9 @@ OHLCV_COLS = ["open", "high", "low", "close", "volume"]
 # -------------------------------------------------------------------
 
 def _sort_dedupe(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     time_col: str = "tz_start",
-) -> tuple[pd.DataFrame, int, Optional[pd.DataFrame]]:
+) -> tuple[_pd.DataFrame, int, Optional[_pd.DataFrame]]:
     """
     Returns:
         out: de-duplicated df
@@ -42,7 +42,7 @@ def _sort_dedupe(
     log.debug(f"Sorting {len(df)} records")
     out = out.sort_values(time_col)
 
-    conflicts: list[pd.DataFrame] = []
+    conflicts: list[_pd.DataFrame] = []
 
     log.debug("Finding duplicates")
     dup_mask = out.duplicated(subset=[time_col], keep=False)
@@ -99,9 +99,9 @@ def _sort_dedupe(
     out = out.reset_index(drop=True)
     n_dropped = before - len(out)
 
-    conflicts_df: Optional[pd.DataFrame]
+    conflicts_df: Optional[_pd.DataFrame]
     if conflicts:
-        conflicts_df = pd.concat(conflicts, ignore_index=True)
+        conflicts_df = _pd.concat(conflicts, ignore_index=True)
         # You can also log summary here if you want
         log.error(
             "Found %d conflicting duplicate groups on '%s' (total %d rows)",
@@ -118,11 +118,11 @@ def _sort_dedupe(
 # -------------------------------------------------------------------
 #  Frequency inference (returns structured object)
 # -------------------------------------------------------------------
-def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
+def infer_freq(df: _pd.DataFrame) -> Optional[TimeFreq]:
     if df.empty or "tz_start" not in df.columns:
         return None
 
-    s = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
+    s = _pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
     if len(s) < 2:
         return None
 
@@ -139,7 +139,7 @@ def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
         return TimeFreq(count=int(seconds), unit=TimeUnit.SECOND)
     else:
         try:
-            off = pd.tseries.frequencies.to_offset(delta)
+            off = _pd.tseries.frequencies.to_offset(delta)
             return TimeFreq(count=off.n, unit=off.name, pandas_offset=off)
         except ValueError:
             return None
@@ -147,7 +147,7 @@ def infer_freq(df: pd.DataFrame) -> Optional[TimeFreq]:
 # -------------------------------------------------------------------
 #  Candle gap detection
 # -------------------------------------------------------------------
-def detect_missing_candles(df: pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[pd.Timestamp]:
+def detect_missing_candles(df: _pd.DataFrame, freq: Optional[TimeFreq] = None) -> list[_pd.Timestamp]:
     if df.empty or freq is None or len(df) < 2:
         return []
 
@@ -157,9 +157,9 @@ def detect_missing_candles(df: pd.DataFrame, freq: Optional[TimeFreq] = None) ->
         raise ValueError(f"Missing required columns: {sorted(miss)}")
 
     fixed, _, _ = _sort_dedupe(df)
-    s = pd.to_datetime(fixed["tz_start"], utc=True)
+    s = _pd.to_datetime(fixed["tz_start"], utc=True)
 
-    expected = pd.date_range(
+    expected = _pd.date_range(
         s.iloc[0],
         s.iloc[-1],
         freq=freq.as_pandas_str,
@@ -173,7 +173,7 @@ def detect_missing_candles(df: pd.DataFrame, freq: Optional[TimeFreq] = None) ->
 # -------------------------------------------------------------------
 #  Value-level checks
 # -------------------------------------------------------------------
-def find_ohlc_zeros(df: pd.DataFrame) -> pd.DataFrame:
+def find_ohlc_zeros(df: _pd.DataFrame) -> _pd.DataFrame:
     """
     Return rows where ANY of open/high/low/close is exactly 0.
     """
@@ -187,11 +187,11 @@ def find_ohlc_zeros(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def find_unrealistic_ranges(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     max_abs_range: float | None = None,
     max_rel_range: float | None = None,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Return rows where the candle range (high-low) looks unrealistically large.
 
@@ -213,7 +213,7 @@ def find_unrealistic_ranges(
     low = df["low"].astype(float)
     _range = high - low
 
-    mask = pd.Series(False, index=df.index)
+    mask = _pd.Series(False, index=df.index)
 
     if max_abs_range is not None:
         mask |= _range > max_abs_range
@@ -221,13 +221,13 @@ def find_unrealistic_ranges(
     if max_rel_range is not None:
         mid = 0.5 * (high + low)
         # avoid div-by-zero if someone sends nonsense data
-        rel = _range / np.where(mid == 0.0, np.nan, mid)
+        rel = _range / _np.where(mid == 0.0, _np.nan, mid)
         mask |= rel > max_rel_range
 
     return df.loc[mask].copy()
 
 
-def find_ohlc_inconsistencies(df: pd.DataFrame) -> pd.DataFrame:
+def find_ohlc_inconsistencies(df: _pd.DataFrame) -> _pd.DataFrame:
     """
     Return rows that violate basic OHLC ordering rules:
 
@@ -289,7 +289,7 @@ def format_missing_str(missing: list, *, max_items: int = 10) -> str:
     more_str = colorize("+ more", Ansi.BOLD, Ansi.RED)
     return f"{shown}, … {more_str}"
 
-def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
+def ensure_homogeneous_candle_size(df: _pd.DataFrame) -> None:
     """
     Raises ValueError if the DataFrame contains inconsistent candle spacing.
 
@@ -305,7 +305,7 @@ def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
     if "tz_start" not in df.columns:
         raise ValueError("Missing tz_start column")
 
-    s = pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
+    s = _pd.to_datetime(df["tz_start"], utc=True).sort_values().drop_duplicates()
     if len(s) < 3:
         return
 
@@ -317,11 +317,11 @@ def ensure_homogeneous_candle_size(df: pd.DataFrame) -> None:
         )
 
 
-def summarize_gap_sizes_df(gaps: list[CandleGap]) -> pd.DataFrame:
+def summarize_gap_sizes_df(gaps: list[CandleGap]) -> _pd.DataFrame:
     """
     Return gap-size distribution as a DataFrame.
     """
-    df = pd.DataFrame(
+    df = _pd.DataFrame(
         {"gap_size": [g.missing_count for g in gaps]}
     )
 
@@ -333,7 +333,7 @@ def summarize_gap_sizes_df(gaps: list[CandleGap]) -> pd.DataFrame:
     )
 
 def gap_sizes_df_to_records(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
 ) -> list[dict]:
     """
     View adapter: convert gap-size summary DF into
@@ -356,12 +356,12 @@ def gap_sizes_df_to_records(
 # -------------------------------------------------------------------
 
 def validate_candles(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     freq: TimeFreq,
     *,
     max_abs_range: float | None = None,
     max_rel_range: float | None = None,
-) -> tuple[pd.DataFrame, CandlesDQReport]:
+) -> tuple[_pd.DataFrame, CandlesDQReport]:
     """
     Validate candles for a *known* frequency.
 
@@ -386,7 +386,7 @@ def validate_candles(
     # value-level diagnostics
     zeros_df = find_ohlc_zeros(fixed)
     inconsist_df = find_ohlc_inconsistencies(fixed)
-    gigantic_candles_df: Optional[pd.DataFrame] = None
+    gigantic_candles_df: Optional[_pd.DataFrame] = None
     if max_abs_range is not None or max_rel_range is not None:
         gigantic_candles_df = find_unrealistic_ranges(
             fixed,
@@ -420,7 +420,7 @@ def validate_candles(
 
 
 def run_candle_quality(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     freq: TimeFreq,
     *,
     max_abs_range: float | None = None,
@@ -431,11 +431,11 @@ def run_candle_quality(
 
     Returns
     -------
-    clean_df : pd.DataFrame
+    clean_df : _pd.DataFrame
         Sorted, deduped, frequency-consistent candle data.
     report : CandlesDQReport
         Full summary of diagnostics.
-    issues : dict[str, Optional[pd.DataFrame]]
+    issues : dict[str, Optional[_pd.DataFrame]]
         Dictionary mapping issue name → filtered DataFrame of affected rows
         (or None if no such issue).
     """
@@ -453,7 +453,7 @@ def run_candle_quality(
         "ohlc_zeros": report.ohlc_zeros,
         "ohlc_inconsistencies": report.ohlc_inconsistencies,
         "large_ranges": report.unrealistically_large_candles,
-        "missing_candles": pd.DataFrame({"tz_start": report.missing_starts})
+        "missing_candles": _pd.DataFrame({"tz_start": report.missing_starts})
             if report.n_gaps > 0 else None,
         "deduped_rows": None,  # optional: populate if needed
     }

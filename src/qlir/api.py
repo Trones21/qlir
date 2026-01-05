@@ -1,5 +1,5 @@
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 
 
 # Re-export handy blocks
@@ -27,7 +27,7 @@ FEATURE_BLOCKS = {
 
 
 
-def apply_feature_block(df: pd.DataFrame, name: str, **kwargs) -> pd.DataFrame:
+def apply_feature_block(df: _pd.DataFrame, name: str, **kwargs) -> _pd.DataFrame:
     fn = FEATURE_BLOCKS.get(name.lower())
     if fn is None:
         raise ValueError(f"Unknown feature block: {name}. Available: {list(FEATURE_BLOCKS)}")

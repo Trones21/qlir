@@ -1,20 +1,20 @@
-import pandas as pd
+import pandas as _pd
 
 
 def add_utc_timestamp_col(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     unix_col: str,
     unit: str,
     out_col: str = "utc_ts",
     copy: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Add a UTC timestamp column (second resolution) derived from a unix timestamp column.
 
     Parameters
     ----------
-    df : pd.DataFrame
+    df : _pd.DataFrame
         Input DataFrame.
     unix_col : str
         Column containing unix timestamps.
@@ -27,7 +27,7 @@ def add_utc_timestamp_col(
 
     Returns
     -------
-    pd.DataFrame
+    _pd.DataFrame
         DataFrame with added UTC timestamp column.
     """
     if unit not in {"s", "ms"}:
@@ -36,7 +36,7 @@ def add_utc_timestamp_col(
     out = df.copy() if copy else df
 
     out[out_col] = (
-        pd.to_datetime(out[unix_col], unit=unit, utc=True)
+        _pd.to_datetime(out[unix_col], unit=unit, utc=True)
         .dt.floor("s")
     )
 

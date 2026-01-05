@@ -2,7 +2,7 @@
 import pytest
 pytestmark = pytest.mark.local
 
-import pandas as pd
+import pandas as _pd
 
 from qlir.data.resampling.generate_candles import (
     generate_candles_from_1m,
@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 
 def make_1m_df(n=10, start="2025-01-01 00:00:00Z"):
     """Build a tiny homogeneous 1m dataframe with tz_start like your infer_freq expects."""
-    idx = pd.date_range(start=start, periods=n, freq="1min")  # 1-minute
-    df = pd.DataFrame(
+    idx = _pd.date_range(start=start, periods=n, freq="1min")  # 1-minute
+    df = _pd.DataFrame(
         {
             "tz_start": idx,   # important for infer_freq
             "open": 1.0,
@@ -99,8 +99,8 @@ def test_generate_candles_from_1m_raises_on_gaps():
 
 def test_generate_candles_general_happy_path():
     # make hourly data
-    idx = pd.date_range("2025-01-01 00:00:00Z", periods=24, freq="1h")
-    df = pd.DataFrame(
+    idx = _pd.date_range("2025-01-01 00:00:00Z", periods=24, freq="1h")
+    df = _pd.DataFrame(
         {
             "tz_start": idx,
             "open": 1.0,
@@ -134,8 +134,8 @@ def test_generate_candles_general_happy_path():
 
 def test_generate_candles_in_unit_mismatch_raises():
     # we actually make 1h data
-    idx = pd.date_range("2025-01-01 00:00:00Z", periods=10, freq="1h")
-    df = pd.DataFrame(
+    idx = _pd.date_range("2025-01-01 00:00:00Z", periods=10, freq="1h")
+    df = _pd.DataFrame(
         {
             "tz_start": idx,
             "open": 1.0,

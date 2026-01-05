@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import List
 
-import pandas as pd
+import pandas as _pd
 
 from .materialization.markers import ROW_MATERIALIZED_COL
 from .types import MissingBlock
 
 
-def find_missing_blocks(df: pd.DataFrame) -> List[MissingBlock]:
+def find_missing_blocks(df: _pd.DataFrame) -> List[MissingBlock]:
     """
     Find contiguous blocks of materialized (missing) rows.
 

@@ -66,7 +66,7 @@ columns: open, high, low, close, volume
 You can load from CSV like:
 
 ```python
-df = pd.read_csv("candles_5m.csv", parse_dates=["ts"])
+df = _pd.read_csv("candles_5m.csv", parse_dates=["ts"])
 df = df.set_index("ts").sort_index()
 ```
 
@@ -97,10 +97,10 @@ No regime filters, no band squeezes, no multi-timeframe coherence (yet). Keep it
 ## Quick start
 
 ```python
-import pandas as pd
+import pandas as _pd
 from breakouts.detect import tag_breakouts_simple
 
-df = pd.read_parquet("sol_5m.parquet")  # or read_csv
+df = _pd.read_parquet("sol_5m.parquet")  # or read_csv
 df = df.sort_index()
 
 df2 = tag_breakouts_simple(
@@ -140,7 +140,7 @@ Prints a simple table with timestamps flagged as breakouts.
 
 ```python
 def tag_breakouts_simple(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     price_col: str = "close",
     *,
     lookback: int = 5,
@@ -148,7 +148,7 @@ def tag_breakouts_simple(
     up_col: str = "breakout_up",
     down_col: str = "breakout_down",
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Adds two columns:
       - up_col:  True where (close_t / close_{t-lookback} - 1) >= min_move
@@ -221,10 +221,10 @@ poetry run pytest -q
 ```python
 # breakouts/detect.py
 from __future__ import annotations
-import pandas as pd
+import pandas as _pd
 
 def tag_breakouts_simple(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     price_col: str = "close",
     *,
     lookback: int = 5,
@@ -232,7 +232,7 @@ def tag_breakouts_simple(
     up_col: str = "breakout_up",
     down_col: str = "breakout_down",
     inplace: bool = False,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     out = df if inplace else df.copy()
     s = out[price_col]
     ref = s.shift(lookback)

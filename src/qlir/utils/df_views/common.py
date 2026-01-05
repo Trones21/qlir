@@ -1,14 +1,14 @@
-import pandas as pd
+import pandas as _pd
 from typing import Iterable
 
 
 def finalize_df(
-    df: pd.DataFrame,
+    df: _pd.DataFrame,
     *,
     columns: Iterable[str] | None = None,
     sort_by: str | None = None,
     ascending: bool = True,
-) -> pd.DataFrame:
+) -> _pd.DataFrame:
     """
     Finalize a DataFrame view:
     - Optionally project + reorder columns
