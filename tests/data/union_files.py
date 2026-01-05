@@ -5,7 +5,7 @@ import pandas as _pd
 from pathlib import Path
 import logging
 
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 log = logging.getLogger(__name__)
 
 # this is your actual function

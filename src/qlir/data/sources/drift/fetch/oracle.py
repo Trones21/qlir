@@ -21,7 +21,7 @@ from qlir.data.sources.drift.time_utils import to_drift_valid_unix_timerange
 
 from qlir.data.core.instruments import CanonicalInstrument
 from qlir.time.timefreq import TimeFreq
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 from pathlib import Path
 from drift_data_api_client import Client
 from drift_data_api_client.api.market import get_market_symbol_funding_rates, get_market_symbol_candles_resolution

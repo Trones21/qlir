@@ -1,5 +1,5 @@
 from qlir.indicators.boll import with_bollinger
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 import pytest
 pytestmark = pytest.mark.local
 

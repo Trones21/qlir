@@ -9,7 +9,7 @@ from qlir.data.resampling.generate_candles import (
     generate_candles,
 )
 from qlir.time.timefreq import TimeFreq, TimeUnit
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 
 import logging 
 log = logging.getLogger(__name__)

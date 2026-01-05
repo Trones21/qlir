@@ -1,6 +1,6 @@
 from qlir.indicators.boll import with_bollinger
 from qlir.features.boll.candle_relations import with_candle_line_relations, with_candle_relation_mece
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 import candle_relations_reference_implementations as ref_imp
 import logging
 log = logging.getLogger(__name__)

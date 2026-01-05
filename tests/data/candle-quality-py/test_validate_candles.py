@@ -6,7 +6,7 @@ from qlir.data.quality.candles.candles import validate_candles, CandlesDQReport
 from qlir.time.timefreq import TimeFreq, TimeUnit
 import logging
 
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 
 log = logging.getLogger(__name__)
 

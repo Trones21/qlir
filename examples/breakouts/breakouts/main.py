@@ -1,7 +1,7 @@
 from pandas import DataFrame
 from qlir.data.sources.drift.fetch import get_candles
 from breakouts.detect import tag_breakouts_simple
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 from qlir.io.writer import write_csv
 from qlir.io.reader import read_csv
 

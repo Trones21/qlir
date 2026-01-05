@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from qlir.df.utils import materialize_index, insert_column, move_column
 from qlir.time.ensure_utc import ensure_utc_series_strict
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 
 import logging 
 

@@ -4,7 +4,7 @@ import logging
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.open_time_spacing import OpenSpacingViolations, SliceParseViolations
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
 from qlir.utils.df_views.list import list_to_df
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 from qlir.utils.str.color import Ansi, colorize
 log = logging.getLogger(__name__)
 

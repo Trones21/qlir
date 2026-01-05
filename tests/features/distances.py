@@ -1,7 +1,7 @@
 import logging
 from qlir.indicators.vwap import with_vwap_cum_hlc3
 from qlir.features.common.distances import with_distance
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 import numpy as _np
 import pandas as _pd
 import pytest

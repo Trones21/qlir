@@ -1,6 +1,6 @@
 import pandas as _pd
 import qlir.core.ops.temporal as pt 
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 
 def tag_breakouts_simple(
     df: _pd.DataFrame,

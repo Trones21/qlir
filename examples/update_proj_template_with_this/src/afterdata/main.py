@@ -14,7 +14,7 @@ from qlir.time.timefreq import TimeFreq
 from qlir.time.timeunit import TimeUnit
 import qlir.data.quality.candles.candles as DQ
 from qlir.io.union_files import union_file_datasets
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 
 def entrypoint():
     print(f""""Hello World!

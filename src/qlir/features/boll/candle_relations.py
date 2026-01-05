@@ -3,7 +3,7 @@ import pandas as _pd
 import logging
 log = logging.getLogger(__name__)
 from qlir.utils.pdtools import null_if
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 
 __all__ = ["with_candle_line_relations"]
 

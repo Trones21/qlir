@@ -10,7 +10,7 @@ from qlir.data.quality.candles.models.candles_dq_report import CandlesDQReport
 from qlir.data.quality.candles.models.candle_gap import CandleGap, candle_gaps_to_df, detect_contiguous_gaps
 from qlir.time.ensure_utc import ensure_utc_series, assert_not_epoch_drift
 from qlir.time.timefreq import TimeFreq, TimeUnit
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 from qlir.utils.str.color import colorize, Ansi
 log = logging.getLogger(__name__)
 

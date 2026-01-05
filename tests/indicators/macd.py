@@ -1,7 +1,7 @@
 from qlir.indicators.macd import with_macd
 import logging
 log = logging.getLogger(__name__)
-from qlir.utils.logdf import logdf
+from qlir.logging.logdf import logdf
 import pytest
 pytestmark = pytest.mark.local
 
