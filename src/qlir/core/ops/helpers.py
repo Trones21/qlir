@@ -4,16 +4,16 @@
 
 from typing import List, Optional, Sequence, Union
 import warnings
-import pandas as pd
+from pandas import DataFrame, api
 
 
 Number = Union[int, float]
 ColsLike =  Optional[Union[str, Sequence[str]]]
 
-def _numeric_cols(df: pd.DataFrame) -> List[str]:
-    return [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+def _numeric_cols(df: DataFrame) -> List[str]:
+    return [c for c in df.columns if api.types.is_numeric_dtype(df[c])]
 
-def _normalize_cols(df: pd.DataFrame, cols: ColsLike) -> List[str]:
+def _normalize_cols(df: DataFrame, cols: ColsLike) -> List[str]:
     if cols is None:
         return _numeric_cols(df)
     if isinstance(cols, str):
@@ -24,7 +24,7 @@ def _normalize_cols(df: pd.DataFrame, cols: ColsLike) -> List[str]:
         warnings.warn(f"Ignoring missing columns: {invalid}", RuntimeWarning)
     return valid
 
-def _maybe_copy(df: pd.DataFrame, inplace: bool) -> pd.DataFrame:
+def _maybe_copy(df: DataFrame, inplace: bool) -> DataFrame:
     return df if inplace else df.copy()
 
 def _safe_name(base: str, *parts: Union[str, int]) -> str:

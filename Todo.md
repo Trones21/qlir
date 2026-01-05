@@ -11,10 +11,19 @@ Manifest Aggregator logs not being written to /logs
     - first check if manifest_aggregator._setup_manifest_logging is actually being called - maybe just raise to short circuit
     - env variable does seem to be working  
 
+# Decisions to be made 
+
+come up with an import / export policy (qlir imports should look clean to the end user, no leaking of pandas etc.)
+Options:
+
+see chatgpt for implementation details 
+
 # Priorities
 
 qlir - data_server - ability to delete and rebuild manifest from scratch
     - try this manually (for like 1m data... delete the file then start up the server, see what happens)
+
+qlir - see data -> sources -> binance  (data server) -> known_issues.md
 
 proj - Do the SMA study!!!!
 
