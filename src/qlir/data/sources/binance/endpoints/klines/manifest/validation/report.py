@@ -1,6 +1,7 @@
 
 import logging
 
+from qlir.core.types.named_df import NamedDF
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.open_time_spacing import OpenSpacingViolations, SliceParseViolations
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
 from qlir.utils.df_views.list import list_to_df
@@ -59,7 +60,7 @@ class ManifestValidationReport:
                 counts_by_shape.append(violation['details'])
 
             df_to_log = list_to_df(rows=counts_by_shape, columns=["slice_keys_count", "structure"])
-            logdf(df_to_log, name="Manifest Objs Counts by Structure")
+            logdf(NamedDF(df_to_log, name="Manifest Objs Counts by Structure"))
 
     def record_and_log_manifest_vs_responses(self, *, fs_issues):
         if not fs_issues:

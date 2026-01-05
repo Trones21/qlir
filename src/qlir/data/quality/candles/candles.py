@@ -6,6 +6,7 @@ import logging
 import numpy as _np
 import pandas as _pd
 
+from qlir.core.types.named_df import NamedDF
 from qlir.data.quality.candles.models.candles_dq_report import CandlesDQReport
 from qlir.data.quality.candles.models.candle_gap import CandleGap, candle_gaps_to_df, detect_contiguous_gaps
 from qlir.time.ensure_utc import ensure_utc_series, assert_not_epoch_drift
@@ -502,9 +503,9 @@ def log_candle_dq_issues(
             f"{ctx} Detected {colorize(str(report.n_gaps), Ansi.BOLD, Ansi.RED)} gaps which represent {colorize(str(len(report.missing_starts)), Ansi.BOLD, Ansi.RED)} missing candles"
         )
         report.gaps_df = report.gaps_df.sort_values("missing_count", ascending=False)
-        logdf(report.gaps_df, name="Candle Gaps")
+        logdf(NamedDF(report.gaps_df, name="Candle Gaps"))
         report.gap_sizes_df = report.gap_sizes_df.sort_values("gap_count", ascending=False)
-        logdf(report.gap_sizes_df, name="Gap Sizes")
+        logdf(NamedDF(report.gap_sizes_df, name="Gap Sizes"))
 
     if report.n_ohlc_zeros:
         log.warning(

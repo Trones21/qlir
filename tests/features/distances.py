@@ -1,4 +1,5 @@
 import logging
+from qlir.core.types.named_df import NamedDF
 from qlir.indicators.vwap import with_vwap_cum_hlc3
 from qlir.features.common.distances import with_distance
 from qlir.logging.logdf import logdf
@@ -41,5 +42,5 @@ def test_distance_against_reference(static_data):
             "ref": ref_series,
             "diff": got_series - ref_series,
         })
-        logdf(diff, 100, name="Mismatch Detected")
+        logdf(NamedDF(diff, name="Mismatch Detected"))
         raise

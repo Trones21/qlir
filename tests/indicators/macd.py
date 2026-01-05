@@ -1,3 +1,4 @@
+from qlir.core.types.named_df import NamedDF
 from qlir.indicators.macd import with_macd
 import logging
 log = logging.getLogger(__name__)
@@ -7,7 +8,7 @@ pytestmark = pytest.mark.local
 
 def test_macd_columns(static_data):
     out = with_macd(static_data)
-    logdf(out, 40, name="With MACD")
+    logdf(NamedDF(out, name="With MACD"), max_rows=40)
 
 
     for c in ["macd", "macd_signal", "macd_hist"]:

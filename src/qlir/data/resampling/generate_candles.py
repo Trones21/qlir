@@ -1,4 +1,5 @@
 
+from qlir.core.types.named_df import NamedDF
 from qlir.time.timefreq import TimeFreq, TimeUnit 
 from qlir.data.quality.candles.candles import infer_freq, ensure_homogeneous_candle_size, detect_missing_candles
 import pandas as _pd
@@ -111,16 +112,16 @@ def generate_candles_from_1m(
     freq: TimeFreq | None = infer_freq(df)
 
     if freq is None:
-        logdf(df=df, name="infer_freq_failure", level="critical")
+        logdf(NamedDF(df=df, name="infer_freq_failure"), level="critical")
         raise ValueError("candle_quality.infer_freq returned None, check the dataset you passed")
 
     if freq.count != 1 or freq.unit != TimeUnit.MINUTE:
-        logdf(df=df, name="infer_freq_failure", level="critical")
+        logdf(NamedDF(df=df, name="infer_freq_failure"), level="critical")
         raise ValueError(f"Incorrect dataset frequency. Expected 1 minute data, got (freq.to_dict() here): {freq.to_dict()} ")
     
     gaps = detect_missing_candles(df, freq)
     if gaps:
-        logdf(df=df, name="canlde_gaps_failure", level="critical")
+        logdf(NamedDF(df=df, name="canlde_gaps_failure"), level="critical")
         raise ValueError({"message":"Found gaps in 1 minute data", "gaps": gaps})
 
     ensure_homogeneous_candle_size(df)
@@ -139,17 +140,17 @@ def generate_candles(
     freq = infer_freq(df)
     
     if freq is None:
-        logdf(df=df, name="infer_freq_failure", level="critical")
+        logdf(NamedDF(df=df, name="infer_freq_failure"), level="critical")
         raise ValueError("candle_quality.infer_freq returned None, check the dataset you passed")
     
     # Check that dataset candle size passed matches the in_unit passed 
     if freq.count != in_unit.count or freq.unit != in_unit.unit:
-        logdf(df=df, name="infer_freq_failure", level="critical")
+        logdf(NamedDF(df=df, name="infer_freq_failure"), level="critical")
         raise ValueError(f"input freq mismatch: inferred {freq}, got arg {in_unit}")
 
     gaps = detect_missing_candles(df, freq)
     if gaps:
-        logdf(df=df, name="candle_gaps_failure", level="critical")
+        logdf(NamedDF(df=df, name="candle_gaps_failure"), level="critical")
         raise ValueError({"message":"Found gaps in {in_unit} data", "number_of_gaps": len(gaps), "gaps": gaps})
 
     # Final Data Quality Check - 
