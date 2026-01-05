@@ -37,12 +37,13 @@ def with_running_true(
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, str]:
     """Consecutive True streak counter for a single boolean column."""
     out = _maybe_copy(df, inplace)
     s = _as_bool_series(out[col])
-    out[name or _safe_name(col, "run_true")] = _consecutive_true(s)
-    return out
+    name = name or _safe_name(col, "run_true")
+    out[name] = _consecutive_true(s)
+    return out, name 
 
 def with_bars_since_true(
     df: _pd.DataFrame,
@@ -50,7 +51,7 @@ def with_bars_since_true(
     *,
     name: Optional[str] = None,
     inplace: bool = False,
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, str]:
     """Bars since last True in column (NaN before first True)."""
     out = _maybe_copy(df, inplace)
     m = _as_bool_series(out[col]).astype(bool)
@@ -58,5 +59,6 @@ def with_bars_since_true(
     idx = _np.arange(n, dtype="int64")
     last_true_idx = _pd.Series(_np.where(m, idx, _np.nan), index=out.index).ffill()
     bars_since = _pd.Series(idx, index=out.index) - last_true_idx
-    out[name or _safe_name(col, "bars_since_true")] = bars_since.where(~bars_since.isna(), _pd.NA).astype("Int64")
-    return out
+    name = name or _safe_name(col, "bars_since_true")
+    out[name] = bars_since.where(~bars_since.isna(), _pd.NA).astype("Int64")
+    return out, name

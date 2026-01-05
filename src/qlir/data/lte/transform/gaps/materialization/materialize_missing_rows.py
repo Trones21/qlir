@@ -42,9 +42,6 @@ import pandas as _pd
 from qlir.data.lte.transform.gaps.materialization.markers import ROW_MATERIALIZED_COL
 
 
-
-
-
 def materialize_missing_rows(
     df: _pd.DataFrame,
     *,
@@ -102,7 +99,7 @@ def materialize_missing_rows(
         raise ValueError("DatetimeIndex must be strictly increasing")
 
     df = df.sort_index()
-
+    
     # ------------------------------------------------------------------
     # Build full wall-clock index
     # ------------------------------------------------------------------

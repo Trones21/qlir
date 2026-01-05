@@ -6,7 +6,7 @@ def assign_condition_group_id(
     *,
     condition_col: str,
     group_col: str = "condition_group_id",
-) -> _pd.DataFrame:
+) -> tuple[_pd.DataFrame, str]:
     """
     Assign monotonically increasing IDs to contiguous True runs.
 
@@ -23,4 +23,4 @@ def assign_condition_group_id(
     # Mask False rows
     df[group_col] = group_ids.where(cond)
 
-    return df
+    return df, group_col
