@@ -60,4 +60,7 @@ def with_abs(
         suffix=suffix or "abs",
     )
 
+
+# We do this so that those ppl who crazily do from qlir.core.ops.non_temporal import * 
+# will see the public funcs 
 __all__ = ["with_sign", "with_abs"]
