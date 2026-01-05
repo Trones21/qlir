@@ -5,18 +5,19 @@ from typing import Tuple
 
 import pandas as _pd
 
+from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.data.lte.transform.gaps.materialization.assert_materialization_complete import assert_materialization_complete
-
+from qlir.core.constants import DEFAULT_OHLC_COLS
 from ..blocks import find_missing_blocks
 from ..context import build_fill_context
-from .markers import ROW_MATERIALIZED_COL, FILL_POLICY_COL, SYNTHETIC_COL, DEFAULT_OHLC_COLS
+from .markers import FILL_POLICY_COL, SYNTHETIC_COL
 from ...policy.base import FillPolicy
 
 
 def apply_fill_policy(
     df: _pd.DataFrame,
     *,
-    ohlc_cols: Tuple[str, str, str, str] = DEFAULT_OHLC_COLS,
+    ohlc_cols: OHLC_Cols = DEFAULT_OHLC_COLS,
     interval_s: int,
     policy: FillPolicy,
     strict: bool = True,

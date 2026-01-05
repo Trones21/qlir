@@ -144,6 +144,14 @@ def logdf(
         emit(f"\n{header}\n{table}{footer}\n")
 
     # ---- Single DataFrame path (index = 0) ----
+    if isinstance(data, NamedDF):
+        effective_cols = cols_filter_all_dfs
+        if cols_filter_by_df_idx and 0 in cols_filter_by_df_idx:
+            effective_cols = cols_filter_by_df_idx[0]
+
+        _log_one(data.df, data.name, effective_cols)
+        return
+    
     if isinstance(data, _pd.DataFrame):
         effective_cols = cols_filter_all_dfs
         if cols_filter_by_df_idx and 0 in cols_filter_by_df_idx:
@@ -151,7 +159,7 @@ def logdf(
 
         _log_one(data, None, effective_cols)
         return
-
+    
     if not isinstance(data, Iterable):
         raise TypeError(f"logdf() received unsupported type: {type(data)!r}")
 

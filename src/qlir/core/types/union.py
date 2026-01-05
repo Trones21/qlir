@@ -9,6 +9,7 @@ ColsLike =  Optional[Union[str, Sequence[str]]]
 
 LogDFInput = Union[
     DataFrame,
+    NamedDF,
     Iterable[DataFrame],
     Iterable[NamedDF],
 ]

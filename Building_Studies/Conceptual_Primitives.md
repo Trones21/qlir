@@ -365,6 +365,7 @@ Examples:
 Symbols and parentheses are allowed if they improve clarity.
 Names are labels, not executable logic.
 
+For math symbols, check out [Setting Up a Compose Key for Math & Greek Symbols](./setup_compose.md
 ---
 
 ## 10. Key Principles
