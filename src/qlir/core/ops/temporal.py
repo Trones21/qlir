@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-from typing import Iterable, List, Optional, Union, Sequence
+from typing import Optional
 import numpy as _np
 import pandas as _pd
-import warnings
 
-from qlir.core.counters.multivariate import _maybe_copy, _safe_name
+from qlir.core.counters.multivariate import _maybe_copy
 from qlir.core.ops._helpers import ColsLike, _add_columns_from_series_map, _normalize_cols
 from qlir.core.ops.non_temporal import with_sign 
-from qlir.logging.logdf import logdf
-from qlir.core.types.named_df import NamedDF
-from qlir.core.counters.univariate import with_bars_since_true, with_running_true
 # ----------------------------
 # Public API
 # ----------------------------

@@ -10,7 +10,10 @@ def bucketize_zoom_equal_width(
     buckets: int = 20,
     threshold_pct: float = 0.9,
     max_depth: int = 6,
+    int_buckets: bool = False,
     dropna: bool = True,
+    human_friendly_fmt: bool = False,
+    raw_values: bool = True,
 ) -> list[NamedDF]:
     """
     Progressive zooming equal-width bucketization.
@@ -19,6 +22,10 @@ def bucketize_zoom_equal_width(
     - bucketize current range
     - if one bucket contains >= threshold_pct of values,
       zoom into that bucket and repeat
+    
+    int_buckets: Whether or not to RETURN buckets at integer intervals 
+        (Bucket sizing always uses float)
+        # e.g. 6.35 - 11.7 (bucket is 7-11 inclusive)
     """
     if dropna:
         s = s.dropna()
@@ -47,7 +54,14 @@ def bucketize_zoom_equal_width(
             total=total,
             depth=depth,
             parent_bucket_id=None,
+            human_friendly_fmt=True,
+            raw_values=False
         )
+
+        # e.g. 6.35 - 11.7 (bucket is 7-11 inclusive)
+        if int_buckets:
+            df["lower"] = _np.ceil(df["lower"])
+            df["upper"] = _np.floor(df["upper"])
 
         out.append(NamedDF(df, f"zoom:depth{depth}"))
 

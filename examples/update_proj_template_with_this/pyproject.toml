@@ -63,6 +63,9 @@ binance-agg-server-arg = "afterdata.etl.binance.main:aggregate_raw_specific"
 
 lte = "afterdata.etl.LTE:clean_data"
 
+sma = "afterdata.analyses.sma_analyses:main"
+
+
 drift_fetch = "afterdata.etl.drift.fetch_initial_data:main"
 drift_append = "afterdata.etl.drift.fetch_and_append_new_data:main"
 

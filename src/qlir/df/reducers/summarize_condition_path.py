@@ -22,7 +22,7 @@ def summarize_condition_paths(
     df = df.copy()
 
     if group_col not in df.columns:
-        df = assign_condition_group_id(
+        (df, _) = assign_condition_group_id(
             df,
             condition_col=condition_col,
             group_col=group_col,

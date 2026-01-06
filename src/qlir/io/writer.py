@@ -25,7 +25,7 @@ def write_csv(df: _pd.DataFrame, path: str | Path, **kwargs) -> Path:
 def write_parquet(df: _pd.DataFrame, path: str | Path, **kwargs) -> Path:
     """Write DataFrame to Parquet (overwrite). Extra kwargs forwarded to DataFrame.to_parquet."""
     path = _prep_path(path)
-    df.to_parquet(path, index=False, **kwargs)
+    df.to_parquet(path, index=True, **kwargs)
     print(f"Wrote parquet to {path}")
     return path
 

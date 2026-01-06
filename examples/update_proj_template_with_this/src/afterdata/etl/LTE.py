@@ -35,8 +35,11 @@ def clean_data():
     log.info(df.columns)
     df.rename(columns={"open_time": "tz_start"}, inplace=True)
     clean_df, dq_report = DQ.validate_candles(df, TimeFreq(1, TimeUnit.MINUTE))
-    clean_df["tz_start"] = pd.to_datetime(clean_df["tz_start"], utc=True)
-    clean_df = clean_df.set_index("tz_start")
+
+    # Using tz_start as the index, but don't overwrite it b/c parquet write doesnt persist the index 
+    # (even though the param is passed as true so idk...)
+    clean_df["tz_idx"] = pd.to_datetime(clean_df["tz_start"], utc=True)
+    clean_df = clean_df.set_index("tz_idx")
 
     DQ.log_candle_dq_issues(dq_report)
 

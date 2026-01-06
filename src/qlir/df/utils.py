@@ -1,6 +1,5 @@
 import pandas as _pd
 
-
 def union_and_sort(dfs: list[_pd.DataFrame], sort_by: list[str] | None = None) -> _pd.DataFrame:
     """
     Union multiple DataFrames and return a sorted, deduplicated result.
@@ -71,6 +70,10 @@ def move_column(df, col: str, to_idx: int = 0) -> _pd.DataFrame:
         raise KeyError(col)
 
     s = df.pop(col)
+    
+    if to_idx == -1:
+        to_idx = len(df.columns) - 1
+    
     df.insert(to_idx, col, s)
 
     return df

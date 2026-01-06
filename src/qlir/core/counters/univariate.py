@@ -12,14 +12,24 @@ def _safe_name(*parts: object, sep: str = "__") -> str:
     toks = [str(p) for p in parts if p is not None and str(p) != ""]
     return sep.join(toks)
 
+# def _as_bool_series(s: _pd.Series) -> _pd.Series:
+#     if s.dtype == BoolDtype or s.dtype == bool:
+#         b = s
+#     elif _pd.api.types.is_numeric_dtype(s):
+#         b = s.ne(0)   
+#     else:
+#         b = s.notna()
+#     return b.fillna(False).astype(BoolDtype)
+
 def _as_bool_series(s: _pd.Series) -> _pd.Series:
-    if s.dtype == BoolDtype or s.dtype == bool:
-        b = s
-    elif _pd.api.types.is_numeric_dtype(s):
-        b = s.ne(0)
-    else:
-        b = s.notna()
-    return b.fillna(False).astype(BoolDtype)
+    if not (
+        _pd.api.types.is_bool_dtype(s)
+        or str(s.dtype) == "boolean"
+    ):
+        raise TypeError(
+            f"Expected boolean column, got dtype={s.dtype}. Column passed was: {s.name}"
+        )
+    return s.astype("boolean")
 
 def _consecutive_true(mask: _pd.Series) -> _pd.Series:
     m = _as_bool_series(mask)

@@ -6,11 +6,24 @@ Program logic for enums should never use .value, always serialize/deserialize at
 # Known Issues
 
 Slices are getting marked as needs_refresh on restart... likely just some manifest schema issue
+---
+
+Ran datasol1m, new slices were fetched but count was not updating and it just kept refetching the same slices over and over again 
+databtc1m - same issue
+datasol1s - somehow decided there were 122 responses missing... (but when i started it up the were ~300)
+    {'manifest': 170385, 'filesystem': 170504},
+    there are all the orphan response files...
+databtc1s - (need to get the full set first)
+
+after a restart we are much closer {'count_mismatch': {'manifest': 170502, 'filesystem': 170504}, (but note that this shouldnt require a restart lol)
+todo: 
+---
+
 
 Manifest Aggregator logs not being written to /logs 
     - first check if manifest_aggregator._setup_manifest_logging is actually being called - maybe just raise to short circuit
     - env variable does seem to be working  
-
+---
 # Decisions to be made 
 
 come up with an import / export policy (qlir imports should look clean to the end user, no leaking of pandas etc.)
@@ -18,18 +31,20 @@ Options:
 
 see chatgpt for implementation details: https://chatgpt.com/c/695b5d5d-9f74-8325-a6ec-fdc61066733a
 
+
+
+
 # Priorities
 
 qlir - data_server - ability to delete and rebuild manifest from scratch
     - try this manually (for like 1m data... delete the file then start up the server, see what happens)
+    - sol1m ... the files were all marked as missing  
+        - it did 54 requests... file system didnt add more (this is good, it means the determnisitic hashing func hasnt changed)
+        - the question is why are they marked as missing... ahh maybe simply b/c the manifest was gone and it doesnt check the fs before starting to make requests...??
 
 qlir - see data -> sources -> binance  (data server) -> known_issues.md
 
 proj - Do the SMA study!!!!
-
-proj - Do the 
-
-proj - implement a simple etl pipeline to fill the gaps
 
 proj - pipelines cli 
 
