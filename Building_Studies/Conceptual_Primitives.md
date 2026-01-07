@@ -30,6 +30,21 @@ Properties:
 
 `<to do add table example>`
 
+
+### Why: Conditions are stateless and global
+
+This prevents a **ton** of conceptual bugs.
+
+A condition:
+
+* does not “start”
+* does not “end”
+* does not “know” about neighbors
+
+It is *purely row-local*.
+
+That’s exactly why persistence must be downstream.
+
 ---
 
 ## 2. Row-wise Logical Composition
