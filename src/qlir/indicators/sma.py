@@ -1,6 +1,21 @@
 import pandas as _pd
+import logging
+log = logging.getLogger(__name__)
 
 
+
+from qlir.core.semantics.decorators import new_col_func
+from qlir.core.semantics.row_derivation import ColumnDerivationSpec
+
+@new_col_func(
+    specs=lambda *, col, window, **_: ColumnDerivationSpec(
+        op="sma",
+        base_cols=(col,),
+        read_rows=(-(window - 1), 0),
+        scope="output",
+        self_inclusive=True,
+    )
+)
 def sma(
     df: _pd.DataFrame,
     *,
@@ -38,4 +53,5 @@ def sma(
         s = s.round(decimals)
 
     out[name] = s
+
     return out, name

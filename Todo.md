@@ -3,6 +3,8 @@
 Program logic for enums should never use .value, always serialize/deserialize at read/write boundary
   (Logging is the exception, b/c we want to see something meaningful, not just an int)
 
+Module arch / user import ux -> See MODULE_ARCH_AND_USER_IMPORT_UX.md
+
 # Known Issues
 
 Slices are getting marked as needs_refresh on restart... likely just some manifest schema issue
@@ -47,8 +49,14 @@ I already created a helper func to grab the single item when only one thing is p
 there is also the question of naming (singular vs plural) sma v. smas. leaning toward singular b/c the pluralness comes from the shape of the params passed
 
 
-
 # Priorities
+
+
+qlir - Any function that creates a new column must declare its row semantics.
+     -   I started with the pattern
+     -   log.info(f"SMA(base_col={col}, window={window}, rows_used=[i-{window-1} .. i], write_col={name}, write_row=i)")
+     - But then create the RowDerivationSpec core.semantics
+     - Should also state that we are removing intermediate columns if we do 
 
 qlir - data_server - ability to delete and rebuild manifest from scratch
     - try this manually (for like 1m data... delete the file then start up the server, see what happens)
@@ -98,6 +106,8 @@ which passes args and calls `__PROJECT_NAME.binance.etl.data_server`
 - refactor project agg_server so that we can use a RuntimeConfig (with a log_profile) so that we  just like we did with the data server)
 - what else do we want to add to RuntimeConfig
     - maybe the telemetry?
+
+- refactor modules to follow the MODULE_ARCH_AND_USER_IMPORT_UX.md
 
 ## Long Term (Not a prio at all)
 - log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)

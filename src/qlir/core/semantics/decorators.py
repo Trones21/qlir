@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import inspect
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Sequence, Tuple
 
@@ -32,7 +33,9 @@ def _normalize_returned_cols(cols: ReturnedCols) -> tuple[list[str], dict[str, s
 
 def _resolve_specs(
     *,
-    specs: ColumnDerivationSpec | Sequence[ColumnDerivationSpec] | Mapping[str, ColumnDerivationSpec],
+    specs: ColumnDerivationSpec
+        | Sequence[ColumnDerivationSpec]  
+        | Mapping[str, ColumnDerivationSpec],        
     out_cols: list[str],
     role_map: dict[str, str] | None,
 ) -> list[tuple[str, ColumnDerivationSpec]]:
@@ -67,7 +70,10 @@ def _resolve_specs(
 
 def new_col_func(
     *,
-    specs: ColumnDerivationSpec | Sequence[ColumnDerivationSpec] | Mapping[str, ColumnDerivationSpec],
+    specs: ColumnDerivationSpec | 
+        Sequence[ColumnDerivationSpec] | 
+        Mapping[str, ColumnDerivationSpec] |
+        Callable[..., ColumnDerivationSpec]
 ):
     """
     Decorator for functions that create new column(s).
@@ -83,13 +89,21 @@ def new_col_func(
 
     def decorator(fn: Callable[..., Any]):
         logger = logging.getLogger(fn.__module__)
-
+        sig = inspect.signature(fn)
+        
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             df, out_cols_any = fn(*args, **kwargs)
 
+            bound = sig.bind(*args, **kwargs)
+            bound.apply_defaults()
+            params = bound.arguments  # dict: param_name -> value
+
+            # 👇 resolve specs dynamically
+            resolved_specs = specs(**params) if callable(specs) else specs
+
             out_cols, role_map = _normalize_returned_cols(out_cols_any)
-            pairs = _resolve_specs(specs=specs, out_cols=out_cols, role_map=role_map)
+            pairs = _resolve_specs(specs=resolved_specs, out_cols=out_cols, role_map=role_map)
 
             ctx = get_ctx()
             for col, spec in pairs:

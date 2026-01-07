@@ -19,7 +19,8 @@ def explain_created(
     if spec.self_inclusive and spec.read_rows[1] == 0:
         logger.debug(
             "⚠ %s is self-inclusive at row i (rows_used ends at i). "
-            "If used for row-level decisions, consider shifting / row-exclusion.",
+            "This is fine when using doing <any OHLC> to open. But keep in mind that if you use high,low, or close of bar @ i, then you should not persist to row i in the new column. " \
+            "Consider shifting / row-exclusion.",
             spec.op.upper(),
         )
 
