@@ -1,7 +1,63 @@
 import pandas as _pd
 
 
-def condition_set_persistence_df(
+# `condition_set_persistence_df` tried to do this in one shot:
+
+# ```
+# boolean column
+# → infer events
+# → infer durations
+# → infer distribution
+# → infer survival
+# ```
+
+# That’s *too much inference* for QLIR’s current philosophy. Even if the function works and has unit tests. 
+
+
+# ## 3. The *real* philosophical split you implemented
+
+# Your new code implicitly draws a **very important boundary**:
+
+# ### Phase 1: Event materialization (row space → event space)
+
+# * assign condition group IDs
+# * compute contiguous-true counters
+# * compute per-event max run length
+# * **persist these columns**
+
+# This phase is:
+
+# * deterministic
+# * inspectable
+# * testable
+# * composable
+
+# ### Phase 2: Distributional views (event space → summaries)
+
+# * bucketize
+# * survival
+# * percentiles
+# * visualization
+
+# This phase is:
+
+# * intentionally lossy *or* lossless
+# * optional
+# * reversible (you can always go back to event space)
+
+# That separation is why this feels “safer”.
+
+# ## 6. The deeper pattern you’ve converged on (important)
+
+# What you’ve *actually* implemented is this principle:
+
+# > **QLIR functions should either**
+# >
+# > 1. *construct state* (with full traceability), or
+# > 2. *summarize state* (without inference)
+
+
+def deprecated_condition_set_persistence_df(
     *,
     df: _pd.DataFrame,
     condition_col: str,
