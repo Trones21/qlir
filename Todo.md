@@ -21,19 +21,12 @@ after a restart we are much closer {'count_mismatch': {'manifest': 170502, 'file
 todo: 
 ---
 
-
 Manifest Aggregator logs not being written to /logs 
     - first check if manifest_aggregator._setup_manifest_logging is actually being called - maybe just raise to short circuit
     - env variable does seem to be working  
 ---
 
 # Decisions to be made 
-
-come up with an import / export policy (qlir imports should look clean to the end user, no leaking of pandas etc.)
-Options:
-
-see chatgpt for implementation details: https://chatgpt.com/c/695b5d5d-9f74-8325-a6ec-fdc61066733a
----
 
 Later Feature Branch:
 
@@ -51,6 +44,17 @@ there is also the question of naming (singular vs plural) sma v. smas. leaning t
 
 # Priorities
 
+- update decorator so that all intellisense passes through (see chatgpt)
+    - this is important b/c we need to verify all intellisense still exists 
+        - How do we pass through the function docstring?
+        - and the params taken 
+        - and params returned
+        - the funcs are basically unusable with this.. but I dont want to give up this amamzing decorator for logging pattern
+            - that said, if we can't figure out how to get the intellisense the way we want it, we could always keep the all the infra
+            but just make the call in the function body... it might not even be that much messier 
+
+- implement arp (and variants, including the bundle) (and expose through the api)
+- implement range shock (and expose via api) 
 
 qlir - Any function that creates a new column must declare its row semantics.
      -   I started with the pattern
@@ -87,7 +91,7 @@ uklines - basically copy paste from klines worker
 ---
 Mermaid diagram of project call usage (and maybe asscii)
 
-bash script (entrypoint specified in pyproject.toml - there are currently 3 options (by-arg, all, file-def)) 
+bash script (entrypoint specified in pyproject.toml - there are currently 2 options (by-arg, all)) 
 Note: The point of the bash script is to abstract away the params.. so you can just run `bash <something>.sh` and it does exactly what you want
 
 by_arg: use args to specify the symbol/interval/limit combos
@@ -108,6 +112,8 @@ which passes args and calls `__PROJECT_NAME.binance.etl.data_server`
     - maybe the telemetry?
 
 - refactor modules to follow the MODULE_ARCH_AND_USER_IMPORT_UX.md
+
+- Refactor "new cols" funcs to use decorator 
 
 ## Long Term (Not a prio at all)
 - log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)
