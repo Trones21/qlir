@@ -1,18 +1,18 @@
 from __future__ import annotations
 import pandas as pd
 
-from .atrp import atrp
+from .arp import arp
 from .sma import sma
 from .rsi import rsi
 
 __all__ = [
-    "atrp",
+    "arp",
     "sma",
     "rsi",  
 ]
 
 _INDICATORS = {
-    "atrp": atrp,
+    "arp": arp,
     "sma": sma,
     "rsi": rsi,
 }

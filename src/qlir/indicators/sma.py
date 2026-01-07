@@ -14,6 +14,7 @@ from qlir.core.semantics.row_derivation import ColumnDerivationSpec
         read_rows=(-(window - 1), 0),
         scope="output",
         self_inclusive=True,
+        log_suffix="sma log suffix"
     )
 )
 def sma(

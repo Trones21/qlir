@@ -6,10 +6,13 @@ import pandas as _pd
 
 from qlir.core.counters.multivariate import _maybe_copy
 from qlir.core.ops._helpers import ColsLike, _add_columns_from_series_map, _normalize_cols
-from qlir.core.ops.non_temporal import with_sign 
+from qlir.core.ops.non_temporal import with_sign
+from qlir.core.semantics.decorators import new_col_func
+from qlir.core.semantics.row_derivation import ColumnDerivationSpec 
 # ----------------------------
 # Public API
 # ----------------------------
+
 
 def with_diff(
     df: _pd.DataFrame,
@@ -129,7 +132,24 @@ def with_shift(
 # ----------------------------
 # Convenience: “bar-to-bar” aliases
 # ----------------------------
-
+@new_col_func(
+    specs=lambda *, col, **_: {
+        "abs": ColumnDerivationSpec(
+            op="diff",
+            base_cols=(col,),
+            read_rows=(-1, 0),
+            scope="output",
+            self_inclusive=True,
+        ),
+        "pct": ColumnDerivationSpec(
+            op="pct_change",
+            base_cols=(col,),
+            read_rows=(-1, 0),
+            scope="output",
+            self_inclusive=True,
+        ),
+    }
+)
 def with_bar_direction(
     df: _pd.DataFrame,
     col: str,

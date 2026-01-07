@@ -34,6 +34,10 @@ class ColumnDerivationSpec:
     # Optional grouping boundary information (e.g., "asset" for grouped rolling).
     grouping: Optional[str] = None
 
+    # Hardcoded string that gives the user more info about the function itself. 
+    # e.g. for arp we log self_inclusive=True ... but arp doesnt implement shifted windows, so i pass a string to log_suffix+"arp() is ALWAYS self-inclusive" 
+    log_suffix: Optional[str] = None
+
     def format_rows_used(self) -> str:
         lo, hi = self.read_rows
 
@@ -54,6 +58,7 @@ class ColumnDerivationSpec:
             f"write_col={write_col}",
             f"write_row={write_row}",
             f"self_inclusive={self.self_inclusive}",
+            f"{self.log_suffix}",
         ]
         if self.grouping:
             parts.append(f"grouping={self.grouping}")
