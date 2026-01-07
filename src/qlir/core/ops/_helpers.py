@@ -49,3 +49,16 @@ def _add_columns_from_series_map(
         new_col_names.append(name)
 
     return out, tuple(new_col_names)
+
+
+
+
+def one(col_names: tuple[str, ...]) -> str:
+    '''Many of these funcs return of tuple iterable of str, but when you pass in a single column you only get a single new col name back, this is a litte helper that ensures there is only one value and pulls it out 
+    Example Usage:
+    df, diff_cols = with_diff(df, price_col)
+    diff_col = one(diff_cols)
+    '''
+    if len(col_names) != 1:
+        raise ValueError(f"Expected exactly one column, got {len(col_names)}")
+    return col_names[0]

@@ -24,13 +24,27 @@ Manifest Aggregator logs not being written to /logs
     - first check if manifest_aggregator._setup_manifest_logging is actually being called - maybe just raise to short circuit
     - env variable does seem to be working  
 ---
+
 # Decisions to be made 
 
 come up with an import / export policy (qlir imports should look clean to the end user, no leaking of pandas etc.)
 Options:
 
 see chatgpt for implementation details: https://chatgpt.com/c/695b5d5d-9f74-8325-a6ec-fdc61066733a
+---
 
+Later Feature Branch:
+
+Pattern for indicators, ops etc. 
+Return shape is different depending on whether the func takes one or list 
+  -> tuple[DataFrame, tuple[str, ...]]
+  -> tuple[DataFrame, str]
+
+but this could be applied to more than columns... if i allowed a list of window to be passed for example, you could calc all the windows at once rather than looop call the func (so maybe o(n) -> 0(1)))
+
+I already created a helper func to grab the single item when only one thing is passed core.ops._helpers.one
+
+there is also the question of naming (singular vs plural) sma v. smas. leaning toward singular b/c the pluralness comes from the shape of the params passed
 
 
 

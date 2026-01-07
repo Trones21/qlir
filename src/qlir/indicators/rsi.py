@@ -2,10 +2,10 @@ from __future__ import annotations
 import pandas as _pd
 import numpy as _np
 
-__all__ = ["with_rsi"]
+__all__ = ["rsi"]
 
 
-def with_rsi(
+def rsi(
     df: _pd.DataFrame,
     *,
     close_col: str = "close",
