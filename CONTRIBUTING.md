@@ -131,3 +131,5 @@ Otherwise, document it as an optional dependency users must install.
 Thanks again for contributing!
 
 ```
+
+See module_arch for details on how modules should be structured 
