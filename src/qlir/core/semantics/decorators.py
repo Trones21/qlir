@@ -3,7 +3,9 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, ParamSpec, Sequence, Tuple
+
+from qlir.core.types.new_cols_result import NewColsResult
 
 from .context import get_ctx
 from .explain import explain_created
@@ -67,6 +69,7 @@ def _resolve_specs(
         )
     return list(zip(out_cols, specs_list))
 
+P = ParamSpec("P")
 
 def new_col_func(
     *,
@@ -74,7 +77,7 @@ def new_col_func(
         Sequence[ColumnDerivationSpec] | 
         Mapping[str, ColumnDerivationSpec] |
         Callable[..., ColumnDerivationSpec]
-):
+) -> Callable[[Callable[P, NewColsResult]], Callable[P, NewColsResult]]:
     """
     Decorator for functions that create new column(s).
 
@@ -86,8 +89,8 @@ def new_col_func(
           * dict[str, str] (role -> column)
       - derivation specs are recorded (if a DerivationContext exists) and logged.
     """
-
-    def decorator(fn: Callable[..., Any]):
+    
+    def decorator(fn: Callable[P, NewColsResult]) -> Callable[P, NewColsResult]:
         logger = logging.getLogger(fn.__module__)
         sig = inspect.signature(fn)
         
