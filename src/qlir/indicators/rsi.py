@@ -2,6 +2,8 @@ from __future__ import annotations
 import pandas as _pd
 import numpy as _np
 
+from qlir.df.utils import _ensure_columns
+
 __all__ = ["rsi"]
 
 
@@ -13,6 +15,9 @@ def rsi(
     out_col: str = "rsi",
     in_place: bool = True,
 ) -> _pd.DataFrame:
+    
+    _ensure_columns(df=df, cols=close_col, caller="rsi")
+    
     out = df if in_place else df.copy()
     close = out[close_col].astype(float)
     delta = close.diff()

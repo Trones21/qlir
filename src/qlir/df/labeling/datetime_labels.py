@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as _pd
 
+from qlir.df.utils import _ensure_columns
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
@@ -20,6 +21,7 @@ def add_calendar_labels(
     """
     Add common calendar/intraday columns to the df.
     """
+    _ensure_columns(df=df, cols=col, caller="add_calendar_labels")
     df = ensure_utc_df_strict(df, col)
     out = df.copy()
     dt = out[col]

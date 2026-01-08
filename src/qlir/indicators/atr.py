@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Optional
 
 import pandas as _pd
+from qlir.core.constants import DEFAULT_OHLC_COLS
+from qlir.core.types.OHLC_Cols import OHLC_Cols
+from qlir.df.utils import _ensure_columns
 
 try:
     import talib
@@ -13,9 +16,7 @@ except ImportError:
 def with_atr(
     df: _pd.DataFrame,
     *,
-    high_col: str = "high",
-    low_col: str = "low",
-    close_col: str = "close",
+    ohlc: OHLC_Cols = DEFAULT_OHLC_COLS,
     period: int = 14,
     out_col: Optional[str] = None,
 ) -> _pd.DataFrame:
@@ -46,13 +47,15 @@ def with_atr(
     if talib is None:
         raise RuntimeError("TA-Lib is required for with_atr(); install ta-lib + talib-python.")
 
+    _ensure_columns(df=df, cols=[*ohlc], caller="atr")
+
     if out_col is None:
         out_col = f"atr_{period}"
 
     atr_vals = talib.ATR(
-        df[high_col].values,
-        df[low_col].values,
-        df[close_col].values,
+        df[ohlc.high].values,
+        df[ohlc.low].values,
+        df[ohlc.close].values,
         timeperiod=period,
     )
 

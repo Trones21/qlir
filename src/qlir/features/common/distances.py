@@ -2,6 +2,8 @@ from __future__ import annotations
 import pandas as _pd
 import numpy as _np
 
+from qlir.df.utils import _ensure_columns
+
 
 __all__ = ["with_zscore", "with_distance"]
 
@@ -21,6 +23,8 @@ def with_distance(
     distance   = to_ - from_
     pct_dist   = (to_ - from_) / from_
     """
+    _ensure_columns(df=df, cols=[from_, to_], caller="with_distance")
+
     out = df if in_place else df.copy()
 
     # Validate presence
@@ -60,6 +64,9 @@ def with_zscore(
     out_col: str | None = None,
     ddof0: bool = True,
 ) -> _pd.DataFrame:
+    
+    _ensure_columns(df=df, cols=col, caller="with_zscore")
+    
     out = df.copy()
     out_col = out_col or f"{col}_z"
     sd = out[col].rolling(window, min_periods=max(5, window//5)).std(ddof=0 if ddof0 else 1)

@@ -2,6 +2,8 @@ import numpy as _np
 import pandas as _pd
 from typing import Iterable
 import logging
+
+from qlir.df.utils import _ensure_columns
 logg = logging.getLogger(__name__)
 
 def series_angle(
@@ -22,6 +24,7 @@ def series_angle(
 
     If log=True, computation is done in log-space (scale invariant).
     """
+    _ensure_columns(df=df, cols=cols, caller="series_angle")
 
     if window <= 0:
         raise ValueError("window must be > 0")

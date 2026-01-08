@@ -1,6 +1,8 @@
 from __future__ import annotations
 import pandas as _pd
 
+from qlir.df.utils import _ensure_columns
+
 __all__ = ["with_distance_metrics"]
 
 
@@ -13,6 +15,9 @@ def with_distance_metrics(
     norm_window: int | None = 200,
     use_pop_std: bool = True,
 ) -> _pd.DataFrame:
+    
+    _ensure_columns(df=df, cols=[price_col, vwap_col], caller="with_distance_metrics")
+
     out = df.copy()
     dist: _pd.Series = out[price_col] - out[vwap_col]
     out[f"{out_prefix}dist"] = dist

@@ -162,6 +162,8 @@ def with_bar_direction(
     Direction of bar-to-bar change (sign of diff): {-1, 0, +1}
     Example: open_t vs open_{t-1} -> direction(open)
     """
+    
+
     out, diff_cols = with_diff(df, cols=[col], periods=periods, inplace=inplace)
     (diff_col, ) = diff_cols
     # attach direction of that diff

@@ -44,14 +44,10 @@ there is also the question of naming (singular vs plural) sma v. smas. leaning t
 
 # Priorities
 
-- update decorator so that all intellisense passes through (see chatgpt)
-    - this is important b/c we need to verify all intellisense still exists 
-        - How do we pass through the function docstring?
-        - and the params taken 
-        - and params returned
-        - the funcs are basically unusable with this.. but I dont want to give up this amamzing decorator for logging pattern
-            - that said, if we can't figure out how to get the intellisense the way we want it, we could always keep the all the infra
-            but just make the call in the function body... it might not even be that much messier 
+- rethink summarize_condition_paths (grouping is sumuggled in here ... but maybe ok maybe we just need two smaller funcs or something for clarity.. also nee dto think through params, ), maybe two top level funcs summarize_condition_paths
+definitely a better doc string... 
+    - but really these are such different operations (one is a reducer the other add a new column before the reducer... but then its on you to ensure the condiiton col is right... )
+
 
 - implement arp (and variants, including the bundle) (and expose through the api)
 - implement range shock (and expose via api) 

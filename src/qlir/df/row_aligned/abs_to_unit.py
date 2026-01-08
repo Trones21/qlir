@@ -3,6 +3,7 @@
 import pandas as _pd
 from qlir.core.types.UnitEnum import UnitEnum
 from qlir.df.scalars.units import abs_to_bps, abs_to_pct
+from qlir.df.utils import _ensure_columns
 
 
 def abs_to_unit(
@@ -17,7 +18,7 @@ def abs_to_unit(
     Row-aligned normalization.
     Each row uses its own reference value.
     """
-
+    _ensure_columns(df=df, cols=[value_col, ref_col], caller="abs_to_unit")
     df = df.copy()
     out_col = out_col or f"{value_col}_{unit.value}"
 

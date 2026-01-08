@@ -1,4 +1,10 @@
+from typing import Iterable
 import pandas as _pd
+
+import logging
+log = logging.getLogger(__name__)
+
+
 
 def union_and_sort(dfs: list[_pd.DataFrame], sort_by: list[str] | None = None) -> _pd.DataFrame:
     """
@@ -105,3 +111,36 @@ def insert_column(df, col: str, values, to_idx: int = 0) -> _pd.DataFrame:
     df.insert(to_idx, col, values)
 
     return df
+
+def _ensure_columns(
+    df: _pd.DataFrame,
+    cols: str | Iterable[str],
+    *,
+    caller: str | None = None,
+) -> None:
+    """
+    Ensure required columns exist in a DataFrame.
+
+    Raises KeyError with detailed logging if any are missing.
+
+    Internal Note: Pass the caller so end users have a better UX
+    """
+
+    if isinstance(cols, str):
+        cols = [cols]
+
+    missing = [c for c in cols if c not in df.columns]
+
+    if not missing:
+        return
+
+    location = f" ({caller})" if caller else ""
+
+    log.error(
+        "Missing required column(s)%s: %s",
+        location,
+        ", ".join(missing),
+    )
+    log.info("Available columns (%d): %s", len(df.columns), list(df.columns))
+
+    raise KeyError(f"Missing required columns{location}: {missing}")

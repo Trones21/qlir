@@ -5,6 +5,7 @@ from typing import Any, Sequence, Mapping
 
 import pandas as _pd
 
+from qlir.df.utils import _ensure_columns
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
@@ -52,6 +53,7 @@ def mark_around_events(
     Add a boolean column marking rows within any event window.
     Optionally add event_id to say *which* event window matched first.
     """
+    _ensure_columns(df=df, cols=col, caller="mark_around_events")
     df = ensure_utc_df_strict(df, col)
     ts = df[col]
 

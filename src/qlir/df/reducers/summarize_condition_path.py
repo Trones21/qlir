@@ -4,6 +4,7 @@ import pandas as _pd
 from qlir.core.constants import DEFAULT_OHLC_COLS, DEFAULT_OPEN_TIMESTAMP_COL
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.condition_set.assign_group_ids import assign_condition_group_id
+from qlir.df.utils import _ensure_columns
 
 
 
@@ -13,7 +14,7 @@ def summarize_condition_paths(
     condition_col: str,
     ts_col: str = DEFAULT_OPEN_TIMESTAMP_COL,
     ohlc_cols: OHLC_Cols = DEFAULT_OHLC_COLS,
-    group_col: str = "condition_group_id",
+    group_col: str | None = None,
 ) -> _pd.DataFrame:
     """
     Summarize all contiguous condition-true paths in a DataFrame.
@@ -21,6 +22,9 @@ def summarize_condition_paths(
 
     df = df.copy()
 
+    _ensure_columns(df, [ts_col, *ohlc_cols], caller="summarize_condition_paths")
+
+    # Just adding this step if grouping hasnt been done yet
     if group_col not in df.columns:
         (df, _) = assign_condition_group_id(
             df,

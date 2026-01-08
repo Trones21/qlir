@@ -2,6 +2,10 @@ from __future__ import annotations
 import numpy as _np
 import pandas as _pd
 
+from qlir.core.constants import DEFAULT_OHLC_COLS
+from qlir.core.types.OHLC_Cols import OHLC_Cols
+from qlir.df.utils import _ensure_columns
+
 __all__ = ["flag_relations"]
 
 
@@ -10,12 +14,12 @@ def flag_relations(
     *,
     vwap_col: str = "vwap",
     price_col: str = "close",
-    high_col: str = "high",
-    low_col: str = "low",
+    ohlc: OHLC_Cols = DEFAULT_OHLC_COLS,
     touch_eps: float = 5e-4,     # 5 bps
     touch_min_abs: float = 0.0,  # e.g., $0.01
     out_rel: str = "relation",
 ) -> _pd.DataFrame:
+    _ensure_columns(df=df, cols=[vwap_col, price_col, *ohlc], caller="flag_relations")
     out = df.copy()
     diff = out[price_col] - out[vwap_col]
     tol = (out[vwap_col].abs() * touch_eps).fillna(0.0)
@@ -29,6 +33,6 @@ def flag_relations(
     out["cross_up"] = (out[out_rel].eq("above") & prev_rel.eq("below")).astype("int8")
     out["cross_down"] = (out[out_rel].eq("below") & prev_rel.eq("above")).astype("int8")
 
-    out["reject_down"] = ((out[high_col] >= out[vwap_col]) & (out[price_col] < out[vwap_col])).astype("int8")
-    out["reject_up"]   = ((out[low_col]  <= out[vwap_col]) & (out[price_col] > out[vwap_col])).astype("int8")
+    out["reject_down"] = ((out[ohlc.high] >= out[vwap_col]) & (out[price_col] < out[vwap_col])).astype("int8")
+    out["reject_up"]   = ((out[ohlc.low]  <= out[vwap_col]) & (out[price_col] > out[vwap_col])).astype("int8")
     return out

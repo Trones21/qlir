@@ -1,6 +1,8 @@
 from __future__ import annotations
 import pandas as _pd
 
+from qlir.df.utils import _ensure_columns
+
 __all__ = ["with_macd_cross_flags"]
 
 
@@ -10,6 +12,7 @@ def with_macd_cross_flags(
     macd_col: str = "macd",
     signal_col: str = "macd_signal",
 ) -> _pd.DataFrame:
+    _ensure_columns(df=df, cols=[macd_col, signal_col], caller="with_macd_cross_flags")
     out = df.copy()
     diff = out[macd_col] - out[signal_col]
     prev = diff.shift(1)

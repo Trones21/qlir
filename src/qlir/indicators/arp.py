@@ -4,14 +4,15 @@ from qlir.core.ops._helpers import _maybe_copy
 from qlir.core.semantics.decorators import new_col_func
 from qlir.core.semantics.row_derivation import ColumnDerivationSpec
 from qlir.core.types.OHLC_Cols import OHLC_Cols
+from qlir.core.types.keep_cols import KeepCols, apply_keep_policy
+from qlir.df.utils import _ensure_columns
 from qlir.indicators.sma import sma
-
-__all__ = ["arp"]
-
 from typing import NamedTuple
 import pandas as pd
+import logging
+log = logging.getLogger(__name__)
 
-
+__all__ = ["arp"]
 
 @new_col_func(
     specs=lambda *, window, window_includes_current=True, **_: ColumnDerivationSpec(
@@ -31,7 +32,7 @@ def arp(
     *,
     ohlc: OHLC_Cols = DEFAULT_OHLC_COLS,
     window: int,
-    keep: str | list[str] = "final",
+    keep: KeepCols | list[str] = KeepCols.FINAL,
     out_col: str | None = None,
     inplace: bool = False,
 ) -> tuple[pd.DataFrame, str]:
@@ -75,35 +76,36 @@ def arp(
     Temporal alignment is a responsibility of the consumer, not the indicator.
     """
 
+    _ensure_columns(df, [*ohlc], caller="arp")
     out = _maybe_copy(df, inplace)
-
+    
     # 1. Absolute intrabar range
-    out, range_col = with_range(
-        out,
-        high_col=ohlc.high,
-        low_col=ohlc.low,
-    )
+    range_col = "hi_lo_rng"
+    out[range_col] = out[ohlc.high] - out[ohlc.low] 
 
     # 2. Percent normalization (same bar, open baseline)
     range_pct_col = f"{range_col}_pct"
-    out[range_pct_col] = out[range_col] / out[ohlc.open]
+    out[range_pct_col] = out[range_col] / out[ohlc.open] * 100
 
     # 3. Average (SMA over percent range)
-
-    out, atrp_col = sma(
+    out, arp_col = sma(
         out,
         col=range_pct_col,
         window=window,
-        prefix_2_default_col_name="atrp",
+        prefix_2_default_col_name="arp",
     )
 
-    final_col = out_col or atrp_col
+    final_col = out_col or arp_col
 
     # 4. Cleanup
-    if keep != "all":
-        keep_cols = {final_col} if keep == "final" else set(keep)
-        drop = [c for c in (range_col, range_pct_col) if c not in keep_cols]
-        out.drop(columns=drop, inplace=True)
+    out = apply_keep_policy(
+        out,
+        keep=keep,
+        final_col=final_col,
+        candidate_cols=[range_col, range_pct_col],
+        inplace=True,
+    )
 
     return out, final_col
+
 

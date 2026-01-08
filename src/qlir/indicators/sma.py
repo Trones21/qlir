@@ -1,5 +1,7 @@
 import pandas as _pd
 import logging
+
+from qlir.df.utils import _ensure_columns
 log = logging.getLogger(__name__)
 
 
@@ -14,7 +16,7 @@ from qlir.core.semantics.row_derivation import ColumnDerivationSpec
         read_rows=(-(window - 1), 0),
         scope="output",
         self_inclusive=True,
-        log_suffix="sma log suffix"
+        log_suffix="sma log suffix test"
     )
 )
 def sma(
@@ -36,6 +38,8 @@ def sma(
     - Optional rounding (`decimals`) is applied AFTER rolling mean
       to control floating-point noise for downstream transforms.
     """
+    _ensure_columns(df=df, cols=col, caller="sma")
+
     out = df if in_place else df.copy()
 
     name = (

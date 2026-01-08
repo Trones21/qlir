@@ -1,6 +1,8 @@
 from __future__ import annotations
 import pandas as _pd
 
+from qlir.df.utils import _ensure_columns
+
 __all__ = ["with_macd"]
 
 
@@ -16,6 +18,8 @@ def with_macd(
     out_hist: str = "macd_hist",
     in_place: bool = True,
 ) -> _pd.DataFrame:
+    
+    _ensure_columns(df=df, cols=close_col, caller="macd")
     out = df if in_place else df.copy()
     close = out[close_col].astype(float)
     

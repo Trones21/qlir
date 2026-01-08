@@ -1,5 +1,7 @@
 import pandas as _pd
 import logging
+
+from qlir.df.utils import _ensure_columns
 log = logging.getLogger(__name__)
 
 def assign_condition_group_id(
@@ -11,6 +13,7 @@ def assign_condition_group_id(
     """
     Assign monotonically increasing IDs to contiguous True runs.
     """
+    _ensure_columns(df=df, cols=condition_col, caller="assign_condition_group_id")
     cond = df[condition_col].astype("boolean")
     
     na_count = df[condition_col].isna().sum()

@@ -1,5 +1,7 @@
 from __future__ import annotations
 import pandas as _pd
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ["ensure_tzaware", "session_floor"]
 
@@ -24,6 +26,7 @@ def session_floor(df, tz="UTC", ts_col: str | None = "timestamp", *, bar_semanti
     if ts_col and ts_col in df.columns:
         ts = _pd.to_datetime(df[ts_col], utc=True)
     else:
+        log.info("ts_col param not passed or not found in df, using index")
         ts = _pd.to_datetime(df.index, utc=True)
 
     # Convert to local tz

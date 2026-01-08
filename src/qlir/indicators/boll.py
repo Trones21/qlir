@@ -2,6 +2,8 @@ from __future__ import annotations
 import pandas as _pd
 import numpy as _np
 
+from qlir.df.utils import _ensure_columns
+
 __all__ = ["with_bollinger"]
 
 
@@ -37,6 +39,8 @@ def with_bollinger(
     in_place : bool
         If True, modifies df directly; otherwise returns a copy.
     """
+    _ensure_columns(df=df, cols=close_col, caller="boll")
+
     out = df if in_place else df.copy()
     close = out[close_col].astype(float)
 

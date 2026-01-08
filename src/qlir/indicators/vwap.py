@@ -2,6 +2,9 @@
 from __future__ import annotations
 import numpy as _np
 import pandas as _pd
+from qlir.core.constants import DEFAULT_OHLC_COLS
+from qlir.core.types.OHLC_Cols import OHLC_Cols
+from qlir.df.utils import _ensure_columns
 from ..time.misc import session_floor
 from ..utils.df_ops import ensure_copy
 
@@ -10,15 +13,17 @@ __all__ = ["with_vwap_cum_hlc3", "with_vwap_hlc3_session"]
 def with_vwap_cum_hlc3(
     df: _pd.DataFrame,
     *,
-    price_cols=("high", "low", "close"),
+    ohlc: OHLC_Cols = DEFAULT_OHLC_COLS,
     volume_col="volume",
     out_col="vwap",
     in_place=False,
 ) -> _pd.DataFrame:
+    
+    _ensure_columns(df, [*ohlc], caller="vwap_cum_hlc3")
+
     out = df if in_place else df.copy()
-    h, l, c = price_cols
     vol = out[volume_col].astype(float)
-    hlc3 = (out[h] + out[l] + out[c]) / 3.0
+    hlc3 = (out[ohlc.high] + out[ohlc.low] + out[ohlc.close]) / 3.0
 
     cum_vol = vol.cumsum()
     out[out_col] = (hlc3 * vol).cumsum() / cum_vol
@@ -28,11 +33,14 @@ def with_vwap_cum_hlc3(
 
 
 # indicators/vwap.py
-def with_vwap_hlc3_session(df, *, tz="UTC", price_cols=("high","low","close"), volume_col="volume", out_col="vwap"):
+def with_vwap_hlc3_session(df, *, tz="UTC", ohlc: OHLC_Cols = DEFAULT_OHLC_COLS, volume_col="volume", out_col="vwap"):
+
+
+    _ensure_columns(df, [*ohlc], caller='vwap_hlc3_session')
+    
     out = df.copy()
-    h, l, c = price_cols
     vol = out[volume_col].astype(float)
-    hlc3 = ((out[h] + out[l] + out[c]) / 3.0).astype(float)
+    hlc3 = ((out[ohlc.high] + out[ohlc.low] + out[ohlc.close]) / 3.0).astype(float)
     
     # Session = calendar day of ts_end in tz (index is ts_end, thanks to data layer)
     if isinstance(out.index, _pd.DatetimeIndex):

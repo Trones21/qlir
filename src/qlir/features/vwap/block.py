@@ -20,8 +20,8 @@ def with_vwap_feature_block(
     out = with_vwap_hlc3_session(df, tz=tz)
     out = flag_relations(out, touch_eps=touch_eps)
     out = with_session_id(out, tz=tz)
-    out = with_counts_running(out, session_col="session", rel_col="relation")
-    out = with_streaks(out, session_col="session", rel_col="relation")
+    out = with_counts_running(out, group_col="session", rel_col="relation")
+    out = with_streaks(out, group_col="session", rel_col="relation")
     out = with_vwap_slope(out)
     out = with_distance_metrics(out, norm_window=norm_window)
     return out
