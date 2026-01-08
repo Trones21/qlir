@@ -18,6 +18,9 @@ classifiers = [
 ]
 urls = { "Source" = "https://github.com/you/qlir" }
 
+[project.scripts]
+notifications = "qlir.servers.notification_server.server:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 

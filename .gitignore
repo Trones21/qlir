@@ -54,3 +54,6 @@ __pypackages__/
 
 # CSVs
 *.csv
+
+# Accidental notification server alerts folder 
+/alerts/
