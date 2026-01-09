@@ -121,6 +121,7 @@ def write_manifest_snapshot(
     _write_manifest_atomic(manifest_path, manifest)
 
 
+
 def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]):
     """
     Ensure every expected slice exists in manifest with at least a 'missing' status.
@@ -148,7 +149,6 @@ def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]
     
     if changed == False:
         log.info("All expected slices found in manifest.")
-        log.info("To Do: Maybe log the max composite key open unix ts (in fmt human). Current unix ts should fall wthin last slice start_ms-end_ms ... just not sure its worth the sort cost.")
 
     return changed
 

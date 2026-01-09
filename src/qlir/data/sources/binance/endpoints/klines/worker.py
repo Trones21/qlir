@@ -17,6 +17,7 @@ from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.io.helpers import has_files
+from qlir.telemetry import telemetry
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
@@ -442,6 +443,7 @@ def _ensure_dir(path: Path) -> None:
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
+
 def _enumerate_expected_slices(
     symbol: str,
     interval: str,
@@ -463,4 +465,5 @@ def _enumerate_expected_slices(
                 limit=limit,
             )
         )
+    log.debug(f"_enumerate_epected_slices. Last slice in array: {format_ts_human(slices[-1].start_ms)} - {format_ts_human(slices[-1].end_ms)}")
     return slices
