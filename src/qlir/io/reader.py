@@ -4,8 +4,8 @@ from typing import Any, Dict, Literal, Optional
 import pandas as _pd
 
 from qlir.data.quality.candles.candles import validate_candles
-
-FillMode = Literal["none", "fetch"]
+import logging
+log = logging.getLogger(__name__)
 
 def _as_path(path: str | Path) -> Path:
     return Path(path).expanduser().resolve()
@@ -67,6 +67,44 @@ def read(path: str | Path, **kwargs) -> _pd.DataFrame:
                      Unsupported extension: {suf} 
                      Use .csv, .parquet, or .json.
                      """)
+
+
+def load_latest_parquet_window(
+    directory: Path,
+    *,
+    pattern: str = "*.parquet",
+    last_n_files: int,
+) -> _pd.DataFrame:
+    files = sorted(directory.glob(pattern))
+    if not files:
+        return _pd.DataFrame()
+
+    selected = files[-last_n_files:]
+    log.info(f"Loading chunks: {selected}")
+    dfs = [_pd.read_parquet(p) for p in selected]
+
+    return _pd.concat(dfs, ignore_index=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # def read_candles(
 #     path: str | Path,
