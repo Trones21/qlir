@@ -69,8 +69,10 @@ def get_slices_needing_to_be_aggregated(
     raw_manifest: dict[str, Any],
     agg_manifest: AggManifest,
 ) -> list[RawSliceRef]:
+    
     eligible = list(iter_raw_ok_slices(raw_manifest))
-        # 1. Start with sealed slices
+    
+    # 1. Start with sealed slices
     used: set[str] = set(agg_manifest.all_slice_ids())
 
     # 2. Union in head slices
@@ -158,7 +160,7 @@ def _next_part_index(agg: AggManifest) -> int:
     return len(parts) + 1
 
 
-def create_or_update_head(
+def create_or_update_parquet_chunk(
     *,
     agg: AggManifest,
     paths: DatasetPaths,
@@ -175,6 +177,7 @@ def create_or_update_head(
     slicing rows by per-slice row_count BEFORE sorting each output parquet.
     """
     if not new_frames:
+        log.info("create_or_update_parquet_chunk called, but was not passed any new frames")
         return
 
     paths.agg_parts_dir.mkdir(parents=True, exist_ok=True)
@@ -195,6 +198,14 @@ def create_or_update_head(
                 head_pq.unlink(missing_ok=True)
             except Exception:
                 pass
+    
+    # Log error, duplicate slices being added to head
+    existing_ids = {it["slice_id"] for it in head_items}
+    for sid, df in zip(new_slice_ids, new_frames):
+        if sid in existing_ids:
+            log.error("[agg] duplicate slices being added to head: %s", sid)
+            continue
+
 
     # Combine head + new (in slice order)
     combined_items: list[dict[str, Any]] = []
@@ -208,6 +219,7 @@ def create_or_update_head(
         combined_items.append({"slice_id": sid, "row_count": int(len(df))})
         combined_frames.append(df)
 
+
     combined = _pd.concat(combined_frames, ignore_index=True)
 
     # Helper to slice off the first K slices worth of rows (preserving boundaries)
@@ -216,6 +228,7 @@ def create_or_update_head(
 
     # Seal as many full parts as possible
     while len(combined_items) >= cfg.batch_slices:
+        log.info(f"Writing head because combined_items: {len(combined_items)} >= batch_slice_size: {cfg.batch_slices}")
         k = cfg.batch_slices
         nrows = rows_for_first_k_slices(combined_items, k)
 
@@ -250,7 +263,7 @@ def create_or_update_head(
         combined_items = combined_items[k:]
 
         log.info(
-            "[agg] sealed %s | slices=%s rows=%s open_time=[%s,%s] head_remaining_slices=%s",
+            "[agg] seal %s | slices=%s rows=%s open_time=[%s,%s] head_remaining_slices=%s",
             part_name,
             len(part_slice_ids),
             len(part_df),
@@ -260,6 +273,7 @@ def create_or_update_head(
         )
 
     # Now write head (remainder)
+    log.info(f"Writing head because combined_items: {len(combined_items)} < batch_slice_size: {cfg.batch_slices}")
     if combined_items:
         head_df2 = combined.copy()
         if "open_time" in head_df2.columns and len(head_df2) > 0:
@@ -277,8 +291,8 @@ def create_or_update_head(
         _set_head_items(agg, None, head_df=None)
 
     # Persist manifest once at the end (includes new parts + head changes)
-    log.debug("manifest updated")
     atomic_write_json(paths.agg_manifest_path, agg.data)
+    log.debug("manifest updated")
 
 
 # ------------
@@ -312,7 +326,7 @@ def run_agg_daemon(
             time.sleep(cfg.sleep_idle_s)
             continue
 
-        # Load some new slices this loop (tunable; correctness does not depend on it)
+        # Load some new slices this loop
         batch = todo[: cfg.ingest_chunk_slices]
         new_frames: list[_pd.DataFrame] = []
         new_slice_ids: list[str] = []
@@ -330,9 +344,9 @@ def run_agg_daemon(
                 atomic_write_json(paths.agg_manifest_path, agg.data)
                 log.warning("[agg] slice failed | h=%s err=%s", h, exc)
                 continue
-
+        
         if new_frames:
-            create_or_update_head(
+            create_or_update_parquet_chunk(
                 agg=agg,
                 paths=paths,
                 new_frames=new_frames,
@@ -340,6 +354,4 @@ def run_agg_daemon(
                 cfg=cfg,
             )
             # If we made progress, poll soon (lets us quickly seal head if more arrived)
-            print("new frames path")
-        else:
-            print("alt path")
+            print("next iteration")

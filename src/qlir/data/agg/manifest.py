@@ -49,10 +49,12 @@ class AggManifest:
     
     def head_slice_ids(self) -> list[str]:
         head = self.data.get("head")
-        if not head:
+        if not isinstance(head, dict):
             return []
-        return list(head.get("slice_ids", []))
-
+        items = head.get("items")
+        if not isinstance(items, list):
+            return []
+        return [it["slice_id"] for it in items if "slice_id" in it]
 
     def mark_slice_failed(self, slice_id: str, error: str) -> None:
         self.data.setdefault("slice_failures", {})[slice_id] = {
