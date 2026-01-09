@@ -3,7 +3,7 @@ import logging
 
 from qlir.core.types.named_df import NamedDF
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.open_time_spacing import OpenSpacingViolations, SliceParseViolations
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation, violations_df
 from qlir.utils.df_views.list import list_to_df
 from qlir.logging.logdf import logdf
 from qlir.utils.str.color import Ansi, colorize
@@ -62,6 +62,7 @@ class ManifestValidationReport:
             df_to_log = list_to_df(rows=counts_by_shape, columns=["slice_keys_count", "structure"])
             logdf(NamedDF(df_to_log, name="Manifest Objs Counts by Structure"))
 
+
     def record_and_log_manifest_vs_responses(self, *, fs_issues):
         if not fs_issues:
             {}
@@ -90,24 +91,23 @@ class ManifestValidationReport:
             })
 
             # log (one per violation, explicit & searchable)
-            log.warning(
-                colorize(
-                    f"[{v.rule}] {v.message}",
-                    Ansi.YELLOW,
-                ),
-                extra={
-                    "tag": ("MANIFEST", "VALIDATION", "SLICE_INVARIANTS"),
-                    "slice_key": v.slice_key,
-                    **(v.extra or {}),
-                },
-            )  
+            # log.warning(
+            #     colorize(
+            #         f"[{v.rule}] {v.message} {v.extra}",
+            #         Ansi.YELLOW,
+            #     ),
+            #     extra={
+            #         "tag": ("MANIFEST", "VALIDATION", "SLICE_INVARIANTS"),
+            #         "slice_key": v.slice_key,
+            #         **(v.extra or {}),
+            #     },
+            # )
+
     
     def add_slice_parse_violations(self, slice_parse_violations: SliceParseViolations):
         log.debug('add_slice_structure_violations: log as df NotImplemented,but violations appended to report')
-        log.debug(slice_parse_violations)
-        self.violations.append(slice_parse_violations)
+        self.violations.append({"slice_parse_violations":slice_parse_violations})
     
     def add_open_spacing_violations(self, open_spacing_violations: OpenSpacingViolations):       
         log.debug('open_spacing_violations: log as df NotImplemented, but violations appended to report')
-        log.debug(open_spacing_violations)
-        self.violations.append(open_spacing_violations)
+        self.violations.append({"open_spacing_violations": open_spacing_violations})

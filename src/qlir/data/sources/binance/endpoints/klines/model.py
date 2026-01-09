@@ -14,7 +14,7 @@ REQUIRED_FIELDS = [
     "n_items",
     "first_ts",
     "last_ts",
-    "requested_url",
+    "url",
     "requested_at",
     "completed_at",
 ]

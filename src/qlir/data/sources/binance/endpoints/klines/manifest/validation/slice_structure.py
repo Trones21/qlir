@@ -41,11 +41,11 @@ def isolate_open_time_from_request_url(
     slice_entry: dict,
 ) -> int | ManifestViolation:
     
-    url = slice_entry.get("requested_url")
+    url = slice_entry.get("requested_url") or slice_entry.get("url")
     if not url:
         return ManifestViolation(
                 slice_key=slice_key,
-                rule="missing_requested_url",
+                rule="missing_requested_url_or_url",
                 message="Slice entry missing 'requested_url'",
             )
 

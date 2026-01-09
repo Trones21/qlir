@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 
-@telemetry(log_path=Path("telemetry/manifest_rebuild.txt"), console=True)
+@telemetry(log_path=Path("telemetry/manifest_rebuild.log"), console=True)
 def rebuild_manifest_from_responses(
     *,
     responses_dir: Path,
@@ -92,9 +92,11 @@ def rebuild_manifest_from_responses(
         
         entry.update({
             "slice_status": status,
+            
             "slice_status_reason": meta.get("slice_status_reason"),
             "n_items": meta.get("n_items"),
             "http_status": meta.get("http_status"),
+            "requested_url": meta.get("url"),
             "requested_at": meta.get("requested_at"),
             "completed_at": meta.get("completed_at"),
         })

@@ -3,6 +3,8 @@ from qlir.data.sources.binance.endpoints.klines.manifest.validation.slice_invari
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
 from qlir.data.sources.binance.intervals import interval_to_ms
 from qlir.data.sources.common.slices.slice_status import SliceStatus
+import logging
+log = logging.getLogger(__name__)
 
 def validate_slice_invariants(
     *,
@@ -35,9 +37,11 @@ def validate_slice_invariants(
         return violations  # cannot proceed further
 
     try:
-        facts_url = extract_facts_from_requested_url(
-            slice_obj["requested_url"]
-        )
+        url = slice_obj.get("requested_url") or slice_obj.get("url")
+        if url is not None:
+            facts_url = extract_facts_from_requested_url(url)
+        else:
+            raise KeyError("url is None")
     except KeyError as ke:
         violations.append(
             ManifestViolation(
@@ -53,9 +57,9 @@ def validate_slice_invariants(
     except RequestedURLParseError as e:
         violations.append(
             ManifestViolation(
-            rule="requested_url_parse_failed",
+            rule="url_parse_failed",
             slice_key=slice_key,
-            message="Requested URL failed to parse",
+            message="URL/Requested URL failed to parse",
             extra={
                 "reason": str(e),
                 "url": e.url,

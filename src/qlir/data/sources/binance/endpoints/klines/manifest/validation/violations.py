@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+import pandas as pd
 
 @dataclass
 class ManifestViolation:
@@ -24,3 +25,16 @@ def attach_violations(manifest: dict, violations: list[ManifestViolation]) -> No
             contract.setdefault("notes", []).append(v.message)
 
         contract["status"] = "out_of_sync"
+
+
+def violations_df(violations: list[ManifestViolation]) -> pd.DataFrame:
+
+    return pd.DataFrame(
+        {
+            "rule": v.rule,
+            "slice_key": v.slice_key,
+            "message": v.message,
+            **(v.extra or {}),
+        }
+        for v in violations
+    )

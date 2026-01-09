@@ -1,11 +1,14 @@
 from pathlib import Path
+from qlir.core.types.named_df import NamedDF
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.validate_slice_invariants import validate_slice_invariants
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_fs_integrity import validate_manifest_vs_responses
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.manifest_structure import do_all_slices_have_same_top_level_metadata
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.open_time_spacing import validate_slice_open_spacing_wrapper
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.report import ManifestValidationReport
 
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import violations_df
 from qlir.data.sources.common.slices.slice_status import SliceStatus
+from qlir.logging.logdf import logdf
 from qlir.utils.str.color import Ansi, colorize
 import logging 
 log = logging.getLogger(__name__)
@@ -93,8 +96,10 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
             slice_obj=slice_obj,
             manifest=manifest,
         )
-        slice_invariant_violations.append(inv_violations)
+        slice_invariant_violations.extend(inv_violations)
         report.add_slice_invariant_violations(inv_violations)
+
+
 
     if not slice_invariant_violations:
          log.info(
@@ -104,6 +109,17 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
                 ),
                 extra={"tag": ("MANIFEST", "VALIDATION", "STRUCTURE")},
             )
+    else:
+
+        viol_df = violations_df(slice_invariant_violations)
+        counts_df = (
+        viol_df.groupby(["rule", "exception"], dropna=False)
+            .size()
+            .rename("violation_count")
+            .reset_index()
+            .sort_values("violation_count", ascending=False)
+        )
+        logdf(NamedDF(counts_df, "Count by rule"),  max_rows=999)
 
     # ─────────────────────────────────────────────
     # Summary

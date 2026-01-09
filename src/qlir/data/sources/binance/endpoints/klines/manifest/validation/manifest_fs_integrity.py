@@ -44,5 +44,6 @@ def validate_manifest_vs_responses(
     if orphan_files:
         issues["orphan_response_files"] = sorted(orphan_files)
 
+        
     log.debug(issues)
     return issues
