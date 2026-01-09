@@ -121,6 +121,15 @@ def apply_manifest_delta(
     slices[slice_key] = entry
 
 
+def append_delta_log_to_in_memory_manifest(delta_log_path: Path, manifest):
+    if delta_log_path.exists():
+        with delta_log_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                delta = json.loads(line)
+                apply_manifest_delta(manifest, delta)
+
+
+
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------

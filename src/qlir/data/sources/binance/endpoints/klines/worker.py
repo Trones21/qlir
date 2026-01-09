@@ -6,7 +6,9 @@ import random
 from httpx import HTTPStatusError, RequestError
 
 from qlir.data.sources.binance.endpoints.klines.fetch import FetchFailed
-from qlir.data.sources.binance.manifest_delta_log import append_manifest_delta
+from qlir.data.sources.binance.endpoints.klines.manifest.rebuild.from_responses import rebuild_manifest_from_responses
+from qlir.data.sources.binance.endpoints.klines.manifest.summary import update_summary
+from qlir.data.sources.binance.manifest_delta_log import append_delta_log_to_in_memory_manifest, append_manifest_delta
 from qlir.data.sources.common import claims
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, write_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.data.sources.common.slices.slice_classification import classify_slices
@@ -14,6 +16,7 @@ from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
+from qlir.io.helpers import has_files
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
@@ -98,7 +101,7 @@ def run_klines_worker(
         limit=limit
     )
 
-    # Explain 
+    # Get Paths 
     responses_dir = sym_interval_limit_raw_dir.joinpath("responses")
     _ensure_dir(sym_interval_limit_raw_dir)
     _ensure_dir(responses_dir)
@@ -136,9 +139,27 @@ def run_klines_worker(
             interval=interval,
             limit=limit,
         )
+
+        append_delta_log_to_in_memory_manifest(delta_log_path=delta_log_path, manifest=manifest)
+
         validate_manifest_and_fs_integrity(manifest, responses_dir)
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
-    
+
+        if manifest["slices"] == {} and has_files(responses_dir):
+            manifest = rebuild_manifest_from_responses(responses_dir=responses_dir, 
+                                                       expected_slices=expected_slices, 
+                                                       symbol=symbol,
+                                                       interval=interval,
+                                                       limit=limit)
+            save_manifest(manifest_path=manifest_path, manifest=manifest, reason=f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
+        
+
+        # Implement later 
+        # if report.fs_violation_ratio > cfg.rebuild_threshold:
+        #     log.warning("Integrity violations exceed threshold; rebuilding manifest")
+        #     manifest = rebuild_manifest_from_responses(...)
+
+
         if seed_manifest_with_expected_slices(manifest, expected_slices):
             save_manifest(manifest_path=manifest_path, manifest=manifest, reason=f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")
         
@@ -164,6 +185,7 @@ def run_klines_worker(
         
         fetch_comp_keys = [skey.canonical_slice_composite_key() for skey in to_fetch]
         for slice_key in to_fetch:
+            log.info(slice_key)
             fetch_fail: FetchFailed | None = None
             meta: Dict[str, Any] = {}
             slice_comp_key = slice_key.canonical_slice_composite_key()
@@ -218,7 +240,7 @@ def run_klines_worker(
                 entry = _update_entry(meta, entry)
                 manifest["slices"][slice_comp_key] = entry
 
-                _update_summary(manifest)
+                update_summary(manifest)
 
                 append_manifest_delta(
                     delta_log_path=delta_log_path,
@@ -238,7 +260,7 @@ def run_klines_worker(
                 )
 
                 manifest["slices"][slice_comp_key] = entry
-                _update_summary(manifest)
+                update_summary(manifest)
 
                 failure_delta = {
                     "slice_comp_key": slice_comp_key,
@@ -442,68 +464,3 @@ def _enumerate_expected_slices(
             )
         )
     return slices
-
-def _update_summary(manifest: Dict) -> None:
-    """
-    Recompute summary stats based on current slice entries.
-    """
-    slices = manifest.get("slices", {})
-    total = len(slices)
-    complete = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.COMPLETE)
-    partial = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.PARTIAL)
-    failed = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.FAILED)
-    missing = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.MISSING)
-    needs_refresh = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.NEEDS_REFRESH)
-    in_progress = sum(1 for e in slices.values() if e.get("slice_status") == SliceStatus.IN_PROGRESS)
-
-    accounted_for = (
-        complete
-        + partial
-        + failed
-        + missing
-        + needs_refresh
-        + in_progress
-    )
-
-    if accounted_for != total:
-        log.warning(
-            "Manifest summary mismatch: total=%d accounted=%d "
-            "(complete=%d partial=%d missing=%d needs_refresh=%d "
-            "in_progress=%d failed=%d)",
-            total,
-            accounted_for,
-            complete,
-            partial,
-            missing,
-            needs_refresh,
-            in_progress,
-            failed,
-        )
-
-    manifest["summary"] = {
-        "total_slices": total,
-        "missing_slices": missing,
-        "complete_slices": complete,
-        "partial_slices": partial,
-        "needs_refresh": needs_refresh,
-        "in_progress": in_progress,
-        "failed_slices": failed,
-        "last_evaluated_at": _now_iso(),
-    }
-    log.info("Manifest Summary: %s", manifest["summary"])
-
-
-
-
-#                 log.info(
-#                     f"Slice entry pulled from manifest | {slice_comp_key} | "
-#                     f"id={entry['slice_id']} status={entry.get('slice_status')}"
-#                 )
-#                 log.debug(f"""{colorize('=== Slice entry pulled from manifest ===', Ansi.BOLD)}
-# comp_key: {colorize(slice_comp_key, Ansi.BOLD)}
-# hashed: {colorize(entry['slice_id'], Ansi.BOLD)}
-# Full Entry: {entry}""")
-
-
-
-#  save_manifest(manifest_path, manifest, f"fetch slice succeeded - marking as {colorize(enum_for_log(entry['slice_status']), Ansi.GREEN , Ansi.BOLD)}. Slice Status Reason: {enum_for_log(entry['slice_status_reason'])}")

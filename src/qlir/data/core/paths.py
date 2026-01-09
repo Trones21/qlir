@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 log = logging.getLogger(__name__)
 
+from qlir.data.sources.common.slices.canonical_hash import make_canonical_slice_hash
+from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.time.timefreq import TimeFreq
 
 """
@@ -140,6 +142,13 @@ def get_raw_manifest_path(datasource:str, endpoint:str, symbol: str, interval: s
     if not Path.exists(path):
         raise FileNotFoundError(f"Manifest not Found at {path}")
     return path
+
+def expected_slice_response_uri(
+    responses_dir: Path,
+    slice_key: SliceKey,
+) -> Path:
+    return responses_dir / f"{make_canonical_slice_hash(slice_key)}.json"
+
 
 def get_symbol_interval_limit_raw_dir(data_root: Path, datasource: str, endpoint:str, symbol: str, interval: str, limit:int) -> Path:
     """Containseverything the data server interacts with:

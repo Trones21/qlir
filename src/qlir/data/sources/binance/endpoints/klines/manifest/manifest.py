@@ -36,6 +36,7 @@ def load_or_create_manifest(
     
     # Fresh skeleton
     log.info("Creating fresh manifest because there was no manifest found at: %s", manifest_path)
+    
     return {
         "endpoint": "klines",
         "symbol": symbol,
@@ -125,12 +126,14 @@ def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]
     Ensure every expected slice exists in manifest with at least a 'missing' status.
     """
     changed = False
+
     for s in expected_slices:
         composite_key = s.canonical_slice_composite_key()
         if composite_key not in manifest['slices']:
+            slice_hash = make_canonical_slice_hash(s)
             manifest['slices'][composite_key] = {
                 "slice_status": SliceStatus.MISSING,
-                "slice_id": make_canonical_slice_hash(s),
+                "slice_id": slice_hash,
                 "first_ts": s.start_ms,
                 "last_ts": s.end_ms,
                 "requested_at": None,
@@ -140,7 +143,13 @@ def seed_manifest_with_expected_slices(manifest, expected_slices: list[SliceKey]
                 "error": None,
                 "http_status": None,
             }
+            log.info(f"Expected slice not found in manifest. Adding {composite_key} - {slice_hash}")
             changed = True
+    
+    if changed == False:
+        log.info("All expected slices found in manifest.")
+        log.info("To Do: Maybe log the max composite key open unix ts (in fmt human). Current unix ts should fall wthin last slice start_ms-end_ms ... just not sure its worth the sort cost.")
+
     return changed
 
 

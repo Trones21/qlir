@@ -21,7 +21,7 @@ import time
 from typing import List
 # from .endpoints.uiklines.worker import run_uiklines_worker
 
-from qlir.data.sources.binance.manifest_aggregator import run_manifest_aggregator
+from qlir.data.sources.binance.manifest_delta_service import run_manifest_delta_service
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ def start_data_server(config: BinanceServerConfig) -> None:
         # Delta Log / Manifest Aggregator (cold path)
         processes.append(
             mp.Process(
-                target=run_manifest_aggregator,
+                target=run_manifest_delta_service,
                 args=(config, config.data_root),
                 name="klines-manifest-aggregator",
             )

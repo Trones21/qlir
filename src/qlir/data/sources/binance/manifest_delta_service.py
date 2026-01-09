@@ -38,7 +38,7 @@ MAX_DELTA_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
 # Process entrypoint
 # ---------------------------------------------------------------------------
 
-def run_manifest_aggregator(server_config: BinanceServerConfig, data_root: Path) -> None:
+def run_manifest_delta_service(server_config: BinanceServerConfig, data_root: Path) -> None:
     """
     Long-running Binance manifest aggregation service.
 

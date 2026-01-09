@@ -41,3 +41,18 @@ Traceback (most recent call last):
         f"Child process exited unexpectedly: {p.name} (pid={p.pid})"
     )
 RuntimeError: Child process exited unexpectedly: klines-worker (pid=69420)
+
+
+
+Manifest Rebuild Plan:
+1. Level 1 - Forced Rebuild on startup
+ - if manifest.json is missing and responses_dir is non empty. 
+ - this should be called during load or create manifest
+
+2. Level 2 - Trust erosion
+  - Triggered by aggregate fs integrity violations
+  - pass a config to tune this 
+  - violations must be VERY large to trigger (a mismatch will occur if the delta log hasnt been applied, and the data service should NEVER apply the delta log, because that would block the hot path)
+
+3. Operator Inititiated (manual)
+  - This is the smae code, but run outside the event loop.. uses a separate entrypoint to do just this one task

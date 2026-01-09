@@ -17,6 +17,8 @@ def validate_manifest_and_fs_integrity(manifest: dict, response_dir: Path) -> Ma
 
     All checks are warnings unless the manifest is fundamentally unusable.
     Intended to be called once per worker before processing begins.
+
+    Manifest dict should include both the info read from manifest.json as well as manifest.delta 
     """
     report = ManifestValidationReport()
     log.info(colorize(
