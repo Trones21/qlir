@@ -228,7 +228,7 @@ def create_or_update_parquet_chunk(
 
     # Seal as many full parts as possible
     while len(combined_items) >= cfg.batch_slices:
-        log.info(f"Writing head because combined_items: {len(combined_items)} >= batch_slice_size: {cfg.batch_slices}")
+        log.info(f"Writing parquet chunk because combined_items: {len(combined_items)} >= batch_slice_size: {cfg.batch_slices}")
         k = cfg.batch_slices
         nrows = rows_for_first_k_slices(combined_items, k)
 
