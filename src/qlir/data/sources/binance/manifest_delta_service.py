@@ -20,6 +20,7 @@ from qlir.data.sources.binance.manifest_delta_log import (
 # KLINES MANIFEST (current location)
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
     load_existing_manifest,
+    snapshot_created_at,
 )
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
     write_manifest_snapshot,
@@ -30,8 +31,8 @@ from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
 # ---------------------------------------------------------------------------
 
 SNAPSHOT_INTERVAL_SEC = 120
-MAX_EVENTS_PER_SNAPSHOT = 500
-MAX_DELTA_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_EVENTS_PER_SNAPSHOT = 5
+MAX_DELTA_LOG_BYTES = 100 * 1024 * 1024   # 100MB 
 
 
 # ---------------------------------------------------------------------------
@@ -69,8 +70,10 @@ def run_manifest_delta_service(server_config: BinanceServerConfig, data_root: Pa
 
     # To easily toggle
     if os.getenv("QLIR_MANIFEST_LOG"):
+        log.info("Enabling delta log service logging because QLIR_MANIFEST_LOG is set")
         _setup_manifest_logging(sym_interval_limit_raw_dir / "logs")
-
+    else:
+        log.info("Set QLIR_MANIFEST_LOG to enable delta log service logging")
 
     manifest_path = sym_interval_limit_raw_dir / "manifest.json"
     delta_log_path = sym_interval_limit_raw_dir / "manifest.delta"
@@ -80,7 +83,6 @@ def run_manifest_delta_service(server_config: BinanceServerConfig, data_root: Pa
         "Starting Binance manifest aggregator | dir=%s",
         sym_interval_limit_raw_dir,
     )
-
 
     # ---------------------------------------------------------------------
     # Load Existing Manifest
@@ -120,6 +122,13 @@ def run_manifest_delta_service(server_config: BinanceServerConfig, data_root: Pa
     log.info("Bootstrap complete | delta_offset=%d", delta_offset)
 
 
+
+    # ---------------------------------------------------------------------
+    # Set Path Where this service can pickup full manifests dropped off by the worker
+    # ---------------------------------------------------------------------
+    snapshot_dir = sym_interval_limit_raw_dir.joinpath("manifest_snapshots")
+    snapshot_path = snapshot_dir / "manifest.snapshot.json"
+
     # ---------------------------------------------------------------------
     # Main loop
     # ---------------------------------------------------------------------
@@ -144,7 +153,25 @@ def run_manifest_delta_service(server_config: BinanceServerConfig, data_root: Pa
                 _write_snapshot(manifest, manifest_path)
                 last_snapshot_ts = time.monotonic()
                 events_since_snapshot = 0
-                delta_log_bytes_at_snapshot = delta_log_path.stat().st_size
+                if delta_log_path.exists():
+                    delta_log_bytes_at_snapshot = delta_log_path.stat().st_size
+                else:
+                    delta_log_bytes_at_snapshot = 0
+
+            # Apply a Full Snapshot if it exists
+            if snapshot_path.exists():
+                dt = snapshot_created_at(snapshot_path)
+                log.info(f"Full manifest snapshot detected. Snapshot created at: {dt}")
+
+                with snapshot_path.open("r", encoding="utf-8") as f:
+                    manifest = json.load(f)
+
+                write_manifest_snapshot(
+                    manifest_path=manifest_path,
+                    manifest=manifest,
+                )
+
+                snapshot_path.unlink()  # consume
 
             time.sleep(0.25)
 
@@ -247,3 +274,7 @@ def _setup_manifest_logging(log_dir: Path) -> None:
     log.setLevel(logging.DEBUG)
     log.propagate = False  # 🔑 prevent stdout duplication
     log.info("zkp-Setup manifest aggregator logger - qlir.manifest_aggregator")
+
+
+
+

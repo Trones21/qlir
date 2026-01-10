@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict, Any, Iterable
 from datetime import datetime, timezone
@@ -48,6 +49,24 @@ def append_manifest_delta(
         f.write(json.dumps(delta, sort_keys=True))
         f.write("\n")
         f.flush()
+        os.fsync(f.fileno())
+
+
+# ---------------------------------------------------------------------------
+# Rewrite the entire manifest (called by workers)
+# ---------------------------------------------------------------------------
+
+
+def rewrite_manifest_json(manifest: dict, path: Path) -> None:
+    tmp = path.with_suffix(".full.tmp")
+
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, sort_keys=True)
+        f.flush()
+        os.fsync(f.fileno())
+
+    tmp.replace(path)  # atomic on POSIX
+
 
 
 # ---------------------------------------------------------------------------

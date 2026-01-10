@@ -10,7 +10,7 @@ from qlir.data.sources.binance.endpoints.klines.manifest.rebuild.from_responses 
 from qlir.data.sources.binance.endpoints.klines.manifest.summary import update_summary
 from qlir.data.sources.binance.manifest_delta_log import append_delta_log_to_in_memory_manifest, append_manifest_delta
 from qlir.data.sources.common import claims
-from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, save_manifest, write_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, write_full_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.data.sources.common.slices.slice_classification import classify_slices
 from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.data.sources.common.slices.slice_status import SliceStatus
@@ -117,6 +117,8 @@ def run_klines_worker(
     manifest_path = sym_interval_limit_raw_dir.joinpath(MANIFEST_FILENAME)
     log.debug("and the manifest aggregator batch updates manifest located at: %s", manifest_path)
 
+    snapshot_dir = sym_interval_limit_raw_dir.joinpath("manifest_snapshots")
+
     if os.getenv("QLIR_MANIFEST_LOG"):
         log.debug("manifest batch update worker logs are turned on. To view, open another terminal and use tail -f %s", manifest_path)
 
@@ -146,29 +148,29 @@ def run_klines_worker(
         validate_manifest_and_fs_integrity(manifest, responses_dir)
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
 
+        log.warning("Full writes in terribly inefficient, but eventually the manifest validation will be pulled out and only run like once per hour")
+  
         if manifest["slices"] == {} and has_files(responses_dir):
+            log.info(f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
             manifest = rebuild_manifest_from_responses(responses_dir=responses_dir, 
                                                        expected_slices=expected_slices, 
                                                        symbol=symbol,
                                                        interval=interval,
                                                        limit=limit)
-            save_manifest(manifest_path=manifest_path, manifest=manifest, reason=f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
-        
-
-        # Implement later 
+            write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason=f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
+             # Implement later 
         # if report.fs_violation_ratio > cfg.rebuild_threshold:
         #     log.warning("Integrity violations exceed threshold; rebuilding manifest")
         #     manifest = rebuild_manifest_from_responses(...)
 
 
         if seed_manifest_with_expected_slices(manifest, expected_slices):
-            save_manifest(manifest_path=manifest_path, manifest=manifest, reason=f"Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")
-        
+            write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason=f"Writing entire manifest snapshot - Updating Manifest with range {format_ts_human(min_start_ms)} , {format_ts_human(max_end_ms)}")
         
         classified = classify_slices(expected_slices, manifest)
         manifest = update_manifest_with_classification(manifest=manifest, classified=classified)
+        write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason=f"Writing entire manifest snapshot - Updating Manifest with slice classifications")
         
-        save_manifest(manifest_path=manifest_path, manifest=manifest, reason=f"Updating Manifest with slice classifications" )
 
         to_fetch = _construct_fetch_batch(classified)
 

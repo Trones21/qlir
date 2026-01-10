@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 from typing import Dict
 import logging
@@ -80,30 +81,38 @@ def _write_manifest_atomic(manifest_path: Path, manifest: Dict) -> None:
     tmp_path.replace(manifest_path)
 
 
-def save_manifest(
-    manifest_path: Path,
-    manifest: Dict,
-    *,
-    reason: str | None = None,
+def write_full_manifest_snapshot(
+    snapshot_dir: Path,
+    manifest: dict,
+    reason: str
 ) -> None:
     """
-    Force-write the manifest immediately.
+    Write a snapshot of the current manifest state.
 
-    Intended for:
-    - bootstrap / seeding
-    - integrity repair
-    - structural updates
-    - single-writer contexts
-
-    NOT intended for:
-    - per-slice updates
-    - high-frequency writes
+    Notes:
+    - Called by the WORKER so that the manifest aggregator can pick up this snapshot
+    - Manifest is a materialized view
+    - May lag behind real-time slice updates
     """
-    _write_manifest_atomic(manifest_path, manifest)
+    tmp = snapshot_dir / "manifest.snapshot.tmp"
+    final = snapshot_dir / "manifest.snapshot.json"
+
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, sort_keys=True)
+        f.flush()
+        os.fsync(f.fileno())
+
+    tmp.replace(final)  # atomic publish
 
     if reason:
-        log.info("Manifest saved | reason=%s path=%s", reason, manifest_path)
+        log.info("Full Manifest Snapshot Taken, deltalog service will pickup from path=%s, reason=%s", final, reason)
 
+
+def snapshot_created_at(path: Path) -> datetime:
+    st = path.stat()
+    return datetime.fromtimestamp(st.st_mtime, tz=timezone.utc)
 
 
 def write_manifest_snapshot(

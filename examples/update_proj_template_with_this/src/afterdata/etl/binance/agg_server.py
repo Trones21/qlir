@@ -113,7 +113,7 @@ def main() -> None:
         "limit": args.limit,
     }
 
-    cfg = AggConfig(batch_slices=args.batch_slices)
+    cfg = AggConfig(batch_slices=args['batch-slices'])
 
     print(
         "[agg_server] starting with\n"
