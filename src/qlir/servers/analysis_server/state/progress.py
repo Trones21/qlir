@@ -17,7 +17,7 @@ def load_last_processed_ts() -> Optional[pd.Timestamp]:
         return None
 
     raw = json.loads(STATE_FILE.read_text())
-    return pd.Timestamp(raw["last_processed_ts"], tz="UTC")
+    return pd.Timestamp(raw["last_processed_ts"], unit="ms", tz="UTC")
 
 
 def save_last_processed_ts(ts: pd.Timestamp) -> None:

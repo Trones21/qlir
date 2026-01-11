@@ -73,16 +73,49 @@ def load_latest_parquet_window(
     directory: Path,
     *,
     pattern: str = "*.parquet",
-    last_n_files: int,
+    window_size: int,
+    head_name: str = "head.parquet",
 ) -> _pd.DataFrame:
-    files = sorted(directory.glob(pattern))
-    if not files:
+    """
+    Load a rolling window of paquet files consisting of:
+      - the latest (window_size - 1) chunk files
+      - plus head.parquet (if present)
+
+    window_size >= 1
+
+    Returns a raw, unordered, non-deduplicated staging DataFrame.
+    ETL MUST be applied before analytical use.
+    """
+    if window_size < 1:
+        raise ValueError("window_size must be >= 1")
+
+    all_files = sorted(directory.glob(pattern))
+    if not all_files:
         return _pd.DataFrame()
 
-    selected = files[-last_n_files:]
-    log.info(f"Loading chunks: {selected}")
-    dfs = [_pd.read_parquet(p) for p in selected]
+    head_path = directory / head_name
+    has_head = head_path.exists()
 
+    # Exclude head from chunk candidates
+    chunk_files = [
+        p for p in all_files
+        if p.name != head_name
+    ]
+
+    # Take last (window_size - 1) chunks
+    n_chunks = window_size - 1
+    selected_chunks = chunk_files[-n_chunks:] if n_chunks > 0 else []
+
+    selected_files = selected_chunks.copy()
+    if has_head:
+        selected_files.append(head_path)
+
+    if not selected_files:
+        return _pd.DataFrame()
+
+    log.info("Loading parquet window: %s", selected_files)
+
+    dfs = [_pd.read_parquet(p) for p in selected_files]
     return _pd.concat(dfs, ignore_index=True)
 
 

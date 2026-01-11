@@ -36,3 +36,5 @@ def clean_data(df):
 
     DQ.log_candle_dq_issues(dq_report)
     log_data_staleness(df=clean_df)
+
+    return df

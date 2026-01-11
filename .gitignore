@@ -57,3 +57,5 @@ __pypackages__/
 
 # Accidental notification server alerts folder 
 /alerts/
+alert_backoff_state.json
+analysis_state.json

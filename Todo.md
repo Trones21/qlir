@@ -7,18 +7,9 @@ Module arch / user import ux -> See MODULE_ARCH_AND_USER_IMPORT_UX.md
 
 # Known Issues
 
-Slices are getting marked as needs_refresh on restart... likely just some manifest schema issue
----
+Count mismatch (likely just slicestatus enum not gathering everything... ahhh this is an easy invariant to solve for, just do count ! in set(slicestatus) 
 
-Ran datasol1m, new slices were fetched but count was not updating and it just kept refetching the same slices over and over again 
-databtc1m - same issue
-datasol1s - somehow decided there were 122 responses missing... (but when i started it up the were ~300)
-    {'manifest': 170385, 'filesystem': 170504},
-    there are all the orphan response files...
-databtc1s - (need to get the full set first)
 
-after a restart we are much closer {'count_mismatch': {'manifest': 170502, 'filesystem': 170504}, (but note that this shouldnt require a restart lol)
-todo: 
 ---
 
 Manifest Aggregator logs not being written to /logs 
@@ -44,10 +35,14 @@ there is also the question of naming (singular vs plural) sma v. smas. leaning t
 
 # Priorities
 
-- rethink summarize_condition_paths (grouping is sumuggled in here ... but maybe ok maybe we just need two smaller funcs or something for clarity.. also nee dto think through params, ), maybe two top level funcs summarize_condition_paths
+Servers - Get all 4 running at once and data flowing end to end
+
+qlir - see data -> sources -> binance  (data server) -> known_issues.md
+     - figure out why the last partial slice isnt continuously polled  
+
+- rethink summarize_condition_paths (grouping is sumuggled in here ... but maybe ok maybe we just need two smaller funcs or something for clarity.. also need to think through params, ), maybe two top level funcs summarize_condition_paths
 definitely a better doc string... 
     - but really these are such different operations (one is a reducer the other add a new column before the reducer... but then its on you to ensure the condiiton col is right... )
-
 
 - implement arp (and variants, including the bundle) (and expose through the api)
 - implement range shock (and expose via api) 
@@ -58,16 +53,6 @@ qlir - Any function that creates a new column must declare its row semantics.
      - But then create the RowDerivationSpec core.semantics
      - Should also state that we are removing intermediate columns if we do 
 
-qlir - data_server - ability to delete and rebuild manifest from scratch
-    - try this manually (for like 1m data... delete the file then start up the server, see what happens)
-    - sol1m ... the files were all marked as missing  
-        - it did 54 requests... file system didnt add more (this is good, it means the determnisitic hashing func hasnt changed)
-        - the question is why are they marked as missing... ahh maybe simply b/c the manifest was gone and it doesnt check the fs before starting to make requests...??
-
-qlir - see data -> sources -> binance  (data server) -> known_issues.md
-
-proj - Do the SMA study!!!!
-
 proj - pipelines cli 
 
 etl funcs unit tests 
@@ -77,9 +62,6 @@ proj - prove that the cli works for
         - list all pipelines
          
 move all manifest validation and other "venue agnostic" code to the data.sources.common modules 
-
-manifest_validation
-    - add log to df for the slice parse and open spacing violations
 
 uklines - basically copy paste from klines worker
     - already setu pthe pyproject.toml in afterdata (but havent moved to template)
@@ -109,19 +91,12 @@ which passes args and calls `__PROJECT_NAME.binance.etl.data_server`
 
 - refactor modules to follow the MODULE_ARCH_AND_USER_IMPORT_UX.md
 
-- Refactor "new cols" funcs to use decorator 
-
 ## Long Term (Not a prio at all)
 - log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)
 - Add ability to write to a non-local location (e.g. S3 bucket)
 - metrics/helth endpoints
 
 ### Ta-lib integration
-
-
-
-### Refactoring:
-
 
 
 ### Viz_Demo
