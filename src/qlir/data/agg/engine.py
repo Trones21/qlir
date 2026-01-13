@@ -15,7 +15,7 @@ from qlir.data.agg.schema_binance_klines import load_binance_kline_slice_json
 
 log = logging.getLogger(__name__)
 
-SLICE_OK = "complete"
+SLICE_OK = ["complete","partial"]
 SLICE_STATUS_KEY = "slice_status"
 
 
@@ -54,7 +54,8 @@ def iter_raw_ok_slices(raw_manifest: dict[str, Any]) -> Iterable[RawSliceRef]:
             continue
 
         status = entry.get(SLICE_STATUS_KEY)
-        if status != SLICE_OK:
+        if status not in SLICE_OK:
+            log.info(f"Ignoring slice {_key}, status: {status} ") 
             continue
 
         h = entry.get("slice_id")
@@ -77,6 +78,7 @@ def get_slices_needing_to_be_aggregated(
 
     # 2. Union in head slices
     used |= set(agg_manifest.head_slice_ids())
+    log.info(f"Used: {len(used)}")
     todo = [s for s in eligible if s.slice_id not in used]
     todo.sort(key=lambda s: s.start_ms)  # oldest-first
     return todo
@@ -92,7 +94,7 @@ def write_parquet_atomic(df: _pd.DataFrame, final_path: Path) -> None:
 @dataclass
 class AggConfig:
     batch_slices: int = 100
-    sleep_idle_s: int = 45
+    sleep_idle_s: int = 20
     sleep_partial_s: int = 7
     log_every_loop: bool = True
     # How many NEW slices to attempt per poll (controls CPU/IO burst).
@@ -296,6 +298,60 @@ def create_or_update_parquet_chunk(
 
 
 # ------------
+# Refresh only head 
+# ------------
+def refresh_head_from_raw(
+    *,
+    agg: AggManifest,
+    paths: DatasetPaths,
+) -> None:
+    """this is needed because the most current slice will have already been discovered, but it will have new data after one interval
+        e.g. lets say the most current slice is SOLUSDT:1m:<someopentime>:1000
+        after the data server persists the first candle (1 candle), (Slice Status Partial) the slice will be added
+        but after the data server the second candle (now slice has 2 candles).. well on the normal path the agg server wouldn't do anything
+        because there are no new SLICES. 
+        
+        Invariant:
+        - Only slices listed in agg.data["head"]["items"] may grow.
+        - Head is rebuilt from raw JSON every daemon loop.
+        - Slices not in head are treated as immutable.
+        - Historical corruption is handled by full rebuild jobs.
+
+    """
+    head_items = _get_head_items(agg)
+    if not head_items:
+        return
+
+    frames: list[_pd.DataFrame] = []
+    new_items: list[dict[str, Any]] = []
+
+    for it in head_items:
+        sid = it["slice_id"]
+        raw_path = paths.raw_responses_dir / f"{sid}.json"
+
+        try:
+            df = load_binance_kline_slice_json(raw_path)
+        except Exception as exc:
+            log.warning("[agg] failed to refresh head slice %s: %s", sid, exc)
+            return  # abort refresh safely
+
+        frames.append(df)
+        new_items.append({"slice_id": sid, "row_count": len(df)})
+
+    combined = _pd.concat(frames, ignore_index=True)
+
+    if "open_time" in combined.columns:
+        combined = combined.sort_values("open_time", kind="mergesort").reset_index(drop=True)
+
+    write_parquet_atomic(combined, _head_path(paths))
+    _set_head_items(agg, new_items, head_df=combined)
+    atomic_write_json(paths.agg_manifest_path, agg.data)
+
+    log.debug("[agg] refreshed head (%d slices, %d rows)", len(new_items), len(combined))
+
+
+
+# ------------
 # Daemon runner
 # ------------
 
@@ -308,8 +364,13 @@ def run_agg_daemon(
     paths.agg_parts_dir.mkdir(parents=True, exist_ok=True)
 
     while True:
+        log.info("inside true")
         raw_manifest = load_json(paths.raw_manifest_path)
         agg = AggManifest.load_or_init(paths.agg_manifest_path, dataset_meta)
+
+
+        # 🔥 ALWAYS refresh head first (because current slice is being updated every interval (1s or 1m))
+        refresh_head_from_raw(agg=agg, paths=paths)
 
         todo = get_slices_needing_to_be_aggregated(raw_manifest, agg)
 

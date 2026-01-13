@@ -20,7 +20,7 @@ from qlir.servers.analysis_server.state.progress import load_last_processed_ts, 
 
 log = logging.getLogger(__name__)
 
-PARQUET_CHUNKS_DIR = get_agg_dir_path("binance", "klines", "SOLUSDT", "1s", 1000)
+PARQUET_CHUNKS_DIR = get_agg_dir_path("binance", "klines", "SOLUSDT", "1m", 1000)
 TS_COL = "tz_start"
 MAX_ALLOWED_LAG = 60  # seconds
 
