@@ -57,37 +57,6 @@ def fetch_raw_all() -> None:
     )
 
 
-DEFAULT_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
-DEFAULT_INTERVALS = ["1m"]
-
-def fetch_raw_default() -> None:
-    parser = argparse.ArgumentParser()
-    _add_endpoint_arg(parser)
-    _add_log_profile_arg(parser)
-
-    args = parser.parse_args()
-
-    
-    print(
-        "[NOTE] This command spawns long-running worker processes.\n"
-        "Ctrl+C will NOT stop the servers.\n"
-        "You must terminate these by PID (kill / pkill).\n"
-        "Logging.prepend_pid is being set to true for your convenience \n"
-        "You can also find the pids with: \n"
-        "   ps aux | grep -E 'binance.data_server|^USER' \n"
-        "To stop a single/multiple worker:\n"
-        "   kill <pid found> <pid found> etc. \n"
-        "To stop all workers:\n"
-        "   pkill -f binance.data_server\n"
-    )
-    print(f"[Note] Printing to the console will be interwoven. \n")
-    print(f"[binance] starting raw ingestion of symbols:  \n {DEFAULT_SYMBOLS} \n at intervals: \n {DEFAULT_INTERVALS} \n\n")
-    print(f" Servers starting in 10 seconds...")
-    sleep(10)
-
-    _fetch_raw_impl(DEFAULT_SYMBOLS, DEFAULT_INTERVALS, args.endpoint, args.log_profile)
-
-
 def fetch_raw_specific() -> None:
     """
     Start raw ingestion for user-specified symbols / intervals for a specific endpoint
@@ -131,12 +100,15 @@ def aggregate_raw_specific():
     parser = argparse.ArgumentParser()
     parser = parse_agg_server_args(parser)
     args = parser.parse_args()
+    print(f"Args received by lte.main.py {args}")
+    print("main.py call agg_server.py")
     subprocess.run(
         [sys.executable, "-m", "afterdata.etl.binance.agg_server", 
          "--endpoint", args.endpoint,
           "--symbol", args.symbol,
           "--interval", args.interval,
-          "--limit", str(args.limit)
+          "--limit", str(args.limit),
+          "--batch-slices", str(args.batch_slices)
          ],
     )
 

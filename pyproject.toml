@@ -22,6 +22,8 @@ classifiers = [
 urls = { "Source" = "https://github.com/Trones21poet/qlir" }
 
 [project.scripts]
+data = "qlir.servers.data_server.run_server:main"
+agg = "qlir.servers.agg_server.run_server:main"
 notifications = "qlir.servers.notification_server.server:main"
 analysis = "qlir.servers.analysis_server.server:main"
 

@@ -8,7 +8,7 @@ dependencies = [
   "pandas>=2.2,<3.0",
   "numpy>=1.26,<2.0",
   # Local path dependency (edit as needed)
-  "qlir @ file:///home/ubuntu/qlir",
+  #"qlir @ file:///home/tjr/gh/qlir",
   # Or use the Git version:
   # "qlir @ git+https://github.com/Trones21/qlir.git@main",
 ]

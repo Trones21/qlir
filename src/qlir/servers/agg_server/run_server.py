@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from afterdata.logging.logging_setup import setup_logging, LogProfile
+from qlir.servers.logging.logging_setup import setup_logging, LogProfile
 from qlir.data.core.paths import get_data_root
 from qlir.data.agg.engine import run_agg_daemon, AggConfig
 from qlir.data.agg.paths import DatasetPaths
