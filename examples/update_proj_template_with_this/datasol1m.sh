@@ -1,1 +1,3 @@
-poetry run binance-data-server-arg --endpoint klines --symbol SOLUSDT --interval "1m" --log-profile "qlir-debug"
+
+
+poetry run binance-data-server-arg --endpoint klines --symbol SOLUSDT --interval "1m" --log-profile "qlir-debug" > data_server.log 2>&1

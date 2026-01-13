@@ -2,8 +2,9 @@
 
 from dataclasses import dataclass
 import os
+from typing import Iterable
 
-from qlir.data.sources.common.slices.slice_key import SliceKey
+from qlir.data.sources.common.slices.slice_key import SliceKey, get_current_slice_key, slice_key_from_canonical
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 import logging
 log = logging.getLogger(__name__)
@@ -22,10 +23,24 @@ def classify_slices(
     manifest: dict,
 ) -> SliceClassification:
 
-    slices = manifest.get("slices", {})
+    slices: dict = manifest.get("slices", {})
     result = SliceClassification([], [], [], [], [])
 
-    for slice_key in expected:
+
+
+    # 'SOLUSDT:1m:1768245600000:1000', 'SOLUSDT:1m:1768305600000:1000'
+
+
+    current_slice, expected_iter = try_resolve_current_slice(
+        expected=expected,
+        slices=slices,
+    )
+
+    if current_slice is not None:
+        result.partial.append(current_slice)
+
+
+    for slice_key in expected_iter:
         key = slice_key.canonical_slice_composite_key()
         entry = slices.get(key)
 
@@ -75,3 +90,54 @@ def classify_slices(
     )
     
     return result
+
+
+
+
+def try_resolve_current_slice(
+    *,
+    expected: list[SliceKey],
+    slices: dict,
+) -> tuple[SliceKey | None, Iterable[SliceKey]]:
+    """
+    Returns:
+      (current_slice: SliceKey | None,
+       expected_without_current: Iterable[SliceKey])
+
+    First we derive the expected current (open) slice deterministically from wall-clock time.
+    This slice should already exist in the manifest. Absence indicates upstream code failure (since slices are deterministic by wall clock time)
+
+    Then we remove it from the iterable if we found it (because the caller handles the current slice separately... yes I know this is coupled... but split for readability, testabiltiy etc.
+    """
+    try:
+        if not slices:
+            raise ValueError("No slices available")
+
+        prior_key = next(reversed(slices))
+        current_slice_key_str = get_current_slice_key(prior_key)
+
+        if current_slice_key_str not in slices:
+            raise ValueError(
+                f"Current slice key {current_slice_key_str} not found"
+            )
+
+        current_slice = slice_key_from_canonical(
+            current_slice_key_str
+        )
+
+        # Exclude it structurally from generic classification
+        expected_without_current = (
+            sk for sk in expected
+            if sk.canonical_slice_composite_key()
+            != current_slice_key_str
+        )
+
+        return current_slice, expected_without_current
+
+    except Exception as exc:
+        log.error(
+            "Failed to resolve current slice; falling back",
+            exc_info=exc,
+        )
+        return None, expected
+
