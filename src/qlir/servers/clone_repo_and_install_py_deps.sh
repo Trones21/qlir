@@ -1,5 +1,3 @@
-bash ./install_system_deps.sh
-
 git clone https://github.com/Trones21/qlir.git
 
 cd ~/qlir
@@ -15,5 +13,4 @@ echo "Please choose a location from which the qlir package should be used (as we
 
 poetry install
 
-bash datasol1m.sh 
 
