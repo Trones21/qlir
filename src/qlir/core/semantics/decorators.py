@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Mapping, ParamSpec, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Mapping, ParamSpec, Sequence, Tuple, Union
 
 from qlir.core.types.new_cols_result import NewColsResult
 
@@ -14,6 +14,16 @@ from .row_derivation import ColumnDerivationSpec
 
 ReturnedCols = str | Sequence[str] | Mapping[str, str]
 
+Specs = Union[
+    ColumnDerivationSpec,
+    Sequence[ColumnDerivationSpec],
+    Mapping[str, ColumnDerivationSpec],
+]
+
+SpecsOrCallable = Union[
+    Specs,
+    Callable[..., Specs],
+]
 
 def _normalize_returned_cols(cols: ReturnedCols) -> tuple[list[str], dict[str, str] | None]:
     """
@@ -73,10 +83,7 @@ P = ParamSpec("P")
 
 def new_col_func(
     *,
-    specs: ColumnDerivationSpec | 
-        Sequence[ColumnDerivationSpec] | 
-        Mapping[str, ColumnDerivationSpec] |
-        Callable[..., ColumnDerivationSpec]
+    specs: SpecsOrCallable,
 ) -> Callable[[Callable[P, NewColsResult]], Callable[P, NewColsResult]]:
     """
     Decorator for functions that create new column(s).
@@ -121,3 +128,14 @@ def new_col_func(
         return wrapper
 
     return decorator
+
+
+
+
+# def new_col_func(
+#     *,
+#     specs: ColumnDerivationSpec | 
+#         Sequence[ColumnDerivationSpec] | 
+#         Mapping[str, ColumnDerivationSpec] |
+#         Callable[..., ColumnDerivationSpec]
+# ) -> Callable[[Callable[P, NewColsResult]], Callable[P, NewColsResult]]:

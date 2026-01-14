@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Any
 import numpy as _np
 import pandas as _pd
 
@@ -135,14 +135,14 @@ def with_shift(
 @new_col_func(
     specs=lambda *, col, **_: {
         "abs": ColumnDerivationSpec(
-            op="diff",
+            op="abs",
             base_cols=(col,),
             read_rows=(-1, 0),
             scope="output",
             self_inclusive=True,
         ),
-        "pct": ColumnDerivationSpec(
-            op="pct_change",
+        "sign": ColumnDerivationSpec(
+            op="sign_col",
             base_cols=(col,),
             read_rows=(-1, 0),
             scope="output",
@@ -157,19 +157,20 @@ def with_bar_direction(
     periods: int = 1,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> tuple[_pd.DataFrame, tuple[str, ...]]:
+) -> tuple[_pd.DataFrame, dict[str, Any]]:
     """
     Direction of bar-to-bar change (sign of diff): {-1, 0, +1}
     Example: open_t vs open_{t-1} -> direction(open)
     """
-    
-
     out, diff_cols = with_diff(df, cols=[col], periods=periods, inplace=inplace)
     (diff_col, ) = diff_cols
     # attach direction of that diff
     out, sign_cols = with_sign(out, cols=[diff_col], suffix=suffix or "direction", inplace=True)
     (sign_col, ) = sign_cols
-    return out, tuple([diff_col, sign_col])
+    return (out, {
+        "abs": diff_col,
+        "sign": sign_col,
+    })
 
 
 

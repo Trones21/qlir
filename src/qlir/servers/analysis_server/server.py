@@ -7,7 +7,10 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from qlir.data.core.paths import get_agg_dir_path
+from qlir.logging.logdf import logdf
+from qlir.servers.analysis_server.analyses.conduct_analysis import conduct_analysis
 from qlir.servers.analysis_server.emit.alert import emit_alert
+from qlir.servers.analysis_server.emit.trigger_registry import TRIGGER_REGISTRY
 from qlir.servers.analysis_server.io.load_clean_data import load_clean_data
 from qlir.servers.analysis_server.state import (
     AlertBackoffState,
@@ -22,12 +25,12 @@ log = logging.getLogger(__name__)
 
 PARQUET_CHUNKS_DIR = get_agg_dir_path("binance", "klines", "SOLUSDT", "1m", 1000)
 TS_COL = "tz_start"
-MAX_ALLOWED_LAG = 60  # seconds
+MAX_ALLOWED_LAG = 120  # seconds
 
-POLL_INTERVAL_SEC = 30
+POLL_INTERVAL_SEC = 15
 LAST_N_FILES = 5
 
-TRIGGER_COL=None
+ACTIVE_TRIGGERS=["dir_col_up", "dir_col_down"]
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -66,8 +69,8 @@ def main() -> None:
             time.sleep(POLL_INTERVAL_SEC)
             continue
 
-        row = df.iloc[-1]
-        data_ts = pd.Timestamp(row[TS_COL], unit="ms", tz="UTC")
+        last_row = df.iloc[-1]
+        data_ts = pd.Timestamp(last_row[TS_COL], unit="ms", tz="UTC")
 
         now = utc_now()
         is_stale = is_data_stale(data_ts, MAX_ALLOWED_LAG)
@@ -87,21 +90,41 @@ def main() -> None:
         alert_states["data_stale"] = stale_state
         save_alert_states(alert_states)
 
-        #     
-
        # 2. Only gate edge-triggered logic on watermark
         if last_processed_ts is not None and data_ts <= last_processed_ts:
             time.sleep(POLL_INTERVAL_SEC)
             continue
 
-        # 3. Signals, etc.
-        if TRIGGER_COL is not None:
-            if bool(row[TRIGGER_COL]):
+        try:
+            after_analysis = conduct_analysis(df)
+            logdf(after_analysis)
+            last_row_aa = after_analysis.iloc[-1]
+            second_last_row_aa = after_analysis.iloc[-2]
+        except Exception as exc:
+             log.error("Exception caught --- we may eventually remove this... but in the analysis path it is quite important, so im going to say that the process should crash")
+             raise RuntimeError()
+             time.sleep(POLL_INTERVAL_SEC)
+
+
+        for col_str in ACTIVE_TRIGGERS:
+            trig = TRIGGER_REGISTRY.get(col_str)
+
+            if trig is None:
+                raise KeyError(
+                    f"Trigger column '{col_str}' in ACTIVE_TRIGGERS but not in registry"
+                )
+            log.info(f"last_row_aa :{last_row_aa.keys()}")
+            if bool(last_row_aa[col_str]):
                 emit_alert({
-                    "type": "signal",
+                    "trigger_col": col_str,
+                    "type": trig["type"],
+                    "description": trig["description"],
                     "data_ts": data_ts.isoformat(),
-                    "trigger_col": TRIGGER_COL,
+                    "last_row_open": last_row_aa["open"],
+                    "row_before_that_open": second_last_row_aa["open"]
                 })
+
+
 
         save_last_processed_ts(data_ts)
         last_processed_ts = data_ts

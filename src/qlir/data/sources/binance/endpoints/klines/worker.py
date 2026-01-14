@@ -12,7 +12,7 @@ from qlir.data.sources.binance.manifest_delta_log import append_delta_log_to_in_
 from qlir.data.sources.common import claims
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, write_full_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
 from qlir.data.sources.common.slices.slice_classification import classify_slices
-from qlir.data.sources.common.slices.slice_key import SliceKey
+from qlir.data.sources.common.slices.slice_key import SliceKey, get_current_slice_key
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
@@ -125,7 +125,10 @@ def run_klines_worker(
     backoff = 1.0
 
     while True:
-    
+        # We need the current slice b/c we release this lock and then end of the while loop
+        # so that we can reacquire it in the for loop (otherwise it stays locked from previous runs) 
+        current_slice_id: str | None = None
+
         min_start_ms, max_end_ms = compute_time_range(symbol=symbol, interval=interval, limit=1000)
 
         expected_slices = _enumerate_expected_slices(
@@ -158,7 +161,9 @@ def run_klines_worker(
                                                        interval=interval,
                                                        limit=limit)
             write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason=f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
-             # Implement later 
+        
+        
+        # Implement later 
         # if report.fs_violation_ratio > cfg.rebuild_threshold:
         #     log.warning("Integrity violations exceed threshold; rebuilding manifest")
         #     manifest = rebuild_manifest_from_responses(...)
@@ -171,6 +176,18 @@ def run_klines_worker(
         manifest = update_manifest_with_classification(manifest=manifest, classified=classified)
         write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason=f"Writing entire manifest snapshot - Updating Manifest with slice classifications")
         
+        # This is where we release the lock for the current slice
+        prior_key = next(reversed(manifest["slices"]))
+        current_comp_key = get_current_slice_key(prior_key)
+        entry = manifest["slices"].get(current_comp_key)
+        if entry:
+            slice_id = entry["slice_id"]
+            try:
+                claims.release_claim(claims_dir, slice_id)
+                log.debug("Released previous current slice claim at iteration start")
+            except FileNotFoundError:
+                pass
+
 
         to_fetch = _construct_fetch_batch(classified)
 
@@ -188,10 +205,12 @@ def run_klines_worker(
         
         fetch_comp_keys = [skey.canonical_slice_composite_key() for skey in to_fetch]
         for slice_key in to_fetch:
-            log.info(slice_key)
+            log.info(f"{slice_key}, start (utc-0):{format_ts_human(slice_key.start_ms)}, end(utc-0): {format_ts_human(slice_key.end_ms)}")
+            
             fetch_fail: FetchFailed | None = None
             meta: Dict[str, Any] = {}
             slice_comp_key = slice_key.canonical_slice_composite_key()
+
             print('\n')
             if slice_comp_key not in fetch_comp_keys:
                 log.debug(f'fetching {slice_comp_key}, but its not in to_fetch {fetch_comp_keys}')
@@ -207,6 +226,7 @@ def run_klines_worker(
                     slice_id,
                     ttl_sec=IN_PROGRESS_STALE_SEC,
                 ):
+                    log.debug("Slice is claimed - continuing to next slice")
                     continue
 
             if not claims.try_claim(
@@ -285,8 +305,6 @@ def run_klines_worker(
             finally:
                 # 🔑 ALWAYS release the claim
                 claims.release_claim(claims_dir, slice_id)
-
-
 
 # ---------------------------------------------------------------------------
 # Internal helpers

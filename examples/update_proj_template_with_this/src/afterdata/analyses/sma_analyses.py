@@ -5,7 +5,7 @@ from qlir.core.ops import temporal
 from qlir.logging.logdf import logdf
 import qlir.df.reducers.distributions.bucketize.equal_width as buckets
 from qlir.core.types.named_df import NamedDF
-from afterdata.analysis_funcs.persistence import persistence_analysis
+from afterdata.analysis_funcs.persistence import persistence_analysis, persistence_analysis_prep_down, persistence_analysis_prep_up
 from afterdata.analysis_funcs.frequency import frequency_analysis
 from afterdata.etl.LTE import load_cleaned_data
 from qlir.telemetry.telemetry import telemetry
@@ -53,3 +53,6 @@ def get_all_persistence_dists(src_df):
 
     
     logdf(out_dfs, max_rows=2)
+
+
+

@@ -1,6 +1,6 @@
 import pandas as _pd
 import logging
-
+from typing import Any
 from qlir.df.utils import _ensure_columns
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def sma(
     min_periods: int | None = None,
     decimals: int | None = None,
     in_place: bool = True,
-) -> tuple[_pd.DataFrame, str]: # type: ignore
+) -> tuple[_pd.DataFrame, tuple[str]]:
     """
     Compute a simple moving average (SMA) for a column.
 
@@ -59,4 +59,4 @@ def sma(
 
     out[name] = s
 
-    return out, name
+    return (df, (name,))
