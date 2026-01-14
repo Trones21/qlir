@@ -91,9 +91,9 @@ def _fmt_df(df: _pd.DataFrame, max_width: int = 120) -> str:
             df_copy[col] = df_copy[col].str.slice(0, cutoff) + "…"
 
     if _HAS_TABULATE:
-        return tabulate(df_copy, headers="keys", tablefmt="github", showindex=False)
+        return tabulate(df_copy, headers="keys", tablefmt="github", showindex=True)
     else:
-        return df_copy.to_string(index=False)
+        return df_copy.to_string(index=True)
 
 
 def logdf(

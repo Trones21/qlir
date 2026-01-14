@@ -30,7 +30,19 @@ MAX_ALLOWED_LAG = 120  # seconds
 POLL_INTERVAL_SEC = 15
 LAST_N_FILES = 5
 
-ACTIVE_TRIGGERS=["dir_col_up", "dir_col_down"]
+ACTIVE_TRIGGERS=["sma_14_down_started", 
+                 "sma_14_up_started",
+
+                 "open_sma_14_up_10%_survive",
+                 "open_sma_14_up_5%_survive",
+                 "open_sma_14_up_1%_survive",
+                 "open_sma_14_up_0.1%_survive",
+
+                "open_sma_14_dn_10%_survive",
+                 "open_sma_14_dn_5%_survive",
+                 "open_sma_14_dn_1%_survive",
+                 "open_sma_14_dn_0.1%_survive",
+                 ]
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -97,7 +109,6 @@ def main() -> None:
 
         try:
             after_analysis = conduct_analysis(df)
-            logdf(after_analysis)
             last_row_aa = after_analysis.iloc[-1]
             second_last_row_aa = after_analysis.iloc[-2]
         except Exception as exc:
