@@ -4,10 +4,10 @@
 # qlir/telemetry.py
 from __future__ import annotations
 
-import time
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
+import time
 from typing import Callable, TypeVar
 
 F = TypeVar("F", bound=Callable)

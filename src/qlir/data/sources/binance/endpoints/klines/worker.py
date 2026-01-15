@@ -1,24 +1,31 @@
 from __future__ import annotations
+
 import logging
 import os
 import random
 
-from httpx import HTTPStatusError, RequestError
+from httpx import HTTPStatusError
 
 from qlir.data.sources.binance.endpoints.klines.fetch import FetchFailed
-from qlir.data.sources.binance.endpoints.klines.manifest.rebuild.from_responses import rebuild_manifest_from_responses
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
+    MANIFEST_FILENAME,
+    load_or_create_manifest,
+    seed_manifest_with_expected_slices,
+    update_manifest_with_classification,
+    wait_for_load_manifest,
+    write_full_manifest_snapshot,
+)
+from qlir.data.sources.binance.endpoints.klines.manifest.rebuild.from_responses import (
+    rebuild_manifest_from_responses,
+)
 from qlir.data.sources.binance.endpoints.klines.manifest.summary import update_summary
-from qlir.data.sources.binance.manifest_delta_log import append_delta_log_to_in_memory_manifest, append_manifest_delta
+from qlir.data.sources.binance.manifest_delta_log import (
+    append_delta_log_to_in_memory_manifest,
+    append_manifest_delta,
+)
 from qlir.data.sources.common import claims
-from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (MANIFEST_FILENAME, 
-                                                                          load_or_create_manifest, 
-                                                                          write_full_manifest_snapshot, 
-                                                                          seed_manifest_with_expected_slices, 
-                                                                          update_manifest_with_classification, 
-                                                                          wait_for_load_manifest)
 from qlir.data.sources.common.slices.slice_classification import classify_slices
 from qlir.data.sources.common.slices.slice_key import SliceKey, get_current_slice_key
-from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.io.delete import delete_file_if_exists
@@ -26,18 +33,22 @@ from qlir.io.helpers import has_files
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
+
 log = logging.getLogger(__name__)
-import time
 from datetime import datetime, timezone
 from pathlib import Path
+import time
 from typing import Any, Dict, List
 
-from .model import REQUIRED_FIELDS #SliceStatus, classify_slices
-from .urls import generate_kline_slices
-from .fetch_wrapper import fetch_and_persist_slice
-from .time_range import compute_time_range
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.orchestrator import validate_manifest_and_fs_integrity
 from qlir.data.core.paths import get_symbol_interval_limit_raw_dir
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.orchestrator import (
+    validate_manifest_and_fs_integrity,
+)
+
+from .fetch_wrapper import fetch_and_persist_slice
+from .model import REQUIRED_FIELDS  #SliceStatus, classify_slices
+from .time_range import compute_time_range
+from .urls import generate_kline_slices
 
 IN_PROGRESS_STALE_SEC = 300  # 5 minutes
 
@@ -192,7 +203,7 @@ def run_klines_worker(
         
         classified = classify_slices(expected_slices, manifest)
         manifest = update_manifest_with_classification(manifest=manifest, classified=classified)
-        write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason=f"Writing entire manifest snapshot - Updating Manifest with slice classifications")
+        write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason="Writing entire manifest snapshot - Updating Manifest with slice classifications")
         
         # This is where we release the lock for the current slice
         prior_key = next(reversed(manifest["slices"]))

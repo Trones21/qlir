@@ -1,5 +1,6 @@
-from qlir.viz.core import View, Panel, SeriesSpec, BandSpec, TableSpec
+from qlir.viz.core import BandSpec, Panel, SeriesSpec, TableSpec, View
 from qlir.viz.registry import register
+
 
 @register("vwap_distance")
 def vwap_distance_view(prefix="vwap_", price_col="close", vwap_col="vwap") -> View:

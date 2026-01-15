@@ -1,7 +1,9 @@
+import logging
 from typing import Dict
+
 from qlir.data.sources.binance.manifest_delta_log import _now_iso
 from qlir.data.sources.common.slices.slice_status import SliceStatus
-import logging
+
 log = logging.getLogger(__name__)
 
 def update_summary(manifest: Dict) -> None:

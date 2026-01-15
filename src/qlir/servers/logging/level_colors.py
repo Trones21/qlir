@@ -1,6 +1,7 @@
 # qlir.servers/logging/colors.py
-from qlir.utils.str.color import Ansi, colorize, DEBUG_STYLE
 import logging
+
+from qlir.utils.str.color import DEBUG_STYLE, Ansi
 
 LEVEL_COLOR = {
     logging.DEBUG: DEBUG_STYLE,

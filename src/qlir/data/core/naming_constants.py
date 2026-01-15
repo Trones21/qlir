@@ -1,7 +1,6 @@
 # Default extension for canonical candle datasets on disk.
 from qlir.time.timeunit import TimeUnit
 
-
 DEFAULT_CANDLES_EXT: str = ".parquet"
 
 CANONICAL_RESOLUTION_UNIT_MAP = {

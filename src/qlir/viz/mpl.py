@@ -13,7 +13,6 @@ def render(view: View, df):
             elif s.kind == "bar":
                 target_ax.bar(df.index, df[s.col], label=s.label or s.col)
         for b in p.bands:
-            import numpy as _np
             y0 = df[b.y0] if isinstance(b.y0, str) else b.y0
             y1 = df[b.y1] if isinstance(b.y1, str) else b.y1
             ax.fill_between(df.index, y0, y1, alpha=b.alpha, label=b.label)

@@ -1,6 +1,10 @@
-from qlir.df.after_grouping.verify_complete_run_length_domain import verify_complete_run_length_domain
-from qlir.df.survival.survival_stat import SurvivalStat
 import pandas as _pd
+
+from qlir.df.after_grouping.verify_complete_run_length_domain import (
+    verify_complete_run_length_domain,
+)
+from qlir.df.survival.survival_stat import SurvivalStat
+
 
 def survival_stats_from_run_lengths(
     df_runs: _pd.DataFrame,

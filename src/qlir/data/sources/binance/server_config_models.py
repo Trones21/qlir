@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Literal, TypeAlias, Union
+
 from qlir.data.sources.binance.endpoints.klines.worker import run_klines_worker
 from qlir.data.sources.binance.job_config_models import KlinesJobConfig, UIKlinesJobConfig
 

@@ -7,10 +7,7 @@ from afterdata.logging.logging_setup import setup_logging, LogProfile
 setup_logging(profile=LogProfile.ALL_DEBUG)
 
 import pandas as pd
-import qlir.data.sources.load as load
 from qlir.data.core.paths import get_agg_dir_path
-from qlir.data.core.instruments import CanonicalInstrument
-from qlir.data.core.datasource import DataSource
 from qlir.time.timefreq import TimeFreq
 from qlir.time.timeunit import TimeUnit
 import qlir.data.quality.candles.candles as DQ

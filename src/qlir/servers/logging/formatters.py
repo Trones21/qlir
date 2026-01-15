@@ -1,7 +1,9 @@
 import logging
-from qlir.utils.str.color import colorize, apply_style_rules
+
 from qlir.servers.logging.level_colors import LEVEL_COLOR
 from qlir.servers.logging.tag_colors import color_for_tag
+from qlir.utils.str.color import apply_style_rules, colorize
+
 from .fulltext_styles import FULLTEXT_STYLE_RULES
 
 

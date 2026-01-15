@@ -1,6 +1,5 @@
 import re
 
-
 _INTERVAL_RE = re.compile(r"^(?P<value>\d+)(?P<unit>[sm])$")
 
 def interval_to_ms(interval: str) -> int:

@@ -1,6 +1,8 @@
 # data/core/naming.py
 from __future__ import annotations
+
 import logging
+
 log = logging.getLogger(__name__)
 """
 Canonical naming rules for on-disk candle datasets.
@@ -19,10 +21,11 @@ It does NOT know:
 - How to read/write files                       → handled by I/O layers
 """
 
-from typing import Optional, TYPE_CHECKING, Tuple
-from .naming_constants import DEFAULT_CANDLES_EXT 
+from typing import Optional, Tuple
+
 from qlir.time.timefreq import TimeFreq
 
+from .naming_constants import DEFAULT_CANDLES_EXT
 
 # ---------------------------------------------------------------------------
 # Resolution string mapping

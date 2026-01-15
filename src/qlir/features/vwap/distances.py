@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns

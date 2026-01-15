@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import logging
-from typing import Iterable, Sequence, Union
+from typing import Iterable, Sequence
+
 import pandas as _pd
 
 from qlir.core.types.named_df import NamedDF

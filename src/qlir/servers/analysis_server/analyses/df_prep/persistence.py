@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 
 from qlir.core.counters import univariate
@@ -5,7 +7,7 @@ from qlir.core.ops import temporal
 from qlir.core.types.named_df import NamedDF
 from qlir.df.condition_set.assign_group_ids import assign_condition_group_id
 from qlir.df.reducers.distributions.persistence import condition_persistence
-import logging
+
 log = logging.getLogger(__name__)
 
 def persistence_analysis(df: pd.DataFrame, trendline_col: str) -> list[NamedDF]:

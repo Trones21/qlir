@@ -2,6 +2,7 @@ import pandas as _pd
 
 from qlir.df.survival.survival_stat import SurvivalStat
 
+
 def add_columns_for_trend_survival_rates(df: _pd.DataFrame, prefix: str, trendrun_count_column: str, survival_stats: list[SurvivalStat]) -> tuple[_pd.DataFrame, dict]:
     """
     Add survival-rate–based persistence columns for an existing trend run counter

@@ -1,11 +1,12 @@
-from pathlib import Path
+import logging
+
 import pandas as _pd
 
 from qlir.data.core.instruments import CanonicalInstrument
 from qlir.data.core.paths import candles_path
-from qlir.io.writer import _prep_path, write, write_dataset_meta
+from qlir.io.writer import write, write_dataset_meta
 from qlir.time.timefreq import TimeFreq
-import logging
+
 log = logging.getLogger(__name__)
 
 def writedf_and_metadata(df: _pd.DataFrame, base_resolution: TimeFreq, symbol: CanonicalInstrument, dir_suffix_str: str | None = None):

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import pandas as _pd
 import numpy as _np
+import pandas as _pd
+
 from qlir.df.utils import move_column
+
 
 def build_bucket_df(
     *,

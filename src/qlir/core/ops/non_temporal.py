@@ -1,8 +1,9 @@
-from typing import Optional, Sequence, Union
+from typing import Optional
+
 import numpy as _np
 import pandas as _pd
 
-from qlir.core.counters.multivariate import _maybe_copy, _safe_name
+from qlir.core.counters.multivariate import _maybe_copy
 from qlir.core.ops._helpers import ColsLike, _add_columns_from_series_map, _normalize_cols
 
 

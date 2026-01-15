@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Generator, Tuple, Optional
 import logging
+from typing import Generator, Optional, Tuple
 
 from qlir.data.sources.binance.intervals import interval_to_ms
 

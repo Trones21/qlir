@@ -1,9 +1,11 @@
+import logging
+from typing import Iterable
+
 import numpy as _np
 import pandas as _pd
-from typing import Iterable
-import logging
 
 from qlir.df.utils import _ensure_columns
+
 logg = logging.getLogger(__name__)
 
 def series_angle(

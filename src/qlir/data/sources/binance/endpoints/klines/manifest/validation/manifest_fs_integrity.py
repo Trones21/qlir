@@ -1,5 +1,6 @@
-from pathlib import Path
 import logging
+from pathlib import Path
+
 log = logging.getLogger(__name__)
 
 def validate_manifest_vs_responses(

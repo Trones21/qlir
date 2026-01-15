@@ -1,45 +1,49 @@
 from __future__ import annotations
+
 import json
+import logging
 import shutil
-from typing import Any, Dict, Optional
+
 from httpx import Response
 import pandas as _pd
-import logging
 
 from qlir.data.core.exponential_backoff import backoff_step
-from qlir.data.sources.drift.resolution_helpers import driftres_typed_to_string, timefreq_to_driftres_typed
+from qlir.data.sources.drift.resolution_helpers import (
+    driftres_typed_to_string,
+    timefreq_to_driftres_typed,
+)
 from qlir.io.writer import _prep_path
 
 log = logging.getLogger(__name__)
 
-from qlir.data.core.infer import infer_dataset_identity
-from qlir.data.core.paths import from_canonical_data_root
+from datetime import datetime, timezone
+import math
+from pathlib import Path
 
+from drift_data_api_client import Client
+from drift_data_api_client.api.market import (
+    get_market_symbol_candles_resolution,
+)
+from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import (
+    GetMarketSymbolCandlesResolutionResolution,
+)
+
+from qlir.data.core.infer import infer_dataset_identity
+from qlir.data.core.instruments import CanonicalInstrument
+from qlir.data.quality.candles.candles import validate_candles
+from qlir.data.sources.drift.constants import DRIFT_BASE_URI
+from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles
 from qlir.data.sources.drift.symbol_map import DriftSymbolMap
 from qlir.data.sources.drift.time_utils import to_drift_valid_unix_timerange
-
-from qlir.data.core.instruments import CanonicalInstrument
-from qlir.time.timefreq import TimeFreq
-from qlir.logging.logdf import logdf
-from pathlib import Path
-from drift_data_api_client import Client
-from drift_data_api_client.api.market import get_market_symbol_funding_rates, get_market_symbol_candles_resolution
-from drift_data_api_client.models import get_market_symbol_candles_resolution_resolution, get_market_symbol_candles_resolution_response_200
-from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
-from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200RecordsItem
-from drift_data_api_client.models import GetMarketSymbolCandlesResolutionResponse200
-from qlir.data.quality.candles.candles import validate_candles
-from qlir.data.sources.drift.normalize_drift_candles import normalize_drift_candles
-from qlir.io.checkpoint import write_checkpoint, FileType
-from qlir.io.union_files import union_file_datasets
-from qlir.io.reader import read
-from qlir.data.sources.drift.constants import DRIFT_BASE_URI, DRIFT_ALLOWED_RESOLUTIONS
-from qlir.df.utils import union_and_sort
-from datetime import datetime, timezone
-from .oracleorfill import OracleOrFill
 from qlir.data.sources.drift.write_wrappers import writedf_and_metadata
+from qlir.df.utils import union_and_sort
+from qlir.io.checkpoint import FileType, write_checkpoint
+from qlir.io.reader import read
+from qlir.io.union_files import union_file_datasets
+from qlir.time.timefreq import TimeFreq
 
-import math
+from .oracleorfill import OracleOrFill
+
 
 def _get_candles(symbol: CanonicalInstrument, oracle_or_fill:OracleOrFill, base_resolution: TimeFreq, from_ts: datetime | None = None, to_ts: datetime | None = None, save_dir_override: Path | None = None, filetype_out: FileType = FileType.PARQUET):
 

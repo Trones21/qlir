@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 import pandas as _pd
 
 from qlir.time.timefreq import TimeFreq

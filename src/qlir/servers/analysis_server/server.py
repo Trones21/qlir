@@ -1,25 +1,27 @@
 from __future__ import annotations
 
-import time
-import logging
 from datetime import datetime, timezone
+import logging
+import time
 
 import pandas as pd
 
 from qlir.data.core.paths import get_agg_dir_path
-from qlir.logging.logdf import logdf
 from qlir.servers.analysis_server.analyses.conduct_analysis import conduct_analysis
 from qlir.servers.analysis_server.emit.alert import emit_alert
 from qlir.servers.analysis_server.emit.trigger_registry import TRIGGER_REGISTRY
 from qlir.servers.analysis_server.io.load_clean_data import load_clean_data
 from qlir.servers.analysis_server.state import (
-    AlertBackoffState,
-    maybe_emit_alert_with_backoff,
-    load_alert_states,
-    save_alert_states,
     INITIAL_BACKOFF,
+    AlertBackoffState,
+    load_alert_states,
+    maybe_emit_alert_with_backoff,
+    save_alert_states,
 )
-from qlir.servers.analysis_server.state.progress import load_last_processed_ts, save_last_processed_ts
+from qlir.servers.analysis_server.state.progress import (
+    load_last_processed_ts,
+    save_last_processed_ts,
+)
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +113,7 @@ def main() -> None:
             after_analysis = conduct_analysis(df)
             last_row_aa = after_analysis.iloc[-1]
             second_last_row_aa = after_analysis.iloc[-2]
-        except Exception as exc:
+        except Exception:
              log.error("Exception caught --- we may eventually remove this... but in the analysis path it is quite important, so im going to say that the process should crash")
              raise RuntimeError()
              time.sleep(POLL_INTERVAL_SEC)

@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any, Optional
+
 import pandas as _pd
 
 from qlir.data.core.naming import sidecar_metadata

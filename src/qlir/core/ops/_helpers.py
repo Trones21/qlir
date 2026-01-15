@@ -2,11 +2,13 @@
 # Helpers
 # ----------------------------
 
-from typing import List, Optional, Sequence, Union
+from typing import List, Union
 import warnings
+
 from pandas import DataFrame, Series, api
 
 from qlir.core.types.union import ColsLike
+
 
 def _numeric_cols(df: DataFrame) -> List[str]:
     return [c for c in df.columns if api.types.is_numeric_dtype(df[c])]

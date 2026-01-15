@@ -1,6 +1,7 @@
 # Compare a list of venue IDs against QLIR's current symbol-map support.
 
 from typing import Any, Type
+
 from qlir.data.sources.base_symbol_map import BaseSymbolMap
 
 

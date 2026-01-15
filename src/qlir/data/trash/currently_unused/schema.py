@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Iterable, Literal, Optional
+from typing import Literal, Optional
+
 import pandas as _pd
 
 OHLCV_REQ = ("open", "high", "low", "close")

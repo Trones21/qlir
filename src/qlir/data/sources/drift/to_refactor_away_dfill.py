@@ -1,9 +1,9 @@
 # qlir/data/drift_fill.py
 from __future__ import annotations
-from typing import Optional, List, Tuple
-import pandas as _pd
 
-from qlir.data.quality.candles.candles import detect_missing_candles
+from typing import List, Optional, Tuple
+
+import pandas as _pd
 
 # map Drift tokens to step seconds
 _STEP_SEC = {"1":60,"5":300,"15":900,"60":3600,"240":14400}

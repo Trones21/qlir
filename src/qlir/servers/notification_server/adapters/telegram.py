@@ -1,5 +1,6 @@
-from typing import Any
 import json
+from typing import Any
+
 import requests
 
 from .base import NotificationAdapter

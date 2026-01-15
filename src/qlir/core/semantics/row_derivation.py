@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, Optional, Sequence, Tuple
 
-
 RowOffset = int  # relative to i (0=current row)
 
 

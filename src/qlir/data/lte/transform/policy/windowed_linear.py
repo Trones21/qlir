@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import Sequence
-
 import numpy as _np
 import pandas as _pd
 
-from .base import FillPolicy, FillContext
+from .base import FillContext, FillPolicy
 
 
 class WindowedLinearFillPolicy(FillPolicy):

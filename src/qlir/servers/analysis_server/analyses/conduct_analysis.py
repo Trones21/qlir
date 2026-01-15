@@ -1,6 +1,7 @@
 
 
 import pandas as _pd
+
 from qlir.servers.analysis_server.analyses.sma import sma
 
 

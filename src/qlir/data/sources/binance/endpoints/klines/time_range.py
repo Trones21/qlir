@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import math
-import re
-import time
 from datetime import datetime, timezone
+import logging
+import math
+import time
 from typing import Optional, Tuple
 
 import httpx
 
-from qlir.data.sources.binance.intervals import interval_to_ms
-
 from .urls import build_kline_url
-import logging
+
 log = logging.getLogger(__name__)
 
 def _now_ms() -> int:

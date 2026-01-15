@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Sequence, Mapping
+from typing import Any, Mapping, Sequence
 
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
+
 
 def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:

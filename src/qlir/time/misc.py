@@ -1,6 +1,9 @@
 from __future__ import annotations
-import pandas as _pd
+
 import logging
+
+import pandas as _pd
+
 log = logging.getLogger(__name__)
 
 __all__ = ["ensure_tzaware", "session_floor"]
@@ -13,7 +16,6 @@ def ensure_tzaware(df: _pd.DataFrame, ts_col: str = "timestamp") -> None:
 
 
 # src/qlir/utils/time.py
-import pandas as _pd
 
 def session_floor(df, tz="UTC", ts_col: str | None = "timestamp", *, bar_semantics: str = "end"):
     """

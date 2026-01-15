@@ -32,8 +32,6 @@ from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
 
-
-
 def _add_session_label(df: _pd.DataFrame, label: str) -> _pd.DataFrame:
     out = df.copy()
     out["session"] = label

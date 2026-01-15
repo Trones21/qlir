@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 from typing import Any, Dict
+
 from qlir.data.sources.common.slices.canonical_hash import make_canonical_slice_hash
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.str.fmt import term_fmt

@@ -1,7 +1,8 @@
 # src/qlir/core/bar_relations.py
 from __future__ import annotations
 
-from typing import Optional, Literal
+from typing import Literal, Optional
+
 import pandas as _pd
 
 BoolDtype = "boolean"

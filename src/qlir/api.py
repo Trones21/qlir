@@ -1,13 +1,13 @@
 from __future__ import annotations
+
 import pandas as _pd
 
+from .features.boll.block import with_boll_feature_block
+from .features.macd.block import with_macd_feature_block
+from .features.rsi.block import with_rsi_feature_block
 
 # Re-export handy blocks
 from .features.vwap.block import with_vwap_feature_block
-from .features.rsi.block import with_rsi_feature_block
-from .features.macd.block import with_macd_feature_block
-from .features.boll.block import with_boll_feature_block
-
 
 __all__ = [
 "with_vwap_feature_block",

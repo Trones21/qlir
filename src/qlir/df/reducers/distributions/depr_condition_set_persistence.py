@@ -1,6 +1,5 @@
 import pandas as _pd
 
-
 # `condition_set_persistence_df` tried to do this in one shot:
 
 # ```

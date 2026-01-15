@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import pandas as _pd
+
 from ...indicators.boll import with_bollinger
+from ..common import distances, temporal
 from .candle_relations import with_candle_line_relations, with_candle_relation_mece
-from ..common import temporal, distances
+
 __all__ = ["with_boll_feature_block"]
 
 

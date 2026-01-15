@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timezone
+import logging
+
 import pandas as pd
 
 from qlir.logging.ensure import ensure_logging

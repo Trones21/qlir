@@ -1,14 +1,12 @@
 from __future__ import annotations
-import pandas as _pd
+
 import numpy as _np
+import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
 
-
 __all__ = ["with_zscore", "with_distance"]
 
-import numpy as _np
-import pandas as _pd
 
 def with_distance(
     df: _pd.DataFrame,

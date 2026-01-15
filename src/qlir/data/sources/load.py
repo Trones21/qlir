@@ -1,30 +1,28 @@
 from __future__ import annotations
+
+import logging
 from pathlib import Path
 from typing import Optional
+
 import pandas as _pd
 
 from qlir import io
-from qlir.data.core.instruments import CanonicalInstrument
-from qlir.data.sources.drift.fetch.oracleorfill import OracleOrFill
-from qlir.data.sources.drift.symbol_map import DriftSymbolMap
-from ..trash.currently_unused.schema import validate_ohlcv, OhlcvContract
-import pyarrow.parquet as pq
-import json
-import logging
 from qlir.data.core.datasource import DataSource
-from qlir.time.timefreq import TimeFreq
-
+from qlir.data.core.instruments import CanonicalInstrument
 from qlir.data.sources.drift.fetch.fills import get_all_candles as get_all_fill_candles
 from qlir.data.sources.drift.fetch.oracle import get_all_candles as get_all_oracle_candles
+from qlir.data.sources.drift.fetch.oracleorfill import OracleOrFill
+from qlir.time.timefreq import TimeFreq
+
+from ..trash.currently_unused.schema import OhlcvContract, validate_ohlcv
 
 log = logging.getLogger(__name__)
 
 from enum import Enum, auto
 
 from qlir.data.quality.candles.candles import (
-    run_candle_quality,
     log_candle_dq_issues,
-    CandlesDQReport,
+    run_candle_quality,
 )
 
 
@@ -74,7 +72,7 @@ def candles_from_disk_or_network(
     if disk_or_network is DiskOrNetwork.NETWORK:
         
         if any(x is None for x in [symbol, base_resolution, datasource]):
-            log.info(f"Symbol (CanonicalInstrument), base_resolution (TimeFreq), and datasource (Datasource) must be passed when fetching from network")
+            log.info("Symbol (CanonicalInstrument), base_resolution (TimeFreq), and datasource (Datasource) must be passed when fetching from network")
 
         return candles_from_network(symbol=symbol, base_resolution=base_resolution, source=datasource, oracle_or_fill=oracle_or_fill)
 

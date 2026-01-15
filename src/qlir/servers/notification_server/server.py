@@ -1,15 +1,13 @@
 import json
-import time
-import shutil
+import os
 from pathlib import Path
+import shutil
+import time
 from typing import Any
 
 from .adapters.base import NotificationAdapter
-from .adapters.webhook import WebhookAdapter
-from .logging import setup_logging
-
 from .adapters.telegram import TelegramAdapter
-import os
+from .logging import setup_logging
 
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]

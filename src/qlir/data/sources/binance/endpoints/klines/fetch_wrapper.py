@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Dict, Any, Optional
-from urllib.parse import parse_qs, urlparse
 import logging
+from pathlib import Path
+from typing import Any, Dict, Optional
+from urllib.parse import parse_qs, urlparse
 
+from qlir.data.sources.binance.endpoints.klines.fetch import FetchFailed, fetch
 from qlir.data.sources.binance.endpoints.klines.inspection_result import inspect_res
+from qlir.data.sources.binance.endpoints.klines.persist import persist
 from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
 from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval
 from qlir.data.sources.common.slices.slice_key import SliceKey
-from qlir.data.sources.binance.endpoints.klines.fetch import  fetch, FetchFailed
-from qlir.data.sources.binance.endpoints.klines.persist import persist
 
 log = logging.getLogger(__name__)
 from qlir.time.iso import now_iso
@@ -43,7 +43,7 @@ def log_requested_slice_size(url: str):
         interval = params["interval"][0]
         unix_start = int(params["startTime"][0])
         unix_end = int(params["endTime"][0])
-    except (KeyError, IndexError, ValueError) as exc:
+    except (KeyError, IndexError, ValueError):
         log.debug(f"Failed to parse slice parameters from url: {url}")
         return "<Error deriving requested slice size>"
 

@@ -1,4 +1,6 @@
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import SliceInvariantsParts
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import (
+    SliceInvariantsParts,
+)
 
 
 class CompositeKeyParseError(ValueError):

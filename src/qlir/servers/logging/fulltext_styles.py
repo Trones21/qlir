@@ -1,4 +1,4 @@
-from qlir.utils.str.color import colorize, Ansi
+from qlir.utils.str.color import Ansi
 
 FULLTEXT_STYLE_RULES = [
     {

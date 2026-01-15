@@ -1,8 +1,8 @@
 # analysis_server/emit/alert.py
 
+from datetime import datetime, timezone
 import json
 from pathlib import Path
-from datetime import datetime, timezone
 from typing import Any
 
 ALERT_OUTBOX = Path("alerts/outbox")

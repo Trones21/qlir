@@ -3,7 +3,6 @@
 # ---------------------------------------------------------------------------
 
 from dataclasses import dataclass
-from enum import Enum
 
 # ---------------------------------------------------------------------------
 # Job Config Classes (specify all the data that the job needs to run)

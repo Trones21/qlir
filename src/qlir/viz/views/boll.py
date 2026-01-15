@@ -1,5 +1,6 @@
-from qlir.viz.core import View, Panel, SeriesSpec, BandSpec, TableSpec, EventSpec
+from qlir.viz.core import BandSpec, Panel, SeriesSpec, TableSpec, View
 from qlir.viz.registry import register
+
 
 @register("boll_validation")
 def boll_validation_view(price_col="close", mid="bb_mid", upper="bb_upper", lower="bb_lower", regime="bb_regime", events_df=None) -> View:

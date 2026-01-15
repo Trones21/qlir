@@ -1,6 +1,5 @@
 import pandas as _pd
 
-
 # Synthetic construction assumes complete time indices but allows incomplete values.
 # Synthetic construction produces blends, not fills.
 

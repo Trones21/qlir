@@ -1,7 +1,9 @@
-import pandas as _pd
 import logging
 
+import pandas as _pd
+
 from qlir.df.utils import _ensure_columns
+
 log = logging.getLogger(__name__)
 
 def assign_condition_group_id(

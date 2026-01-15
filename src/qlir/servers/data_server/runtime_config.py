@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from qlir.servers.logging.logging_profiles import LogProfile
 
 

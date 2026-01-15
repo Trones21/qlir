@@ -1,11 +1,13 @@
-import pathlib
-import pandas as _pd
-from .helpers import detect_homogeneous_filetype
-from .filetype import FileType
-from .reader import read
-from pathlib import Path
-import pyarrow.dataset as ds
 import logging
+from pathlib import Path
+
+import pandas as _pd
+import pyarrow.dataset as ds
+
+from .filetype import FileType
+from .helpers import detect_homogeneous_filetype
+from .reader import read
+
 log = logging.getLogger(__name__)
 
 def union_file_datasets(dir_path: str | Path) -> _pd.DataFrame: # type: ignore

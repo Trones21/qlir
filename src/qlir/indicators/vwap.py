@@ -1,12 +1,12 @@
 # src/qlir/indicators/vwap.py
 from __future__ import annotations
+
 import numpy as _np
 import pandas as _pd
+
 from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.utils import _ensure_columns
-from ..time.misc import session_floor
-from ..utils.df_ops import ensure_copy
 
 __all__ = ["with_vwap_cum_hlc3", "with_vwap_hlc3_session"]
 

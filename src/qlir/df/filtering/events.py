@@ -16,7 +16,7 @@ This is meant for: FOMC, CPI, big listings, exchange incidents, etc.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Sequence, Mapping, Iterable
+from typing import Any, Iterable, Mapping, Sequence
 
 import pandas as _pd
 

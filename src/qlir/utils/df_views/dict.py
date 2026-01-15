@@ -1,5 +1,7 @@
+from typing import Iterable, Mapping
+
 import pandas as _pd
-from typing import Mapping, Iterable
+
 from .common import finalize_df
 
 

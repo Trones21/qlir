@@ -1,8 +1,6 @@
-from enum import Enum
 import logging
 
 from qlir.servers.logging.logging_profiles import LogProfile
-
 
 
 def resolve_levels(profile: LogProfile) -> tuple[int, int]:

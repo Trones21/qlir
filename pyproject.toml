@@ -52,5 +52,36 @@ addopts = "-q --maxfail=1"
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
-extend-select = ["I"]
+target-version = "py312"
+
+# What Ruff should check
+select = [
+    # "F",    # pyflakes (unused imports, undefined names)
+    "I",    # isort (import ordering)
+]
+
+# Allow Ruff to auto-fix
+fix = true
+
+# Exclude common noise
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "examples",
+    "quickstart"
+]
+
+[tool.ruff.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+known-first-party = ["qlir"]
+
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.14.11,<0.15.0)"
+]

@@ -3,9 +3,12 @@
 # constants.DRIFT_ALLOWED_RESOLUTIONS
 # DriftCandleSpec has some values in registry.py
 # GetMarketSymbolCandlesResolutionResolution contains strings from the drift sdk
+from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import (
+    GetMarketSymbolCandlesResolutionResolution,
+)
+
 from qlir.time.timefreq import TimeFreq
 from qlir.time.timeunit import TimeUnit
-from drift_data_api_client.models.get_market_symbol_candles_resolution_resolution import GetMarketSymbolCandlesResolutionResolution
 
 
 def driftres_typed_to_string(drift_res_typed: GetMarketSymbolCandlesResolutionResolution):

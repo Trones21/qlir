@@ -1,7 +1,8 @@
+import logging
 from typing import Iterable
+
 import pandas as _pd
 
-import logging
 log = logging.getLogger(__name__)
 
 

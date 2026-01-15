@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import pandas as _pd
 
 __all__ = ["with_combo_signal"]

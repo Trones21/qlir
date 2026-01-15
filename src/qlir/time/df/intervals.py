@@ -1,5 +1,7 @@
 import pandas as _pd
+
 from qlir.time.series.intervals import unexpected_interval_mask
+
 
 def flag_unexpected_intervals_df(
     df: _pd.DataFrame,

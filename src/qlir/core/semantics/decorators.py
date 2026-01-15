@@ -3,14 +3,13 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Mapping, ParamSpec, Sequence, Tuple, Union
+from typing import Callable, Mapping, ParamSpec, Sequence, Union
 
 from qlir.core.types.new_cols_result import NewColsResult
 
 from .context import get_ctx
 from .explain import explain_created
 from .row_derivation import ColumnDerivationSpec
-
 
 ReturnedCols = str | Sequence[str] | Mapping[str, str]
 

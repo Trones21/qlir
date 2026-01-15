@@ -1,5 +1,6 @@
 import pandas as _pd
 
+
 def verify_complete_run_length_domain(
     df: _pd.DataFrame,
     *,

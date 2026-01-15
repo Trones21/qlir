@@ -1,15 +1,16 @@
+import logging
+
 import pandas as pd
+
 from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.ops._helpers import _maybe_copy
 from qlir.core.semantics.decorators import new_col_func
 from qlir.core.semantics.row_derivation import ColumnDerivationSpec
-from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.core.types.keep_cols import KeepCols, apply_keep_policy
+from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.utils import _ensure_columns
 from qlir.indicators.sma import sma
-from typing import NamedTuple
-import pandas as pd
-import logging
+
 log = logging.getLogger(__name__)
 
 __all__ = ["arp"]

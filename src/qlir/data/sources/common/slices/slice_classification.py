@@ -1,12 +1,17 @@
 
 
 from dataclasses import dataclass
+import logging
 import os
 from typing import Iterable
 
-from qlir.data.sources.common.slices.slice_key import SliceKey, get_current_slice_key, slice_key_from_canonical
+from qlir.data.sources.common.slices.slice_key import (
+    SliceKey,
+    get_current_slice_key,
+    slice_key_from_canonical,
+)
 from qlir.data.sources.common.slices.slice_status import SliceStatus
-import logging
+
 log = logging.getLogger(__name__)
 
 @dataclass

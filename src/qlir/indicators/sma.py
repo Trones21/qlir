@@ -1,13 +1,16 @@
-import pandas as _pd
 import logging
-from typing import Any
+
+import pandas as _pd
+
 from qlir.df.utils import _ensure_columns
+
 log = logging.getLogger(__name__)
 
 
 
 from qlir.core.semantics.decorators import new_col_func
 from qlir.core.semantics.row_derivation import ColumnDerivationSpec
+
 
 @new_col_func(
     specs=lambda *, col, window, **_: ColumnDerivationSpec(

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
+import json
 from pathlib import Path
 
-from .alerts import AlertBackoffState, AlertKey, INITIAL_BACKOFF
-
+from .alerts import AlertBackoffState, AlertKey
 
 ALERT_STATE_PATH = Path("alert_backoff_state.json")
 

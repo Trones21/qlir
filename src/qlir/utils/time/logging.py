@@ -2,10 +2,9 @@
 from dataclasses import dataclass
 from typing import Callable
 
-from qlir.time.count_intervals import count_intervals_exact, count_intervals_whole, truncate_ms
+from qlir.time.count_intervals import count_intervals_exact, count_intervals_whole
 from qlir.time.timeunit import TimeUnit
 from qlir.utils.time.fmt import format_delta_ms, format_ts_ms_and_human
-
 
 
 @dataclass

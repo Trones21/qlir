@@ -1,4 +1,5 @@
 
+import logging
 from pathlib import Path
 
 from qlir.data.core.paths import expected_slice_response_uri
@@ -9,7 +10,7 @@ from qlir.data.sources.common.slices.slice_key import SliceKey
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.telemetry.telemetry import telemetry
 from qlir.time.iso import now_utc
-import logging
+
 log = logging.getLogger(__name__)
 
 

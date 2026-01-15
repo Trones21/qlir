@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Optional
 import logging
-from qlir.logging.logdf import logdf
+
 import pandas as _pd
 
 log = logging.getLogger(__name__)

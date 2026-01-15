@@ -1,6 +1,8 @@
 from urllib.parse import parse_qs, urlparse
 
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import SliceInvariantsParts
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import (
+    SliceInvariantsParts,
+)
 
 
 class RequestedURLParseError(ValueError):

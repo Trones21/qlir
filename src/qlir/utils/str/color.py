@@ -1,6 +1,7 @@
 import re
 from typing import Iterable
 
+
 class Ansi:
     ESC = "\033["
 

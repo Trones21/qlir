@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Sequence, Literal
+from typing import Literal, Sequence
+
 
 @dataclass
 class SeriesSpec:

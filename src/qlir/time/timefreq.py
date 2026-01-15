@@ -2,13 +2,16 @@
 #  Time frequency representation
 # -------------------------------------------------------------------
 from dataclasses import dataclass
-from enum import Enum
 from typing import Optional
 
 import pandas as _pd
 
-from qlir.data.core.naming_constants import CANONICAL_RESOLUTION_UNIT_MAP, REVERSE_CANONICAL_RESOLUTION_UNIT_MAP
+from qlir.data.core.naming_constants import (
+    CANONICAL_RESOLUTION_UNIT_MAP,
+    REVERSE_CANONICAL_RESOLUTION_UNIT_MAP,
+)
 from qlir.time.timeunit import TimeUnit
+
 
 @dataclass
 class TimeFreq:

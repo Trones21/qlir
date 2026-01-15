@@ -1,8 +1,10 @@
 # qlir/indicators/volatility.py  (or wherever you keep these)
 from __future__ import annotations
+
 from typing import Optional
 
 import pandas as _pd
+
 from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.utils import _ensure_columns

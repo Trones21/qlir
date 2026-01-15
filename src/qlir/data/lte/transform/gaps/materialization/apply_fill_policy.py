@@ -1,17 +1,18 @@
 # transform/gaps/materialize.py
 from __future__ import annotations
 
-from typing import Tuple
-
 import pandas as _pd
 
-from qlir.core.types.OHLC_Cols import OHLC_Cols
-from qlir.data.lte.transform.gaps.materialization.assert_materialization_complete import assert_materialization_complete
 from qlir.core.constants import DEFAULT_OHLC_COLS
+from qlir.core.types.OHLC_Cols import OHLC_Cols
+from qlir.data.lte.transform.gaps.materialization.assert_materialization_complete import (
+    assert_materialization_complete,
+)
+
+from ...policy.base import FillPolicy
 from ..blocks import find_missing_blocks
 from ..context import build_fill_context
 from .markers import FILL_POLICY_COL, SYNTHETIC_COL
-from ...policy.base import FillPolicy
 
 
 def apply_fill_policy(

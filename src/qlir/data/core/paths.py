@@ -1,6 +1,8 @@
 # data/core/paths.py
 from __future__ import annotations
+
 import logging
+
 log = logging.getLogger(__name__)
 
 from qlir.data.sources.common.slices.canonical_hash import make_canonical_slice_hash
@@ -33,7 +35,6 @@ from pathlib import Path
 from typing import Optional
 
 from qlir.data.core.naming import candle_filename
-
 
 # ---------------------------------------------------------------------------
 # Data root resolution

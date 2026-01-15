@@ -1,5 +1,7 @@
-import pandas as _pd
 from typing import Dict
+
+import pandas as _pd
+
 
 def generate_offset_candles(
     df: _pd.DataFrame,

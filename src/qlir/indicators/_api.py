@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import pandas as pd
 
 from .arp import arp
-from .sma import sma
 from .rsi import rsi
+from .sma import sma
 
 __all__ = [
     "arp",

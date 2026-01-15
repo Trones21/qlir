@@ -1,19 +1,19 @@
 
+import logging
+from typing import Dict, Iterable
+
+import pandas as _pd
+
 from qlir.core.types.named_df import NamedDF
-from qlir.time.timefreq import TimeFreq, TimeUnit 
-from qlir.data.quality.candles.candles import infer_freq, ensure_homogeneous_candle_size, detect_missing_candles
-import pandas as _pd
-from typing import Iterable, Dict
-
-import pandas as _pd
-from typing import Iterable, Dict
-from dataclasses import dataclass
-
-from qlir.df.utils import materialize_index, insert_column, move_column
-from qlir.time.ensure_utc import ensure_utc_series_strict
+from qlir.data.quality.candles.candles import (
+    detect_missing_candles,
+    ensure_homogeneous_candle_size,
+    infer_freq,
+)
+from qlir.df.utils import materialize_index, move_column
 from qlir.logging.logdf import logdf
-
-import logging 
+from qlir.time.ensure_utc import ensure_utc_series_strict
+from qlir.time.timefreq import TimeFreq, TimeUnit
 
 log = logging.getLogger(__name__)
 

@@ -1,7 +1,5 @@
-import argparse, sys
-from qlir.data.loader.load import load_ohlcv
-from qlir.data.sources.drift.fetch import get_candles
-from qlir.io.writer import write 
+import argparse
+
 
 def main():
     p = argparse.ArgumentParser(prog="qlir")

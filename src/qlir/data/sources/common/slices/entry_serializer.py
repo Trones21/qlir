@@ -2,7 +2,6 @@ from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.utils.enum import deserialize_enum, serialize_enum
 
-
 SLICE_ENTRY_ENUMS = {
     "slice_status": SliceStatus,
     "slice_status_reason": SliceStatusReason,

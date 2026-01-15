@@ -1,6 +1,7 @@
 # qlir/df/row_aligned/abs_to_unit.py
 
 import pandas as _pd
+
 from qlir.core.types.UnitEnum import UnitEnum
 from qlir.df.scalars.units import abs_to_bps, abs_to_pct
 from qlir.df.utils import _ensure_columns

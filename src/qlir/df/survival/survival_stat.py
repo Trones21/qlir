@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-import pandas as _pd
+
 
 @dataclass(frozen=True, slots=True)
 class SurvivalStat:

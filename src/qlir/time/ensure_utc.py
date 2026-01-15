@@ -1,6 +1,5 @@
+
 import pandas as _pd
-from typing import Union
-from qlir.time.constants import DEFAULT_TS_COL
 
 # ============================================================
 #  Series-level utilities

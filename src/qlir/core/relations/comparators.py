@@ -1,8 +1,8 @@
 # src/qlir/core/comparators.py
 from __future__ import annotations
 
-from typing import Optional, Union, Literal
-import numpy as _np
+from typing import Literal, Optional, Union
+
 import pandas as _pd
 
 BoolDtype = "boolean"

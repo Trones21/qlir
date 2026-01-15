@@ -1,5 +1,6 @@
 from enum import StrEnum, auto
 
+
 class SliceStatusReason(StrEnum):
     NONE = auto()  # normal fast-path completion
     

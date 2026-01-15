@@ -1,6 +1,8 @@
-import pandas as _pd
-from dataclasses import is_dataclass, asdict
+from dataclasses import asdict, is_dataclass
 from typing import Iterable
+
+import pandas as _pd
+
 from .common import finalize_df
 
 

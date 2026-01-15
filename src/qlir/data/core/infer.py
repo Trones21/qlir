@@ -1,6 +1,8 @@
 # data/core/infer.py
 from __future__ import annotations
+
 import logging
+
 log = logging.getLogger(__name__)
 
 """
@@ -19,16 +21,14 @@ Inference strategy (for instrument_id / resolution / datasource / upstream_symbo
 4. Optional column scan (for CSV/JSON) as a last resort
 """
 
-from pathlib import Path
-from typing import Any, Optional, Dict, Tuple
-
 import json
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import pandas as _pd
 import pyarrow.parquet as pq
 
 from qlir.data.core.naming import split_candle_stem
-
 
 # ---------------------------------------------------------------------------
 # Low-level helpers: read metadata sources

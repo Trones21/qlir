@@ -1,4 +1,5 @@
 from typing import Literal
+
 import pandas as _pd
 
 from qlir.execution.on_summary._core import apply_execution_model

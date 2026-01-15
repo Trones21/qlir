@@ -1,10 +1,12 @@
+import logging
 from typing import Any, Dict, Optional
 
 import pandas as _pd
 import requests
-import logging
+
 log = logging.getLogger(__name__)
-from .constants import DRIFT_BASE_URI, DRIFT_ALLOWED_RESOLUTIONS
+from .constants import DRIFT_BASE_URI
+
 
 def list_markets():
     raise NotImplementedError("Drift market discovery not implemented yet.")

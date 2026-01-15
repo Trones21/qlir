@@ -1,8 +1,4 @@
 from typing import Literal
-import pandas as _pd
-
-
-from typing import Callable
 
 import pandas as _pd
 

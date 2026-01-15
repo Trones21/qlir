@@ -9,22 +9,21 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import string
+
 from qlir.data.core.paths import get_data_root
-from qlir.servers.logging.logging_setup import setup_logging, LogProfile
-from qlir.data.sources.binance.server import (
-    start_data_server
-)
-from qlir.data.sources.binance.server_config_models import (  
-    WorkerType,  
-    KlinesServerConfig,
-    UIKlinesServerConfig,)
-
-from qlir.data.sources.binance.job_config_models import (    
+from qlir.data.sources.binance.job_config_models import (
     KlinesJobConfig,
-    UIKlinesJobConfig,)
-
+    UIKlinesJobConfig,
+)
+from qlir.data.sources.binance.server import start_data_server
+from qlir.data.sources.binance.server_config_models import (
+    KlinesServerConfig,
+    UIKlinesServerConfig,
+    WorkerType,
+)
 from qlir.servers.data_server.runtime_config import RuntimeConfig
+from qlir.servers.logging.logging_setup import LogProfile, setup_logging
+
 
 def parse_csv_arg(value: str) -> list[str]:
     return [v.strip() for v in value.split(",") if v.strip()]

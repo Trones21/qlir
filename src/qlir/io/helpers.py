@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
+
 def detect_homogeneous_filetype(folder: str | Path) -> Optional[str]:
     """
     Check whether all files in a folder have the same extension.

@@ -1,11 +1,9 @@
-from typing import Literal
 import pandas as _pd
 
 from qlir.core.constants import DEFAULT_OHLC_COLS, DEFAULT_OPEN_TIMESTAMP_COL
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.condition_set.assign_group_ids import assign_condition_group_id
 from qlir.df.utils import _ensure_columns
-
 
 
 def summarize_condition_paths(

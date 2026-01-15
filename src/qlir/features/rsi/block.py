@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import pandas as _pd
+
 from ...indicators.rsi import with_rsi
 from .regimes import with_rsi_regime_flags
 

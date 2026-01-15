@@ -1,4 +1,5 @@
-from typing import Tuple, TypeAlias
+from typing import TypeAlias
+
 import pandas as pd
 
 OutCols: TypeAlias = (

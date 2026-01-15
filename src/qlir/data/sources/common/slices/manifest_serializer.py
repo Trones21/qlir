@@ -1,4 +1,5 @@
 from typing import Dict
+
 from qlir.data.sources.common.slices.entry_serializer import serialize_entry
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason

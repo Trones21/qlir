@@ -1,6 +1,6 @@
 from __future__ import annotations
-import pandas as _pd
 
+import pandas as _pd
 
 __all__ = ["ensure_copy", "astype_int8"]
 

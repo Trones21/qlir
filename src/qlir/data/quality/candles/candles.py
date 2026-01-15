@@ -1,18 +1,23 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional, List
+
 import logging
+from typing import Optional
 
 import numpy as _np
 import pandas as _pd
 
 from qlir.core.types.named_df import NamedDF
+from qlir.data.quality.candles.models.candle_gap import (
+    CandleGap,
+    candle_gaps_to_df,
+    detect_contiguous_gaps,
+)
 from qlir.data.quality.candles.models.candles_dq_report import CandlesDQReport
-from qlir.data.quality.candles.models.candle_gap import CandleGap, candle_gaps_to_df, detect_contiguous_gaps
-from qlir.time.ensure_utc import ensure_utc_series, assert_not_epoch_drift
-from qlir.time.timefreq import TimeFreq, TimeUnit
 from qlir.logging.logdf import logdf
-from qlir.utils.str.color import colorize, Ansi
+from qlir.time.ensure_utc import assert_not_epoch_drift, ensure_utc_series
+from qlir.time.timefreq import TimeFreq, TimeUnit
+from qlir.utils.str.color import Ansi, colorize
+
 log = logging.getLogger(__name__)
 
 

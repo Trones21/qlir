@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from enum import StrEnum, auto
-from typing import Any, Optional
 import logging
+from typing import Any, Optional
+
 log = logging.getLogger(__name__)
 
 

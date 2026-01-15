@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as _pd
 
-from .base import FillPolicy, FillContext
+from .base import FillContext, FillPolicy
 
 
 class ConstantFillPolicy(FillPolicy):

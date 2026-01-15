@@ -1,9 +1,11 @@
-import os
 import logging
-from enum import Enum
 
 from qlir.servers.logging.filters import HasTagFilter, NoTagFilter
-from qlir.servers.logging.handler_factories import make_simple_handler, make_tagged_handler, make_telemetry_handler
+from qlir.servers.logging.handler_factories import (
+    make_simple_handler,
+    make_tagged_handler,
+    make_telemetry_handler,
+)
 from qlir.servers.logging.level_resolution import resolve_levels
 from qlir.servers.logging.logging_profiles import LogProfile
 

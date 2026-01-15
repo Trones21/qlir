@@ -1,8 +1,8 @@
 from .alerts import (
+    INITIAL_BACKOFF,
     AlertBackoffState,
     AlertKey,
     maybe_emit_alert_with_backoff,
-    INITIAL_BACKOFF,
 )
 from .persistence import (
     load_alert_states,

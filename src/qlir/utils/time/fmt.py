@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any
 
+
 def format_ts_ms_and_human(ts_ms: int) -> str:
     iso = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%SZ"

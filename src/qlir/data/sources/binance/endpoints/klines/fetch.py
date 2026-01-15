@@ -1,10 +1,11 @@
 
-from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Dict
+
 import httpx
 
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.time.iso import now_iso
+
 
 class FetchFailed(Exception):
     def __init__(self, *, reason, meta=None, exc=None):

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import contextvars
 from dataclasses import dataclass, field
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from .row_derivation import ColumnDerivationSpec, ColumnLifecycleEvent
-
 
 _CTX: contextvars.ContextVar["DerivationContext | None"] = contextvars.ContextVar(
     "qlir_derivation_context",

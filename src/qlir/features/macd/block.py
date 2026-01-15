@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import pandas as _pd
+
 from ...indicators.macd import with_macd
 from .crosses import with_macd_cross_flags
 

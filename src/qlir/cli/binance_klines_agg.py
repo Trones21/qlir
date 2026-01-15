@@ -5,6 +5,7 @@ from pathlib import Path
 from qlir.data.agg.engine import AggConfig, run_agg_daemon
 from qlir.data.agg.paths import DatasetPaths
 
+
 def main() -> None:
     # You can wire argparse later; hardcode for now.
     root = Path("/home/tjr/qlir_data/binance/klines")

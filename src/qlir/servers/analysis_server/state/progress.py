@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from typing import Optional
+
 import pandas as pd
 
 STATE_FILE = Path("analysis_state.json")

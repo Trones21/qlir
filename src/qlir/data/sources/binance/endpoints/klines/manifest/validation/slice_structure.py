@@ -1,8 +1,12 @@
 from dataclasses import dataclass
-from urllib.parse import urlparse, parse_qs
 import logging
+from urllib.parse import parse_qs, urlparse
+
 log = logging.getLogger(__name__)
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import ManifestViolation
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.violations import (
+    ManifestViolation,
+)
+
 
 def isolate_open_time_from_composite_key(
     composite_key: str,

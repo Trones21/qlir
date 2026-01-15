@@ -1,7 +1,9 @@
 from __future__ import annotations
+
+from typing import Iterable, Optional
+
 import numpy as _np
 import pandas as _pd
-from typing import Iterable, Optional
 
 BoolDtype = "boolean"
 

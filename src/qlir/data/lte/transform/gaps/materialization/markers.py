@@ -1,4 +1,3 @@
-from typing import Tuple
 
 
 ROW_MATERIALIZED_COL = "__row_materialized"

@@ -1,18 +1,20 @@
 from __future__ import annotations
-from typing import Iterable, Optional, Tuple
+
 from dataclasses import dataclass, replace
 from enum import Enum, auto
-from typing import Optional
 import logging
+from typing import Optional
 
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
+
 log = logging.getLogger(__name__)
 
 from qlir.data.sources.binance.endpoints.klines.time_range import _now_ms
 from qlir.data.sources.common.slices.slice_status import SliceStatus
-from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
 from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
+from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
+
 
 class InspectionMode(Enum):
     QUICK = auto()
@@ -148,7 +150,6 @@ def extract_slice_receipt(
     )
 
 
-from typing import Optional
 
 
 def inspect_slice_integrity(

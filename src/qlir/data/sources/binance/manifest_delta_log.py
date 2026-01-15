@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any, Iterable
-from datetime import datetime, timezone
+from typing import Any, Dict, Iterable
 
 log = logging.getLogger("qlir.manifest_delta_log")
 

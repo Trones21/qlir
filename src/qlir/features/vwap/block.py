@@ -1,11 +1,13 @@
 from __future__ import annotations
+
 import pandas as _pd
+
 from ...indicators.vwap import with_vwap_hlc3_session
-from .relations import flag_relations
-from ..common.session import with_session_id
 from ..common.running import with_counts_running, with_streaks
-from .slope import with_vwap_slope
+from ..common.session import with_session_id
 from .distances import with_distance_metrics
+from .relations import flag_relations
+from .slope import with_vwap_slope
 
 __all__ = ["with_vwap_feature_block"]
 

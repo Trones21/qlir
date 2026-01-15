@@ -1,13 +1,16 @@
-import pandas as _pd
-from qlir import indicators
-from qlir.core.ops import temporal
-from qlir.df.survival.survival_stat import SurvivalStat
-from qlir.df.survival.survival_mark_columns import add_columns_for_trend_survival_rates
-from qlir.logging.logdf import logdf
-from qlir.servers.analysis_server.analyses.df_prep.persistence import persistence_analysis, persistence_analysis_prep_down, persistence_analysis_prep_up
 import logging
 
-from qlir.servers.analysis_server.emit.create_for_registry import create_emit_object
+import pandas as _pd
+
+from qlir import indicators
+from qlir.core.ops import temporal
+from qlir.df.survival.survival_mark_columns import add_columns_for_trend_survival_rates
+from qlir.df.survival.survival_stat import SurvivalStat
+from qlir.servers.analysis_server.analyses.df_prep.persistence import (
+    persistence_analysis_prep_down,
+    persistence_analysis_prep_up,
+)
+
 log = logging.getLogger(__name__)
 
 def sma(clean_data: _pd.DataFrame, window: int) -> tuple[_pd.DataFrame | None, bool]:

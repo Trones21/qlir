@@ -1,10 +1,12 @@
-from enum import StrEnum
-import time
-from pandas import DataFrame
-from qlir.io.writer import write
-import pyarrow.dataset as ds
-from .filetype import FileType
 import logging
+import time
+
+from pandas import DataFrame
+
+from qlir.io.writer import write
+
+from .filetype import FileType
+
 log = logging.getLogger(__name__)
 
 

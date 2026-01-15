@@ -1,9 +1,16 @@
 from dataclasses import dataclass
 import hashlib
 
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import SliceInvariantsParts
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.parsers.request_url_parser import parse_requested_kline_url
-from qlir.data.sources.binance.endpoints.klines.manifest.validation.parsers.composite_key_parser import parse_composite_slice_key
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.contracts.slice_facts_parts import (
+    SliceInvariantsParts,
+)
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.parsers.composite_key_parser import (
+    parse_composite_slice_key,
+)
+from qlir.data.sources.binance.endpoints.klines.manifest.validation.parsers.request_url_parser import (
+    parse_requested_kline_url,
+)
+
 
 @dataclass(frozen=True)
 class SliceInvariants:

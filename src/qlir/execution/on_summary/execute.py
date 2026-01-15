@@ -2,11 +2,11 @@ from typing import Any
 
 import pandas as _pd
 
-from qlir.execution.on_summary.execution_models import (
-    SummaryExecutionModel,
-    BUILTIN_SUMMARY_EXECUTION_REGISTRY,
-)
 from qlir.execution.on_summary.diy import diy
+from qlir.execution.on_summary.execution_models import (
+    BUILTIN_SUMMARY_EXECUTION_REGISTRY,
+    SummaryExecutionModel,
+)
 
 
 def execute_summary(

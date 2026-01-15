@@ -1,5 +1,6 @@
-import pandas as _pd
 from typing import Iterable
+
+import pandas as _pd
 
 
 def finalize_df(

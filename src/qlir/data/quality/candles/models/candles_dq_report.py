@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import pandas as _pd
+
 from qlir.data.quality.candles.models.candle_gap import CandleGap
 from qlir.time.timefreq import TimeFreq
 

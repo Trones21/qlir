@@ -1,5 +1,7 @@
 import click
+
 from qlir.data.sources.base import DataSource
+
 
 @click.group()
 def instruments():

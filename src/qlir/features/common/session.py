@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
+
 from ...time.misc import session_floor
 
 __all__ = ["with_session_id"]
