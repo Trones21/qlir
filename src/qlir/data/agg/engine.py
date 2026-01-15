@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
-
+import json
 import pandas as _pd
 
 from qlir.data.agg.atomic import atomic_rename, atomic_write_json
@@ -19,12 +19,23 @@ SLICE_OK = ["complete","partial"]
 SLICE_STATUS_KEY = "slice_status"
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    import json
+def wait_load_manifest_json_no_serialize(manifest_path: Path) -> dict[str, Any]:
+    """
+    Load an existing manifest from disk.
 
-    with path.open("r", encoding="utf-8") as f:
+    Contract:
+    - waits for the manifest to exist, then loads it 
+    """
+    log.info("Waiting for manifest.json to exist | path=%s", manifest_path)
+    
+    while True:
+        if manifest_path.exists() and manifest_path.stat().st_size > 0:
+                break
+        log.warning("STILL waiting for manifest.json to exist | path=%s", manifest_path)
+        time.sleep(0.2)
+
+    with manifest_path.open("r", encoding="utf-8") as f:
         return json.load(f)
-
 
 @dataclass(frozen=True)
 class RawSliceRef:
@@ -365,7 +376,7 @@ def run_agg_daemon(
 
     while True:
         log.info("inside true")
-        raw_manifest = load_json(paths.raw_manifest_path)
+        raw_manifest = wait_load_manifest_json_no_serialize(paths.raw_manifest_path)
         agg = AggManifest.load_or_init(paths.agg_manifest_path, dataset_meta)
 
 

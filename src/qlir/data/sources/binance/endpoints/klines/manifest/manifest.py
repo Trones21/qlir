@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import time
 from typing import Dict
 import logging
 
@@ -36,7 +37,7 @@ def load_or_create_manifest(
         return manifest
     
     # Fresh skeleton
-    log.info("Creating fresh manifest because there was no manifest found at: %s", manifest_path)
+    log.info("Creating fresh manifest (in-memory object) because there was no manifest found at: %s", manifest_path)
     
     return {
         "endpoint": "klines",
@@ -56,18 +57,40 @@ def load_or_create_manifest(
     }
 
 
-def load_existing_manifest(manifest_path: Path) -> Dict:
+def wait_for_load_manifest(manifest_path: Path) -> Dict:
     """
-    Load an existing manifest.json from disk.
+    Load an existing manifest from disk.
+
+    Contract:
+    - waits for the manifest to exist, then loads it 
+    """
+    log.info("Waiting for manifest.json to exist | path=%s", manifest_path)
+    
+    while True:
+        if manifest_path.exists() and manifest_path.stat().st_size > 0:
+                break
+        log.warning("STILL waiting for manifest.json to exist | path=%s", manifest_path)
+        time.sleep(2)
+
+    with manifest_path.open("r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    deserialize_manifest(manifest)
+    return manifest
+
+
+def load_existing_manifest_snapshot(snapshot_path: Path) -> Dict:
+    """
+    Load an existing manifest from disk.
 
     Contract:
     - manifest.json MUST already exist
     - Caller is responsible for waiting until it does
     """
-    if not manifest_path.exists():
-        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+    if not snapshot_path.exists():
+        raise FileNotFoundError(f"Manifest snapshot not found: {snapshot_path}")
 
-    with manifest_path.open("r", encoding="utf-8") as f:
+    with snapshot_path.open("r", encoding="utf-8") as f:
         manifest = json.load(f)
 
     deserialize_manifest(manifest)

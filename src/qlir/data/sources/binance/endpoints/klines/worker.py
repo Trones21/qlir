@@ -10,14 +10,19 @@ from qlir.data.sources.binance.endpoints.klines.manifest.rebuild.from_responses 
 from qlir.data.sources.binance.endpoints.klines.manifest.summary import update_summary
 from qlir.data.sources.binance.manifest_delta_log import append_delta_log_to_in_memory_manifest, append_manifest_delta
 from qlir.data.sources.common import claims
-from qlir.data.sources.binance.endpoints.klines.manifest.manifest import MANIFEST_FILENAME, load_or_create_manifest, write_full_manifest_snapshot, seed_manifest_with_expected_slices, update_manifest_with_classification
+from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (MANIFEST_FILENAME, 
+                                                                          load_or_create_manifest, 
+                                                                          write_full_manifest_snapshot, 
+                                                                          seed_manifest_with_expected_slices, 
+                                                                          update_manifest_with_classification, 
+                                                                          wait_for_load_manifest)
 from qlir.data.sources.common.slices.slice_classification import classify_slices
 from qlir.data.sources.common.slices.slice_key import SliceKey, get_current_slice_key
 from qlir.data.sources.common.slices.slice_status import SliceStatus
 from qlir.data.sources.common.slices.slice_status_policy import SliceStatusPolicy
 from qlir.data.sources.common.slices.slice_status_reason import SliceStatusReason
+from qlir.io.delete import delete_file_if_exists
 from qlir.io.helpers import has_files
-from qlir.telemetry import telemetry
 from qlir.time.iso import now_utc, parse_iso
 from qlir.utils.str.color import Ansi, colorize
 from qlir.utils.time.fmt import format_ts_human
@@ -25,14 +30,14 @@ log = logging.getLogger(__name__)
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Any, Dict, List
 
 from .model import REQUIRED_FIELDS #SliceStatus, classify_slices
 from .urls import generate_kline_slices
-from .fetch_wrapper import log_requested_slice_size, fetch_and_persist_slice
+from .fetch_wrapper import fetch_and_persist_slice
 from .time_range import compute_time_range
 from qlir.data.sources.binance.endpoints.klines.manifest.validation.orchestrator import validate_manifest_and_fs_integrity
-from qlir.data.core.paths import get_data_root, get_symbol_interval_limit_raw_dir
+from qlir.data.core.paths import get_symbol_interval_limit_raw_dir
 
 IN_PROGRESS_STALE_SEC = 300  # 5 minutes
 
@@ -117,8 +122,15 @@ def run_klines_worker(
     manifest_path = sym_interval_limit_raw_dir.joinpath(MANIFEST_FILENAME)
     log.debug("and the manifest aggregator batch updates manifest located at: %s", manifest_path)
 
-    snapshot_dir = sym_interval_limit_raw_dir.joinpath("manifest_snapshots")
+    snapshot_dir = sym_interval_limit_raw_dir.joinpath("manifest_snapshot")
+    snapshot_path = snapshot_dir / "manifest.snapshot.json"
 
+    log.info("Manifest.json, manifest.delta, and manifest.snapshot.json being removed - manifest MUST be rebuilt on each startup")
+ 
+    delete_file_if_exists(manifest_path)
+    delete_file_if_exists(delta_log_path)
+    delete_file_if_exists(snapshot_path)
+ 
     if os.getenv("QLIR_MANIFEST_LOG"):
         log.debug("manifest batch update worker logs are turned on. To view, open another terminal and use tail -f %s", manifest_path)
 
@@ -146,23 +158,29 @@ def run_klines_worker(
             limit=limit,
         )
 
+        if manifest["slices"] == {} and has_files(responses_dir):
+            log.info(f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
+            manifest_snap = rebuild_manifest_from_responses(responses_dir=responses_dir, 
+                                                        expected_slices=expected_slices, 
+                                                        symbol=symbol,
+                                                        interval=interval,
+                                                        limit=limit)
+            write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest_snap, reason=f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
+            
+            # wait until the aggregator has moved the manifest snapshot to the root folder then reload
+            manifest = wait_for_load_manifest(manifest_path)
+
+        else:
+            log.info(f"Manifest slices_len:{len(manifest['slices'])}")
+
         append_delta_log_to_in_memory_manifest(delta_log_path=delta_log_path, manifest=manifest)
 
         validate_manifest_and_fs_integrity(manifest, responses_dir)
         log.info(f"Total Expected Slice Count:{len(expected_slices)}")
 
-        log.warning("Full writes in terribly inefficient, but eventually the manifest validation will be pulled out and only run like once per hour")
-  
-        if manifest["slices"] == {} and has_files(responses_dir):
-            log.info(f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
-            manifest = rebuild_manifest_from_responses(responses_dir=responses_dir, 
-                                                       expected_slices=expected_slices, 
-                                                       symbol=symbol,
-                                                       interval=interval,
-                                                       limit=limit)
-            write_full_manifest_snapshot(snapshot_dir=snapshot_dir, manifest=manifest, reason=f"Manifest contains empty slices dict, but responses dir has response files. Rebuilding from filesystem raw responses dir: {responses_dir} ")
-        
-        
+        log.warning("Full writes is terribly inefficient, but eventually the manifest validation will be pulled out and only run like once per hour")
+
+      
         # Implement later 
         # if report.fs_violation_ratio > cfg.rebuild_threshold:
         #     log.warning("Integrity violations exceed threshold; rebuilding manifest")

@@ -19,7 +19,7 @@ from qlir.data.sources.binance.manifest_delta_log import (
 
 # KLINES MANIFEST (current location)
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
-    load_existing_manifest,
+    load_existing_manifest_snapshot,
     snapshot_created_at,
 )
 from qlir.data.sources.binance.endpoints.klines.manifest.manifest import (
@@ -85,19 +85,27 @@ def run_manifest_delta_service(server_config: BinanceServerConfig, data_root: Pa
     )
 
     # ---------------------------------------------------------------------
-    # Load Existing Manifest
+    # Set Path Where this service can pickup full manifests dropped off by the worker
     # ---------------------------------------------------------------------
-    log.info("Waiting for manifest.json to exist | path=%s", manifest_path)
+    snapshot_dir = sym_interval_limit_raw_dir.joinpath("manifest_snapshot")
+    snapshot_path = snapshot_dir / "manifest.snapshot.json"
+
+
+    # ---------------------------------------------------------------------
+    # Wait for a Manifest Snapshot 
+    # ---------------------------------------------------------------------
+    log.info("Waiting for manifest.snapshot.json to exist | path=%s", snapshot_path)
     
     while True:
-        if manifest_path.exists() and manifest_path.stat().st_size > 0:
+        if snapshot_path.exists() and snapshot_path.stat().st_size > 0:
                 break
+        log.warning("STILL waiting for manifest.snapshot.json to exist | path=%s", snapshot_path)
         time.sleep(0.5)
 
     log.info("Loading Manifest into Aggregator")
 
-    manifest: Dict[str, Any] = load_existing_manifest(
-        manifest_path=manifest_path
+    manifest: Dict[str, Any] = load_existing_manifest_snapshot(
+        snapshot_path=snapshot_path
     )
 
     last_snapshot_ts = time.monotonic()
@@ -121,13 +129,6 @@ def run_manifest_delta_service(server_config: BinanceServerConfig, data_root: Pa
 
     log.info("Bootstrap complete | delta_offset=%d", delta_offset)
 
-
-
-    # ---------------------------------------------------------------------
-    # Set Path Where this service can pickup full manifests dropped off by the worker
-    # ---------------------------------------------------------------------
-    snapshot_dir = sym_interval_limit_raw_dir.joinpath("manifest_snapshots")
-    snapshot_path = snapshot_dir / "manifest.snapshot.json"
 
     # ---------------------------------------------------------------------
     # Main loop

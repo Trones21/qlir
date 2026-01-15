@@ -1,0 +1,1 @@
+tmux new-session -d -s qlir_analysis 'poetry run analysis_server 2>&1 | tee -a logs/analysis_server.log'

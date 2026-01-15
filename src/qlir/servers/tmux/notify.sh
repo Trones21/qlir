@@ -1,0 +1,1 @@
+tmux new-session -d -s qlir_notify 'poetry run notifications_server 2>&1 | tee -a logs/notifications_server.log'
