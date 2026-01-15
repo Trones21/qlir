@@ -5,7 +5,7 @@ import logging
 import os
 import time
 
-from qlir.data.sources.binance.server import BinanceServerConfig
+from qlir.data.sources.binance.server_config_models import BinanceServerConfig
 
 log = logging.getLogger("qlir.manifest_aggregator")
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import time
 
-from qlir.data.sources.binance.generate_urls import interval_to_ms
+from qlir.data.sources.binance.intervals import interval_to_ms
 
 
 @dataclass(frozen=True)

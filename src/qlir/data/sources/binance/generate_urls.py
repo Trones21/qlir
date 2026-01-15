@@ -1,7 +1,7 @@
 BASE = "https://api.binance.com/api/v3/klines"
 
 
-def interval_to_ms(interval: str) -> int:
+def _interval_to_ms(interval: str) -> int:
     """
     Only supports '1s' and '1m'.
     """
@@ -40,7 +40,7 @@ def generate_kline_url_slices(
     if start_ms > end_ms:
         return []
 
-    interval_ms = interval_to_ms(interval)
+    interval_ms = _interval_to_ms(interval)
     slice_span = interval_ms * limit  # time covered by one request
 
     urls: list[str] = []

@@ -12,11 +12,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from qlir.data.sources.binance.server import (
+
+from qlir.data.sources.binance.server_config_models import (
     BinanceServerConfig,
     KlinesJobConfig,
-    start_data_server,
 )
+from qlir.data.sources.binance.server import start_data_server
 
 
 def parse_args() -> argparse.Namespace:

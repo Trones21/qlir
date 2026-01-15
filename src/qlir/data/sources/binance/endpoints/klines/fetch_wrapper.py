@@ -8,8 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from qlir.data.sources.binance.endpoints.klines.fetch import FetchFailed, fetch
 from qlir.data.sources.binance.endpoints.klines.inspection_result import inspect_res
 from qlir.data.sources.binance.endpoints.klines.persist import persist
-from qlir.data.sources.binance.endpoints.klines.time_range import interval_to_ms
-from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval
+from qlir.data.sources.binance.intervals import floor_unix_ts_to_interval, interval_to_ms
 from qlir.data.sources.common.slices.slice_key import SliceKey
 
 log = logging.getLogger(__name__)
