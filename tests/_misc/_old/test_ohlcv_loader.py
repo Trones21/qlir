@@ -5,6 +5,11 @@ from qlir.io import write
 import pytest
 pytestmark = pytest.mark.local
 
+pytest.skip(
+    "Deprecated",
+    allow_module_level=True
+)
+
 def _seed_df():
     return _pd.DataFrame(
         {

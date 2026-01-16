@@ -1,7 +1,7 @@
 import pytest
 import time
 
-from qlir.data.sources.binance.generate_urls import interval_to_ms
+from qlir.data.sources.binance.intervals import interval_to_ms
 from qlir.data.sources.common.slices.slice_classification import try_resolve_current_slice
 from qlir.data.sources.common.slices.slice_key import SliceKey
 
