@@ -5,7 +5,7 @@ import pandas as _pd
 from qlir.servers.analysis_server.analyses.distance_dist import distance_distributions
 from qlir.servers.analysis_server.analyses.sma import sma
 from qlir.servers.analysis_server.analyses.sma_14.execution_analyses import execution_analysis
-from qlir.servers.analysis_server.analyses.sma_14.mfe import mfe_analysis
+from qlir.servers.analysis_server.analyses.sma_14.mfe import mfe
 from qlir.servers.analysis_server.analyses.sma_14.globals import mae, net_move_to_path_length
 def conduct_analysis(clean_data: _pd.DataFrame):
 

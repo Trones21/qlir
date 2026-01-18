@@ -5,7 +5,8 @@ import inspect
 import logging
 from typing import Callable, Mapping, ParamSpec, Sequence, Union
 
-from qlir.core.types.new_cols_result import NewColsResult
+from qlir.core.registries.columns.registry import ColRegistry
+from qlir.core.types.annotated_df import AnnotatedDataFrame
 
 from .context import get_ctx
 from .explain import explain_created
@@ -83,7 +84,7 @@ P = ParamSpec("P")
 def new_col_func(
     *,
     specs: SpecsOrCallable,
-) -> Callable[[Callable[P, NewColsResult]], Callable[P, NewColsResult]]:
+) -> Callable[[Callable[P, AnnotatedDataFrame]], Callable[P, AnnotatedDataFrame]]:
     """
     Decorator for functions that create new column(s).
 
@@ -96,7 +97,7 @@ def new_col_func(
       - derivation specs are recorded (if a DerivationContext exists) and logged.
     """
     
-    def decorator(fn: Callable[P, NewColsResult]) -> Callable[P, NewColsResult]:
+    def decorator(fn: Callable[P, AnnotatedDataFrame]) -> Callable[P, AnnotatedDataFrame]:
         logger = logging.getLogger(fn.__module__)
         sig = inspect.signature(fn)
         
@@ -128,13 +129,3 @@ def new_col_func(
 
     return decorator
 
-
-
-
-# def new_col_func(
-#     *,
-#     specs: ColumnDerivationSpec | 
-#         Sequence[ColumnDerivationSpec] | 
-#         Mapping[str, ColumnDerivationSpec] |
-#         Callable[..., ColumnDerivationSpec]
-# ) -> Callable[[Callable[P, NewColsResult]], Callable[P, NewColsResult]]:

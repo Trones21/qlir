@@ -16,4 +16,14 @@ FULLTEXT_STYLE_RULES = [
         "styles": [Ansi.RED, Ansi.BOLD],
         "case_sensitive": True,
     },
+    {
+        "match": ["CREATED"],
+        "styles": [Ansi.GREEN],
+        "case_sensitive": True,
+    },
+    {
+        "match": ["REMOVED"],
+        "styles": [Ansi.MAGENTA],
+        "case_sensitive": True,
+    },
 ]
