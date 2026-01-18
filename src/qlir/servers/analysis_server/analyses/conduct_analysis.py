@@ -9,7 +9,9 @@ from qlir.servers.analysis_server.analyses.sma_14.mfe import mfe
 from qlir.servers.analysis_server.analyses.sma_14.globals import mae, net_move_to_path_length
 def conduct_analysis(clean_data: _pd.DataFrame):
 
-
+   # Row Filter for Quick Dev Runs
+   clean_data = clean_data.iloc[-2000:]
+   
    # mfe_analysis(clean_data)
    
    # distance_distributions(clean_data)

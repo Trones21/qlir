@@ -6,17 +6,19 @@ import pandas as pd
 from qlir.df.granularity.distributions.bucketize.lossy.equal_width import bucketize_zoom_equal_width
 from qlir.df.scalars.units import delta_in_bps
 from qlir.logging.logdf import logdf
-from qlir.servers.analysis_server.analyses.sma_14.execution_analyses import _prep
+from qlir.column_bundles.trend_with_legs import sma_plus_directional_leg_persistence
 import logging
 
 from qlir.utils.time.fmt import format_ts_human 
 log = logging.getLogger(__name__)
 
 def distance_distributions(df):
-    dfs, lists_cols = _prep(df)
+    sma_dfs = sma_plus_directional_leg_persistence(df)
     
-    df_up = dfs[0]
-    log.info(lists_cols[0])
+    df_up = sma_dfs.up
+
+    raise NotImplementedError("Need to revisit, this was lasted worked on before a major refactor.")
+    log.info()
     leg_id = "open_sma_14_up_leg_id"
     
 
@@ -24,6 +26,7 @@ def distance_distributions(df):
     df_up['intra_leg_idx'] = df_up.groupby(leg_id).cumcount()
     df_slim = df_up.loc[:,[leg_id, "tz_start","open", "high", "open_sma_14", "intra_leg_idx"]]
     df_slim["hmn_ts"] = format_ts_human(df_slim["tz_start"])
+    
     # Get the leg len (zero based) - And apply to: [all row in group, new col]
     df_slim["leg_len_idx"] = (
         df_slim.groupby(leg_id)["intra_leg_idx"]
