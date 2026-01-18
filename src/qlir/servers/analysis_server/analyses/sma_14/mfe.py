@@ -4,15 +4,26 @@
 
 import numpy as np
 import pandas as pd
+from qlir.core.types.direction import Direction
+from qlir.core.types.excursion_type import ExcursionType
 from qlir.core.types.named_df import NamedDF
 from qlir.df.scalars.units import delta_in_bps
 from qlir.logging.logdf import logdf
+from qlir.servers.analysis_server.analyses.excursion import excursion
 from qlir.servers.analysis_server.analyses.sma_14.execution_analyses import _prep
 from qlir.df.granularity.distributions.bucketize.lossy.equal_width import bucketize_zoom_equal_width
 import logging
 log = logging.getLogger(__name__)
 
-def mfe_analysis(df: pd.DataFrame):
+
+
+def mfe(df: pd.DataFrame):
+    df_mfe_up = excursion(df=df, trendname_or_col_prefix="osma14", direction=Direction.UP, mae_or_mfe=ExcursionType.MFE)
+    df_mfe_down = excursion(df=df, trendname_or_col_prefix="osma14", direction=Direction.DOWN, mae_or_mfe=ExcursionType.MFE)
+
+
+
+def mfe_original(df: pd.DataFrame):
     
     mfe_df = mfe_rows_up(df)
 
