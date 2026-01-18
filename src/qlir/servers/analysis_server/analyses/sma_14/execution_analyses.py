@@ -8,7 +8,7 @@ from qlir.df.granularity.summarize_condition_path import summarize_condition_pat
 from qlir.execution.on_summary.execute import execute_summary
 from qlir.execution.on_summary.execution_models import SummaryExecutionModel
 from qlir.logging.logdf import logdf
-from qlir.servers.analysis_server.analyses.df_prep.persistence import persistence_analysis_prep_down, persistence_analysis_prep_up
+from qlir.column_bundles.persistence import persistence_down_legs, persistence_up_legs
 from qlir.df.granularity.distributions.bucketize.lossy.equal_width import bucketize_zoom_equal_width
 
 import logging 
@@ -27,8 +27,8 @@ def _prep(clean_df: DataFrame, dev_filter: bool = False):
     df, cols = temporal.with_bar_direction(df, col=sma_col)
     direction_col = cols['sign'] #type: ignore 
     
-    for_up, up_cols = persistence_analysis_prep_up(df, direction_col, sma_col)
-    for_down, down_cols = persistence_analysis_prep_down(df, direction_col, sma_col)
+    for_up, up_cols = persistence_up_legs(df, direction_col, sma_col)
+    for_down, down_cols = persistence_down_legs(df, direction_col, sma_col)
 
     return [for_up, for_down], [up_cols, down_cols]
 

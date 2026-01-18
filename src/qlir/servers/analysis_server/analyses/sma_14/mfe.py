@@ -9,7 +9,7 @@ from qlir.core.types.excursion_type import ExcursionType
 from qlir.core.types.named_df import NamedDF
 from qlir.df.scalars.units import delta_in_bps
 from qlir.logging.logdf import logdf
-from qlir.servers.analysis_server.analyses.excursion import excursion
+from qlir.column_bundles.excursion import excursion
 from qlir.servers.analysis_server.analyses.sma_14.execution_analyses import _prep
 from qlir.df.granularity.distributions.bucketize.lossy.equal_width import bucketize_zoom_equal_width
 import logging

@@ -7,7 +7,7 @@ from qlir.core.types.direction import Direction
 from qlir.core.types.excursion_type import ExcursionType
 from qlir.df.granularity.distributions.bucketize.lossy.equal_width import bucketize_zoom_equal_width
 from qlir.logging.logdf import logdf
-from qlir.servers.analysis_server.analyses.excursion import excursion
+from qlir.column_bundles.excursion import excursion
 
 
 def mae(df: pd.DataFrame):

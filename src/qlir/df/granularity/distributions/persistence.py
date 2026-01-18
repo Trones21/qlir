@@ -3,7 +3,6 @@ import pandas as _pd
 from qlir.core.types.named_df import NamedDF
 import qlir.df.granularity.distributions.bucketize.lossy.equal_width as buckets
 
-
 def condition_persistence(df: _pd.DataFrame, group_id_col: str, persistence_col: str) -> list[NamedDF]:
     '''Distribution of event persistence length
     (Summarize then Bucketize)

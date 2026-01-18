@@ -6,7 +6,9 @@
 * **Examples:** `resample(df, '5m')`, `align([df1, df2])`, `fill(method='ffill')`.
 * **Rule:** No finance opinions—pure plumbing.
 
-## 1) Ops (Deterministic, 1–2 series in → 1 series out) — *core ingredients*
+## Core
+
+### Ops (Deterministic, 1–2 series in → 1 series out) — *core ingredients*
 
 Primitive math on series; this is where your “prior bar close vs this bar close” lives.
 
@@ -21,7 +23,7 @@ Primitive math on series; this is where your “prior bar close vs this bar clos
 > `r2 = ops.pct_change(close)` (percentage change)
 > `dir = ops.sign(r1)` (direction −1/0/+1)
 
-## 2) Relations (Boolean/event primitives) — *core ingredients*
+### Relations (Boolean/event primitives) — *core ingredients*
 
 Bar-to-bar and series-to-series **relations** (pure booleans or {-1,0,1}). These are the lego bricks for everything “did X cross Y? did open rise vs prior open?”.
 
@@ -36,7 +38,7 @@ Bar-to-bar and series-to-series **relations** (pure booleans or {-1,0,1}). These
 > *“close crossed above prior high”* →
 > `relations.cross_up(close, shift(high,1))`
 
-## 3) Counters (Stateful tallies over booleans) — *core ingredients*
+### Counters (Stateful tallies over booleans) — *core ingredients*
 
 Run-lengths, counts since event, bars-since—these are essential for later “episodes”.
 
@@ -49,7 +51,8 @@ Run-lengths, counts since event, bars-since—these are essential for later “e
 > `streak_up(close)` → how many consecutive bars up
 > `bars_since(relations.cross_up(close, vwap))`
 
-## 4) Indicators (Named financial recipes) — *recipes, but still library-level*
+
+## Indicators (Named financial recipes) — *recipes, but still library-level*
 
 Composed from Ops/Relations/Counters; canonical, parameterized, testable.
 
@@ -59,7 +62,26 @@ Composed from Ops/Relations/Counters; canonical, parameterized, testable.
 
 > Rule of thumb: if it has a name in TA textbooks, it’s an **indicator** (still “ingredient” for signals).
 
-## 5) Features (Vectorized descriptors) — *ingredients, task-agnostic*
+
+Got it — same **size, density, and cadence** as *Indicators* / *Features*.
+Here’s a **tight, symmetric** section you can drop in verbatim.
+
+---
+
+## Column Bundles (Structural derivations) — *structure, but still library-level*
+
+Composed from Ops / Relations / Counters / Indicators; canonical, parameterized, testable.
+
+They introduce **structural context**—groups, legs, runs, and within-structure
+coordinates—by adding **multiple, logically related columns at once**.
+
+* **Excursion (MAE / MFE):** `excursion(df, prefix, leg_id, dir, kind)` → intra-leg idx, leg length, excursion, bps, event row, position metrics
+* **Persistence / Runs:** `persistence_up_legs(df, direction_col, trendline_col)` → leg ids, run counters, per-leg persistence
+* **Leg / Episode annotation:** assign group ids, mark boundaries, broadcast per-group stats
+
+--- 
+
+## Features (Vectorized descriptors) — *ingredients, task-agnostic*
 
 Bundles of normalized numbers suitable for ML / ranking. No trade intent.
 
@@ -69,7 +91,7 @@ Bundles of normalized numbers suitable for ML / ranking. No trade intent.
 
 > Features are *compositions* of Ops/Relations/Indicators with consistent scaling and NaN policy.
 
-## 6) Signals (Trade-intent logic) — *recipes, strategy-facing*
+## Signals (Trade-intent logic) — *recipes, strategy-facing*
 
 Enter/exit booleans, score functions, stop/target suggestions. Consumes Features/Indicators, emits **decisions**.
 
@@ -80,7 +102,10 @@ Enter/exit booleans, score functions, stop/target suggestions. Consumes Features
 
 ---
 
-## Naming / API sketch (fits your style)
+
+
+
+## Naming / API sketch
 
 ```
 qlir/

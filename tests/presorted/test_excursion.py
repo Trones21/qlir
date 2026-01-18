@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from qlir.servers.analysis_server.analyses.excursion import excursion
+from qlir.column_bundles.excursion import excursion
 from qlir.core.types.direction import Direction
 from qlir.core.types.excursion_type import ExcursionType
 

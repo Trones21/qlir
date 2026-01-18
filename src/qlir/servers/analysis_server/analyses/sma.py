@@ -6,9 +6,9 @@ from qlir import indicators
 from qlir.core.ops import temporal
 from qlir.df.survival.survival_mark_columns import add_columns_for_trend_survival_rates
 from qlir.df.survival.survival_stat import SurvivalStat
-from qlir.servers.analysis_server.analyses.df_prep.persistence import (
-    persistence_analysis_prep_down,
-    persistence_analysis_prep_up,
+from qlir.column_bundles.persistence import (
+    persistence_down_legs,
+    persistence_up_legs,
 )
 
 log = logging.getLogger(__name__)
@@ -27,8 +27,8 @@ def sma(clean_data: _pd.DataFrame, window: int) -> tuple[_pd.DataFrame | None, b
     # with bar direction returns a tuple[str, ...], the second one is the sign column
     direction = cols["sign"]
 
-    for_up_df, up_cols = persistence_analysis_prep_up(df, direction, sma_col)
-    for_down_df, down_cols = persistence_analysis_prep_down(df, direction, sma_col)
+    for_up_df, up_cols = persistence_up_legs(df, direction, sma_col)
+    for_down_df, down_cols = persistence_down_legs(df, direction, sma_col)
     
     # ========================== UpTrends ===============================================
     df_up = for_up_df.loc[:,["tz_start","open", "open_sma_14", "dir_col_up", "dir_col_up__run_true"]]

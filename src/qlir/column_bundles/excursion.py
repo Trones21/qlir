@@ -7,12 +7,30 @@ from qlir.core.types.annotated_df import AnnotatedDataFrame
 from qlir.core.types.direction import Direction
 from qlir.core.types.excursion_type import ExcursionType
 from qlir.df.scalars.units import delta_in_bps
+from qlir.logging.logdf import logdf
 from qlir.servers.analysis_server.analyses.sma_14.execution_analyses import _prep
 from typing_extensions import assert_never
 from enum import StrEnum
+import logging
+log = logging.getLogger(__name__)
 
 
-def excursion(df: pd.DataFrame, trendname_or_col_prefix:str , direction: Direction, mae_or_mfe: ExcursionType) -> AnnotatedDataFrame:
+def excursion_wrapper(df: pd.DataFrame, trendname_or_col_prefix:str, direction: Direction, mae_or_mfe: ExcursionType):
+    
+    dfs, lists_cols = _prep(df, prefix)
+
+    if direction == Direction.UP:
+        df_ = dfs[0]
+        cols = lists_cols[0]
+        leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
+    
+    if direction == Direction.DOWN:
+        df_ = dfs[1]
+        cols = lists_cols[1]
+        leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
+        excursion()
+
+def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, direction: Direction, mae_or_mfe: ExcursionType) -> AnnotatedDataFrame:
     """
     Compute per-leg price excursion metrics (MAE or MFE) for directional trend legs.
 
@@ -75,26 +93,13 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str , direction: Directi
       into valid directional leg segments by upstream logic.
     """
     
-    dfs, lists_cols = _prep(df)
-
-    if direction == Direction.UP:
-        df_ = dfs[0]
-        cols = lists_cols[0]
-        leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
-    
-    elif direction == Direction.DOWN:
-        df_ = dfs[1]
-        cols = lists_cols[1]
-        leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
-    
-    else:
-        assert_never(direction)
-
     new_cols = ColRegistry()
 
     excursion_name = f"{trendname_or_col_prefix}_{direction.value}_{mae_or_mfe.value}"
     
-    # Mark the intra leg idx 
+    # Mark the intra leg idx
+    log.info(leg_id) 
+    logdf(df_)
     intra_leg_idx = f'{excursion_name}_intra_leg_idx'
     df_[intra_leg_idx] = df_.groupby(leg_id).cumcount()
     
