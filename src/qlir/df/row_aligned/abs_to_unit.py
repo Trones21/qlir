@@ -3,7 +3,7 @@
 import pandas as _pd
 
 from qlir.core.types.UnitEnum import UnitEnum
-from qlir.df.scalars.units import abs_to_bps, abs_to_pct
+from qlir.df.scalars.units import delta_in_bps, delta_in_pct
 from qlir.df.utils import _ensure_columns
 
 
@@ -24,10 +24,10 @@ def abs_to_unit(
     out_col = out_col or f"{value_col}_{unit.value}"
 
     if unit == UnitEnum.BPS:
-        df[out_col] = abs_to_bps(df[value_col], df[ref_col])
+        df[out_col] = delta_in_bps(df[value_col], df[ref_col])
 
     elif unit == UnitEnum.PCT:
-        df[out_col] = abs_to_pct(df[value_col], df[ref_col])
+        df[out_col] = delta_in_pct(df[value_col], df[ref_col])
 
     else:
         raise ValueError(f"Unsupported unit: {unit}")

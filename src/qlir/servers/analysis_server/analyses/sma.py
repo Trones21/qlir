@@ -88,3 +88,4 @@ def sma(clean_data: _pd.DataFrame, window: int) -> tuple[_pd.DataFrame | None, b
     df_out = df_up.combine_first(df_down)
 
     return (df_out, False)
+

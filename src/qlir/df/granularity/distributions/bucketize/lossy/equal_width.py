@@ -1,7 +1,7 @@
 import numpy as _np
 import pandas as _pd
 
-from qlir.df.reducers.distributions.bucketize.build_bucket_df import build_bucket_df
+from qlir.df.granularity.distributions.bucketize.build_bucket_df import build_bucket_df
 from qlir.logging.logdf import NamedDF
 
 

@@ -10,7 +10,7 @@ from qlir.data.core.paths import get_agg_dir_path
 from qlir.servers.analysis_server.analyses.conduct_analysis import conduct_analysis
 from qlir.servers.analysis_server.emit.alert import emit_alert
 from qlir.servers.analysis_server.emit.trigger_registry import TRIGGER_REGISTRY
-from qlir.servers.analysis_server.io.load_clean_data import load_clean_data
+from qlir.servers.analysis_server.io.load_clean_data import load_clean_data, wait_get_agg_dir_path
 from qlir.servers.analysis_server.state import (
     INITIAL_BACKOFF,
     AlertBackoffState,
@@ -25,7 +25,7 @@ from qlir.servers.analysis_server.state.progress import (
 
 log = logging.getLogger(__name__)
 
-PARQUET_CHUNKS_DIR = get_agg_dir_path("binance", "klines", "SOLUSDT", "1m", 1000)
+PARQUET_CHUNKS_DIR = wait_get_agg_dir_path("binance", "klines", "SOLUSDT", "1m", 1000)
 TS_COL = "tz_start"
 MAX_ALLOWED_LAG = 120  # seconds
 
