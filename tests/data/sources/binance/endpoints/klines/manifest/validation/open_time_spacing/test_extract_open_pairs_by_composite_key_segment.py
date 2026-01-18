@@ -11,7 +11,7 @@ def test_extract_open_pairs_by_composite_key_segment():
         },
     }
 
-    pairs = extract_open_pairs_by_composite_key_segment(slices)
+    pairs, _ = extract_open_pairs_by_composite_key_segment(slices)
 
     assert pairs == [
         (1503122400000, slices["BTCUSDT:1m:1503122400000:1000"]),

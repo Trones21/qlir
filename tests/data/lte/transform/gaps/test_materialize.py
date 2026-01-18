@@ -42,14 +42,14 @@ def test_materialize_missing_rows_wall_clock_minutes():
     materialized = out["__row_materialized"]
 
     # Original rows
-    assert materialized.loc["2024-01-01 12:00:00"] is False
-    assert materialized.loc["2024-01-01 12:01:00"] is False
-    assert materialized.loc["2024-01-01 12:05:00"] is False
+    assert materialized.loc["2024-01-01 12:00:00"] == False
+    assert materialized.loc["2024-01-01 12:01:00"] == False
+    assert materialized.loc["2024-01-01 12:05:00"] == False
 
     # Materialized rows
-    assert materialized.loc["2024-01-01 12:02:00"] is True
-    assert materialized.loc["2024-01-01 12:03:00"] is True
-    assert materialized.loc["2024-01-01 12:04:00"] is True
+    assert materialized.loc["2024-01-01 12:02:00"] == True
+    assert materialized.loc["2024-01-01 12:03:00"] == True
+    assert materialized.loc["2024-01-01 12:04:00"] == True
 
     # No value filling occurs
     assert _pd.isna(out.loc["2024-01-01 12:02:00", "open"])

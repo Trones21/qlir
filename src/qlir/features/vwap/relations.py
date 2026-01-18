@@ -6,6 +6,8 @@ import pandas as _pd
 from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.utils import _ensure_columns
+from qlir.core.semantics.events import log_column_event
+from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
 
 __all__ = ["flag_relations"]
 
@@ -36,4 +38,10 @@ def flag_relations(
 
     out["reject_down"] = ((out[ohlc.high] >= out[vwap_col]) & (out[price_col] < out[vwap_col])).astype("int8")
     out["reject_up"]   = ((out[ohlc.low]  <= out[vwap_col]) & (out[price_col] > out[vwap_col])).astype("int8")
+
+    log_column_event(caller="flag_relations", ev=ColumnLifecycleEvent(col="cross_up", event="created"))
+    log_column_event(caller="flag_relations", ev=ColumnLifecycleEvent(col="cross_down", event="created"))
+    log_column_event(caller="flag_relations", ev=ColumnLifecycleEvent(col="reject_up", event="created"))
+    log_column_event(caller="flag_relations", ev=ColumnLifecycleEvent(col="reject_down", event="created"))
+
     return out

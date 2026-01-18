@@ -1,3 +1,4 @@
+
 import numpy as _np
 import pandas as _pd
 import pytest
@@ -92,7 +93,13 @@ def test_outside_bar_inclusive_and_strict():
     col = "outside_bar"
     # t3 engulfs t2 (>=,<=) -> True
     expected_inc = _pd.Series([False, False, False, True, False], dtype="boolean")
-    assert out_inc[col].equals(expected_inc)
+
+    _pd.testing.assert_series_equal(
+        out_inc[col],
+        expected_inc,
+        check_dtype=True,
+        obj=f"column '{col}'"
+    )
 
     out_strict = with_outside_bar(df.copy(), inclusive="strict")
     # t3 still strict True (12.0 > 10.8 and 9.2 < 9.8)

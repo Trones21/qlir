@@ -54,10 +54,10 @@ def test_end_to_end_constant_fill_policy():
     assert len(df) == 4
 
     # Missing rows should be marked
-    assert df.loc["2024-01-01 10:01:00", ROW_MATERIALIZED_COL] is True
-    assert df.loc["2024-01-01 10:02:00", ROW_MATERIALIZED_COL] is True
-    assert df.loc["2024-01-01 10:00:00", ROW_MATERIALIZED_COL] is False
-    assert df.loc["2024-01-01 10:03:00", ROW_MATERIALIZED_COL] is False
+    assert df.loc["2024-01-01 10:01:00", ROW_MATERIALIZED_COL] ==  True
+    assert df.loc["2024-01-01 10:02:00", ROW_MATERIALIZED_COL] == True
+    assert df.loc["2024-01-01 10:00:00", ROW_MATERIALIZED_COL] == False
+    assert df.loc["2024-01-01 10:03:00", ROW_MATERIALIZED_COL] ==  False
 
     # ------------------------------------------------------------
     # Step 3: Apply constant fill policy
@@ -79,7 +79,7 @@ def test_end_to_end_constant_fill_policy():
         assert row["low"] == 101.0
         assert row["close"] == 101.0
 
-        assert row[SYNTHETIC_COL] is True
+        assert row[SYNTHETIC_COL] == True
         assert row[FILL_POLICY_COL] == "constant"
 
     # Real rows must remain untouched
