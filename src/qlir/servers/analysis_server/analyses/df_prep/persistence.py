@@ -4,6 +4,8 @@ import pandas as pd
 
 from qlir.core.counters import univariate
 from qlir.core.ops import temporal
+from qlir.core.semantics.events import log_column_event
+from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
 from qlir.core.types.named_df import NamedDF
 from qlir.df.condition_set.assign_group_ids import assign_condition_group_id
 from qlir.df.granularity.distributions.persistence import condition_persistence
@@ -54,6 +56,7 @@ def persistence_analysis_prep_up(df: pd.DataFrame, direction_col: str, trendline
 
     # Add Persistence (Max of contig per group id )
     df["up_leg_run_len"] = df.groupby(grp_ids_sma_up_legs_col)[contig_true_rows].transform("max")
+    log_column_event(caller="with_bar_direction", ev=ColumnLifecycleEvent(col="up_leg_run_len", event="created"))
     
     # uncomment for comparison (spt check)
     # logdf(df, from_row_idx=22, max_rows=40)

@@ -2,6 +2,8 @@ import logging
 
 import pandas as _pd
 
+from qlir.core.semantics.events import log_column_event
+from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
 from qlir.df.utils import _ensure_columns
 
 log = logging.getLogger(__name__)
@@ -38,5 +40,6 @@ def assign_condition_group_id(
 
     # Mask False rows
     df[group_col] = group_ids.where(cond)
+    log_column_event(caller="assign_condition_group_id", ev=ColumnLifecycleEvent(col=group_col, event="created"))
 
     return df, group_col

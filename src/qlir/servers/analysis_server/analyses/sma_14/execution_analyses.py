@@ -26,7 +26,7 @@ def _prep(clean_df: DataFrame, dev_filter: bool = False):
 
     df, cols = temporal.with_bar_direction(df, col=sma_col)
     direction_col = cols['sign'] #type: ignore 
-
+    
     for_up, up_cols = persistence_analysis_prep_up(df, direction_col, sma_col)
     for_down, down_cols = persistence_analysis_prep_down(df, direction_col, sma_col)
 
