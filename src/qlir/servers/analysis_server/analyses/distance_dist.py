@@ -12,12 +12,12 @@ import logging
 from qlir.utils.time.fmt import format_ts_human 
 log = logging.getLogger(__name__)
 
-def distance_distributions(df):
-    sma_dfs = sma_plus_directional_leg_persistence(df)
+def distance_distributions(df, window: int):
+    sma_dfs = sma_plus_directional_leg_persistence(df, window=window)
     
     df_up = sma_dfs.up
 
-    raise NotImplementedError("Need to revisit, this was lasted worked on before a major refactor.")
+    raise NotImplementedError("Need to revisit, this was last worked on before a major refactor.")
     log.info()
     leg_id = "open_sma_14_up_leg_id"
     

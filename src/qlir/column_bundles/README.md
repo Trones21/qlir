@@ -18,7 +18,7 @@ A *column bundle* is a function that:
 - Performs **multiple vectorized transformations**
 - Introduces **structural semantics** (groups, legs, runs, events)
 - Emits **many new columns at once**
-- Returns an `AnnotatedDataFrame` (or equivalent) with declared metadata
+- Returns an `AnnotatedDF` (or equivalent) with declared metadata
 
 Column bundles are **not indicators**, **not features**, and **not signals**.
 

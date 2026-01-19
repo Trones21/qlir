@@ -15,9 +15,9 @@ def frequency_analysis(df: pd.DataFrame, trendline_col: str) -> list[NamedDF]:
     # Count Events by day Bucketize 
     '''
 
-    df, cols = temporal.with_bar_direction(df, col=trendline_col)
+    adf = temporal.with_bar_direction(df, col=trendline_col)
     # with bar direction returns a tuple[str, ...], the second one is the sign column
-    direction_col = cols[1]
+    direction_col = adf.new_cols.get_column("sign")
 
     dfs: list[NamedDF] = []
     for_up, new_cols = persistence_analysis_prep_up(df, direction_col, trendline_col)

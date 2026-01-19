@@ -3,34 +3,33 @@ import pandas as pd
 from qlir.core.registries.columns.registry import ColRegistry
 from qlir.core.semantics.events import log_column_event
 from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
-from qlir.core.types.annotated_df import AnnotatedDataFrame
+from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.core.types.direction import Direction
 from qlir.core.types.excursion_type import ExcursionType
 from qlir.df.scalars.units import delta_in_bps
 from qlir.logging.logdf import logdf
-from qlir.servers.analysis_server.analyses.sma_14.execution_analyses import _prep
 from typing_extensions import assert_never
 from enum import StrEnum
 import logging
 log = logging.getLogger(__name__)
 
 
-def excursion_wrapper(df: pd.DataFrame, trendname_or_col_prefix:str, direction: Direction, mae_or_mfe: ExcursionType):
+# def excursion_wrapper(df: pd.DataFrame, trendname_or_col_prefix:str, direction: Direction, mae_or_mfe: ExcursionType):
     
-    dfs, lists_cols = _prep(df, prefix)
+#     dfs, lists_cols = sma
 
-    if direction == Direction.UP:
-        df_ = dfs[0]
-        cols = lists_cols[0]
-        leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
+#     if direction == Direction.UP:
+#         df_ = dfs[0]
+#         cols = lists_cols[0]
+#         leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
     
-    if direction == Direction.DOWN:
-        df_ = dfs[1]
-        cols = lists_cols[1]
-        leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
-        excursion()
+#     if direction == Direction.DOWN:
+#         df_ = dfs[1]
+#         cols = lists_cols[1]
+#         leg_id = f"{trendname_or_col_prefix}_{direction.value}_leg_id"
+#         excursion()
 
-def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, direction: Direction, mae_or_mfe: ExcursionType) -> AnnotatedDataFrame:
+def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, direction: Direction, mae_or_mfe: ExcursionType) -> AnnotatedDF:
     """
     Compute per-leg price excursion metrics (MAE or MFE) for directional trend legs.
 
@@ -105,7 +104,7 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     
     df_slim = df_.loc[:,[leg_id, intra_leg_idx, "open", "high", "low"]]
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=intra_leg_idx, event="created"))
-    new_cols.declare(key="intra_leg_idx", column=intra_leg_idx)
+    new_cols.add(key="intra_leg_idx", column=intra_leg_idx)
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col="MANY (FILTER)", event="dropped", reason="Excursion filter step: includes str<leg_id>, str<intra_leg_idx>, open, high, low"))
     
 
@@ -120,8 +119,8 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
 
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=leg_max_idx, event="created"))
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=leg_of_n_bars, event="created"))
-    new_cols.declare(key="leg_max_idx", column=leg_max_idx)
-    new_cols.declare(key="leg_of_n_bars", column=leg_of_n_bars)
+    new_cols.add(key="leg_max_idx", column=leg_max_idx)
+    new_cols.add(key="leg_of_n_bars", column=leg_of_n_bars)
 
     # Get the first open - And apply to: [all rows in group, new col]
     group_first_open = f"{excursion_name}_grp_1st_open"
@@ -131,7 +130,7 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     )
 
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=group_first_open, event="created"))
-    new_cols.declare(key="group_first_open", column=group_first_open)
+    new_cols.add(key="group_first_open", column=group_first_open)
 
     # Calc Exc (also in bps)
     df_slim[f"{excursion_name}_exc"] = df_slim["high"] - df_slim[group_first_open]
@@ -145,9 +144,9 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=f"{excursion_name}_exc", event="created"))
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=f"{excursion_name}_exc_bps", event="created"))
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=f"is_{excursion_name}_row", event="created"))
-    new_cols.declare(key="excursion", column=f"{excursion_name}_exc")
-    new_cols.declare(key="excursion_bps", column=f"{excursion_name}_exc_bps")
-    new_cols.declare(key="is_excursion_row", column=f"is_{excursion_name}_row")
+    new_cols.add(key="excursion", column=f"{excursion_name}_exc")
+    new_cols.add(key="excursion_bps", column=f"{excursion_name}_exc_bps")
+    new_cols.add(key="is_excursion_row", column=f"is_{excursion_name}_row")
 
 
     df_slim, cols_se = from_start_and_end(df=df_slim, prefix=excursion_name, leg_max_idx_col=leg_max_idx, intra_leg_idx_col=intra_leg_idx)
@@ -156,7 +155,7 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     df_slim, cols_pct = pct_when_excursion_max(df=df_slim, prefix=excursion_name, leg_n_bars_col=leg_of_n_bars)
     new_cols.extend(cols_pct)
     
-    return AnnotatedDataFrame(df_slim, new_cols)
+    return AnnotatedDF(df_slim, new_cols)
 
 
 
@@ -170,8 +169,8 @@ def from_start_and_end(df: pd.DataFrame, prefix: str, leg_max_idx_col: str, intr
     
     log_column_event(caller="from_start_and_end", ev=ColumnLifecycleEvent(col=f"{prefix}_from_end", event="created"))
     log_column_event(caller="from_start_and_end", ev=ColumnLifecycleEvent(col=f"{prefix}_from_start", event="created"))
-    new_cols.declare(key="from_start", column=f"{prefix}_from_start")
-    new_cols.declare(key="from_end", column=f"{prefix}_from_end")
+    new_cols.add(key="from_start", column=f"{prefix}_from_start")
+    new_cols.add(key="from_end", column=f"{prefix}_from_end")
     return df, new_cols
     
 
@@ -192,9 +191,9 @@ def pct_when_excursion_max(df: pd.DataFrame, prefix: str, leg_n_bars_col: str):
     log_column_event(caller="pct_when_excursion_max", ev=ColumnLifecycleEvent(col=sum_col, event="created"))
 
     new_cols = ColRegistry()
-    new_cols.declare(key="idx_pct_from_start", column=pct_from_start_col)
-    new_cols.declare(key="idx_pct_from_end", column=pct_from_end_col)
-    new_cols.declare(key="idx_pct_sum", column=sum_col)
+    new_cols.add(key="idx_pct_from_start", column=pct_from_start_col)
+    new_cols.add(key="idx_pct_from_end", column=pct_from_end_col)
+    new_cols.add(key="idx_pct_sum", column=sum_col)
 
     return df , new_cols
 

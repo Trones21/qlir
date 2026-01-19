@@ -12,6 +12,13 @@ class ColKeyDecl:
 
 
 class ColRegistry:
+    """
+    Declaration binding a semantic column key to a concrete DataFrame column name.
+
+    A ColKeyDecl represents *what* a column is (by semantic key) and *where*
+    it lives in a DataFrame (by column name). The key is stable and cataloged;
+    the column name may be None if the key was declared but not produced.
+    """
     def __init__(
         self,
         *,
@@ -22,9 +29,39 @@ class ColRegistry:
         self._owner = owner
         self._decls: dict[str, ColKeyDecl] = {}
 
-    def resolve(self, key: str) -> str | None:
+
+    def __iter__(self):
+        return iter(self._decls)
+
+    def __len__(self) -> int:
+        return len(self._decls)
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._decls
+    
+    def items(self):
+        return self._decls.items()
+
+    def values(self):
+        return self._decls.values()
+
+    def get_column(self, key: str) -> str:
+        """
+        Return the concrete DataFrame column name for a semantic key.
+
+        Raises
+        ------
+        KeyError
+            If the key was not declared by this operation or has no column bound.
+        """
         decl = self.lookup(key)
-        return None if decl is None else decl.column
+        if decl is None or decl.column is None:
+            raise KeyError(
+                f"Column key '{key}' was not produced by this operation"
+                f"{self._fmt_owner()}. Available keys: {sorted(self._decls.keys())}"
+            )
+        return decl.column
+
 
     def keys(self) -> list[str]:
         return list(self._decls.keys())
@@ -35,13 +72,49 @@ class ColRegistry:
     def _fmt_owner(self) -> str:
         return f" (owner={self._owner})" if self._owner else ""
 
-    def declare(self, key: str, column: str | None = None) -> ColKeyDecl:
+    def add(self, key: str, column: str | None = None) -> ColKeyDecl:
+        """
+        Declare that a semantic column key was produced.
+
+        Registers a key with its resolved column name. If the key is not part
+        of the column catalog, a warning is emitted.
+
+        Parameters
+        ----------
+        key:
+            Semantic column key being declared.
+        column:
+            Concrete DataFrame column name, or None if the key was declared
+            but not materialized.
+
+        Returns
+        -------
+        ColKeyDecl
+            The declaration object for the key.
+        """
         self._catalog.warn_if_unknown(key, context=self._ctx("declare"))
         decl = ColKeyDecl(key=key, column=column)
         self._decls[key] = decl
         return decl
 
     def lookup(self, key: str) -> ColKeyDecl | None:
+        """
+        Look up a column declaration by semantic key.
+
+        Validates the key against the catalog and returns the corresponding
+        declaration if present. If the key is cataloged but was not returned
+        by this operation, a warning is logged.
+
+        Parameters
+        ----------
+        key:
+            Semantic column key to look up.
+
+        Returns
+        -------
+        ColKeyDecl or None
+            The declaration if present; None if the key was not returned.
+        """
         self._catalog.warn_if_unknown(key, context=self._ctx("lookup"))
 
         decl = self._decls.get(key)

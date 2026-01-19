@@ -15,20 +15,6 @@ log = logging.getLogger(__name__)
 
 
 # To Migrate
-# def persistence_analysis_prep_generic(df: pd.DataFrame, condition_col: str , col_name_for_added_group_id_col: str) -> tuple[pd.DataFrame, str]:
-#     assert df[condition_col].any(), "No True rows for persistence analysis"
-
-
-#     #fillna so that all downstream consumers of this column have a clean bool view
-#     df[condition_col] = df[condition_col].astype("boolean").fillna(False)
-
-#     df, group_ids_col = assign_condition_group_id(df=df, condition_col=condition_col, group_col=col_name_for_added_group_id_col)
-#     df, contig_true_rows = univariate.with_running_true(df, group_ids_col)
-
-#     max_run_col = f"{condition_col}_run_len"
-#     df[max_run_col] = df.groupby(group_ids_col)[contig_true_rows].transform("max")
-    
-#     return df, max_run_col
 
 
 # def get_legs(df: pd.DataFrame, trendline_col: str):

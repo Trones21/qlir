@@ -10,7 +10,6 @@ from qlir.core.types.named_df import NamedDF
 from qlir.df.scalars.units import delta_in_bps
 from qlir.logging.logdf import logdf
 from qlir.column_bundles.excursion import excursion
-from qlir.servers.analysis_server.analyses.sma_14.execution_analyses import _prep
 from qlir.df.granularity.distributions.bucketize.lossy.equal_width import bucketize_zoom_equal_width
 import logging
 log = logging.getLogger(__name__)
@@ -23,9 +22,9 @@ def mfe(df: pd.DataFrame):
 
 
 
-def mfe_original(df: pd.DataFrame):
+def mfe_original(df: pd.DataFrame, leg_id_col):
     
-    mfe_df = mfe_rows_up(df)
+    mfe_df = mfe_rows_up(df, leg_id_col)
 
     assert (mfe_df["leg_of_n_bars"] >= 1).all()
     assert (mfe_df["mfe_from_start"] >= 0).all()
@@ -34,27 +33,27 @@ def mfe_original(df: pd.DataFrame):
     survival_curve = mfe_survival_curve(df=mfe_df, leg_len_col="leg_len", mfe_idx_col="mfe_from_start")
     logdf(survival_curve, max_rows=100)
 
-def mfe_rows_up(df):
-    dfs, lists_cols = _prep(df)
+def mfe_rows_up(df: pd.DataFrame, leg_id_col: str):
+    # dfs, lists_cols = _prep(df)
 
-    df_up = dfs[0]
-    up_cols = lists_cols[0]
-    leg_id = "open_sma_14_up_leg_id"
+    # df_up = dfs[0]
+    # up_cols = lists_cols[0]
+    # leg_id = "open_sma_14_up_leg_id"
 
     # Mark the intra leg idx 
-    df_up['intra_leg_idx'] = df_up.groupby(leg_id).cumcount()
+    df['intra_leg_idx'] = df.groupby(leg_id_col).cumcount()
     
-    df_slim = df_up.loc[:,[leg_id, "open", "high","intra_leg_idx"]]
+    df_slim = df.loc[:,[leg_id_col, "open", "high","intra_leg_idx"]]
     
     # Get the leg len - And apply to: [all row in gorup, new col]
     df_slim["leg_len"] = (
-        df_slim.groupby(leg_id)["intra_leg_idx"]
+        df_slim.groupby(leg_id_col)["intra_leg_idx"]
         .transform("last")
     )
 
     # Get the first open - And apply to: [all rows in group, new col]
     df_slim["group_first_price"] = (
-        df_slim.groupby(leg_id)["open"]
+        df_slim.groupby(leg_id_col)["open"]
         .transform("first")
     )
 
@@ -63,7 +62,7 @@ def mfe_rows_up(df):
     df_slim["exc_bps"] = delta_in_bps(df_slim["excursion"], df_slim["group_first_price"])
     
     # Mark the mfe row for each leg
-    mfe_row_idx = df_slim.groupby(leg_id)["exc_bps"].idxmax()
+    mfe_row_idx = df_slim.groupby(leg_id_col)["exc_bps"].idxmax()
     df_slim["is_mfe_row"] = False
     df_slim.loc[mfe_row_idx, "is_mfe_row"] = True
 

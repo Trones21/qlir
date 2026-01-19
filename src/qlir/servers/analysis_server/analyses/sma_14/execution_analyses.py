@@ -2,6 +2,7 @@ from functools import partial
 from pandas import DataFrame, Series
 from qlir import indicators
 from qlir.core.ops import temporal
+from qlir.core.types.direction import Direction
 from qlir.core.types.named_df import NamedDF
 from qlir.df.granularity.distributions.persistence import condition_persistence
 from qlir.df.granularity.summarize_condition_path import summarize_condition_paths
@@ -16,13 +17,9 @@ log = logging.getLogger(__name__)
 
 
 
-def execution_analysis(df: DataFrame):
+def execution_analysis(df: DataFrame, direction: Direction):
     
-    dfs, lists_cols = _prep(df)
-
-    df_up = dfs[0]
-    up_cols = lists_cols[0]
-
+    raise NotImplementedError("THis was written for up only, need to refacotr to make generic")
     df_up_paths = summarize_condition_paths(
         df=df_up,
         condition_col="dir_col_up__run_true",

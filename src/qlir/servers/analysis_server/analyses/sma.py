@@ -13,7 +13,7 @@ from qlir.column_bundles.persistence import (
 
 log = logging.getLogger(__name__)
 
-def sma(clean_data: _pd.DataFrame, window: int) -> tuple[_pd.DataFrame | None, bool]:
+def sma_survival(clean_data: _pd.DataFrame, window: int) -> tuple[_pd.DataFrame | None, bool]:
 
     df, sma_cols = indicators.sma(clean_data, col="open", window=window, decimals=6)
     sma_col = sma_cols[0] #type: ignore (fix later, lol, works but pylance issue (decorator))
@@ -22,16 +22,17 @@ def sma(clean_data: _pd.DataFrame, window: int) -> tuple[_pd.DataFrame | None, b
     df[sma_col].round(6)
     # persistence_dists = persistence_analysis(df, sma_col)
 
-    df, cols = temporal.with_bar_direction(clean_data, col=sma_col)
-    
-    # with bar direction returns a tuple[str, ...], the second one is the sign column
-    direction = cols["sign"]
+    adf = temporal.with_bar_direction(clean_data, col=sma_col)
+    direction = adf.new_cols.get_column("sign")
 
-    for_up_df, up_cols = persistence_up_legs(df, direction, sma_col)
-    for_down_df, down_cols = persistence_down_legs(df, direction, sma_col)
+    for_up_adf = persistence_up_legs(adf.df, direction, sma_col)
+    for_down_adf = persistence_down_legs(adf.df, direction, sma_col)
+    # Pull out the Dataframes 
+    df_up = for_up_adf.df
+    df_down = for_down_adf.df
     
     # ========================== UpTrends ===============================================
-    df_up = for_up_df.loc[:,["tz_start","open", "open_sma_14", "dir_col_up", "dir_col_up__run_true"]]
+    df_up = df_up.loc[:,["tz_start","open", "open_sma_14", "dir_col_up", "dir_col_up__run_true"]]
     
     # Add Column for Boundary
     df_up[f"sma_{window}_up_started"] = df_up["dir_col_up__run_true"] == 1
@@ -56,7 +57,7 @@ def sma(clean_data: _pd.DataFrame, window: int) -> tuple[_pd.DataFrame | None, b
     # ==================================================================================
 
     # ========================== DownTrends ===============================================
-    df_down = for_down_df.loc[:,["tz_start","open", "open_sma_14", "dir_col_down", "dir_col_down__run_true"]]
+    df_down = df_down.loc[:,["tz_start","open", "open_sma_14", "dir_col_down", "dir_col_down__run_true"]]
 
     # Add Column for Boundary
     df_down[f"sma_{window}_down_started"] = df_down["dir_col_down__run_true"] == 1

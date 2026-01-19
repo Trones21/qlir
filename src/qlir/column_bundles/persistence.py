@@ -7,7 +7,7 @@ from qlir.core.ops import temporal
 from qlir.core.registries.columns.registry import ColRegistry
 from qlir.core.semantics.events import log_column_event
 from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
-from qlir.core.types.annotated_df import AnnotatedDataFrame
+from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.core.types.named_df import NamedDF
 from qlir.df.condition_set.assign_group_ids import assign_condition_group_id
 from qlir.df.granularity.distributions.persistence import condition_persistence
@@ -15,7 +15,7 @@ from qlir.df.granularity.distributions.persistence import condition_persistence
 log = logging.getLogger(__name__)
 
 
-def persistence_up_legs(df: pd.DataFrame, direction_col: str, trendline_col: str) -> AnnotatedDataFrame:
+def persistence_up_legs(df: pd.DataFrame, direction_col: str, trendline_col: str) -> AnnotatedDF:
     '''
     Prep for persistence analysis funcs
     assign group ids 
@@ -39,15 +39,15 @@ def persistence_up_legs(df: pd.DataFrame, direction_col: str, trendline_col: str
     # logdf(df, from_row_idx=22, max_rows=40)
 
     new_cols = ColRegistry()
-    new_cols.declare(key="grp_ids_up_legs_col", column=grp_ids_up_legs_col)
-    new_cols.declare(key="dir_col_up", column="dir_col_up")
-    new_cols.declare(key="up_leg_run_len", column="up_leg_run_len")
+    new_cols.add(key="grp_ids_up_legs_col", column=grp_ids_up_legs_col)
+    new_cols.add(key="dir_col_up", column="dir_col_up")
+    new_cols.add(key="up_leg_run_len", column="up_leg_run_len")
 
-    return AnnotatedDataFrame(df, new_cols)
+    return AnnotatedDF(df=df, new_cols=new_cols)
 
 
 
-def persistence_down_legs(df: pd.DataFrame, direction_col: str, trendline_col: str) -> AnnotatedDataFrame:
+def persistence_down_legs(df: pd.DataFrame, direction_col: str, trendline_col: str) -> AnnotatedDF:
     '''
     Prep for the persistence analysis func
     assign group ids 
@@ -70,13 +70,35 @@ def persistence_down_legs(df: pd.DataFrame, direction_col: str, trendline_col: s
     # logdf(df, from_row_idx=22, max_rows=40)
 
     new_cols = ColRegistry()
-    new_cols.declare(key="grp_ids_legs_col_down", column=grp_ids_legs_col)
-    new_cols.declare(key="dir_col_down", column="dir_col_down")
-    new_cols.declare(key="down_leg_run_len", column="down_leg_run_len")
+    new_cols.add(key="grp_ids_legs_col_down", column=grp_ids_legs_col)
+    new_cols.add(key="dir_col_down", column="dir_col_down")
+    new_cols.add(key="down_leg_run_len", column="down_leg_run_len")
 
-    return AnnotatedDataFrame(df, new_cols)
+    return AnnotatedDF(df=df, new_cols=new_cols)
  
 
+def persistence(df: pd.DataFrame, condition_col: str , col_name_for_added_group_id_col: str) -> AnnotatedDF:
+    assert df[condition_col].any(), "No True rows for persistence analysis"
+
+
+    #fillna so that all downstream consumers of this column have a clean bool view
+    df[condition_col] = df[condition_col].astype("boolean").fillna(False)
+
+    df, group_ids_col = assign_condition_group_id(df=df, condition_col=condition_col, group_col=col_name_for_added_group_id_col)
+    df, contig_true_rows = univariate.with_running_true(df, group_ids_col)
+
+    max_run_col = f"{condition_col}_run_len"
+    df[max_run_col] = df.groupby(group_ids_col)[contig_true_rows].transform("max")
+    log_column_event(caller="persistence", ev=ColumnLifecycleEvent(col=max_run_col, event="created"))
+
+    new_cols = ColRegistry()
+    new_cols.add(key="group_ids_col", column=group_ids_col)
+    new_cols.add(key="max_run_col", column=max_run_col)
+    new_cols.add(key="contig_true_rows", column=contig_true_rows)
+
+    return AnnotatedDF(df=df, new_cols=new_cols)
+    
+  
 
 
 

@@ -16,6 +16,7 @@ def mae(df: pd.DataFrame):
 
 
 def mae_dists(df: pd.DataFrame):
+    logdf(df)
     df_mae_up, cols_up = excursion(df=df, trendname_or_col_prefix="osma14", direction=Direction.UP, mae_or_mfe=ExcursionType.MAE)
     logdf(df_mae_up)
 

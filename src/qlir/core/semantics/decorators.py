@@ -3,129 +3,105 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
-from typing import Callable, Mapping, ParamSpec, Sequence, Union
+from typing import Callable, Mapping, ParamSpec, Union
 
-from qlir.core.registries.columns.registry import ColRegistry
-from qlir.core.types.annotated_df import AnnotatedDataFrame
+from qlir.core.types.annotated_df import AnnotatedDF
+from qlir.core.semantics.context import get_ctx
+from qlir.core.semantics.explain import explain_created
+from qlir.core.semantics.row_derivation import ColumnDerivationSpec
 
-from .context import get_ctx
-from .explain import explain_created
-from .row_derivation import ColumnDerivationSpec
-
-ReturnedCols = str | Sequence[str] | Mapping[str, str]
+P = ParamSpec("P")
 
 Specs = Union[
-    ColumnDerivationSpec,
-    Sequence[ColumnDerivationSpec],
-    Mapping[str, ColumnDerivationSpec],
+    ColumnDerivationSpec,                      # single spec
+    Mapping[str, ColumnDerivationSpec],        # key -> spec
 ]
-
 SpecsOrCallable = Union[
     Specs,
     Callable[..., Specs],
 ]
 
-def _normalize_returned_cols(cols: ReturnedCols) -> tuple[list[str], dict[str, str] | None]:
-    """
-    Returns:
-      - flat list of column names (in stable order)
-      - optional role->col mapping if provided as dict
-    """
-    if isinstance(cols, str):
-        return [cols], None
 
-    if isinstance(cols, Mapping):
-        # Preserve insertion order (py3.7+ dict order is stable).
-        role_map = dict(cols)
-        return list(role_map.values()), role_map
-
-    # Sequence[str]
-    return list(cols), None
-
-
-def _resolve_specs(
+def _normalize_specs_for_keys(
+    resolved: Specs,
     *,
-    specs: ColumnDerivationSpec
-        | Sequence[ColumnDerivationSpec]  
-        | Mapping[str, ColumnDerivationSpec],        
-    out_cols: list[str],
-    role_map: dict[str, str] | None,
-) -> list[tuple[str, ColumnDerivationSpec]]:
+    declared_keys: list[str],
+    context: str,
+) -> Mapping[str, ColumnDerivationSpec]:
     """
-    Returns (col, spec) pairs aligned to output columns.
+    Normalize specs into a mapping keyed by ColRegistry keys.
+
+    Rules:
+    - If resolved is a dict: returned as-is.
+    - If resolved is a single spec:
+        - If exactly 1 declared key: bind it to that key.
+        - If >1 declared keys: raise (forces you to be explicit).
     """
-    if isinstance(specs, ColumnDerivationSpec):
-        if len(out_cols) != 1:
-            raise ValueError(
-                f"new_col_func got 1 spec but function returned {len(out_cols)} cols: {out_cols}"
-            )
-        return [(out_cols[0], specs)]
+    if isinstance(resolved, Mapping):
+        return resolved
 
-    if isinstance(specs, Mapping):
-        if role_map is None:
-            raise ValueError("new_col_func specs is role-mapped but function did not return a dict")
-        pairs: list[tuple[str, ColumnDerivationSpec]] = []
-        for role, spec in specs.items():
-            if role not in role_map:
-                raise KeyError(f"new_col_func missing role '{role}' in returned cols {list(role_map)}")
-            pairs.append((role_map[role], spec))
-        return pairs
-
-    # Sequence[spec]
-    specs_list = list(specs)
-    if len(specs_list) != len(out_cols):
+    # single spec
+    if len(declared_keys) != 1:
         raise ValueError(
-            f"new_col_func got {len(specs_list)} specs but function returned {len(out_cols)} cols: {out_cols}"
+            f"{context}: single ColumnDerivationSpec provided, but function declared "
+            f"{len(declared_keys)} keys: {declared_keys}. Provide a mapping instead."
         )
-    return list(zip(out_cols, specs_list))
+    return {declared_keys[0]: resolved}
 
-P = ParamSpec("P")
 
 def new_col_func(
     *,
     specs: SpecsOrCallable,
-) -> Callable[[Callable[P, AnnotatedDataFrame]], Callable[P, AnnotatedDataFrame]]:
+) -> Callable[[Callable[P, AnnotatedDF]], Callable[P, AnnotatedDF]]:
     """
-    Decorator for functions that create new column(s).
+    Decorator for functions that create new columns.
 
     Contract:
-      - wrapped function returns (df, out_cols)
-      - out_cols can be:
-          * str
-          * list/tuple[str]
-          * dict[str, str] (role -> column)
-      - derivation specs are recorded (if a DerivationContext exists) and logged.
+    - Wrapped function returns AnnotatedDF and declares columns in adf.cols (ColRegistry).
+    - `specs` describes row-derivation for created columns:
+        * ColumnDerivationSpec (only valid if exactly 1 key is declared), OR
+        * Mapping[key, ColumnDerivationSpec]
+      You may also pass a callable that returns either form based on bound args.
     """
-    
-    def decorator(fn: Callable[P, AnnotatedDataFrame]) -> Callable[P, AnnotatedDataFrame]:
+
+    def decorator(fn: Callable[P, AnnotatedDF]) -> Callable[P, AnnotatedDF]:
         logger = logging.getLogger(fn.__module__)
         sig = inspect.signature(fn)
-        
+
         @functools.wraps(fn)
-        def wrapper(*args, **kwargs):
-            df, out_cols_any = fn(*args, **kwargs)
+        def wrapper(*args, **kwargs) -> AnnotatedDF:
+            adf = fn(*args, **kwargs)
 
             bound = sig.bind(*args, **kwargs)
             bound.apply_defaults()
-            params = bound.arguments  # dict: param_name -> value
+            params = bound.arguments
 
-            # 👇 resolve specs dynamically
-            resolved_specs = specs(**params) if callable(specs) else specs
+            resolved = specs(**params) if callable(specs) else specs
 
-            out_cols, role_map = _normalize_returned_cols(out_cols_any)
-            pairs = _resolve_specs(specs=resolved_specs, out_cols=out_cols, role_map=role_map)
+            declared_keys = list(adf.new_cols.keys())
+            spec_by_key = _normalize_specs_for_keys(
+                resolved,
+                declared_keys=declared_keys,
+                context=f"{fn.__module__}.{fn.__name__}",
+            )
 
             ctx = get_ctx()
-            for col, spec in pairs:
-                # Record always, if context exists
-                if ctx is not None:
-                    ctx.add_created(col=col, spec=spec)
-                # Log always (current behavior; you can gate this later)
-                explain_created(logger=logger, col=col, spec=spec)
 
-            return df, out_cols_any
+            for decl in adf.new_cols.values():
+                if decl.column is None:
+                    continue
+
+                spec = spec_by_key.get(decl.key)
+                if spec is None:
+                    continue
+
+                if ctx is not None:
+                    ctx.add_created(col=decl.column, spec=spec)
+
+                explain_created(logger=logger, col=decl.column, spec=spec)
+
+            return adf
 
         return wrapper
 
     return decorator
-

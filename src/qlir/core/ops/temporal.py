@@ -8,9 +8,11 @@ import pandas as _pd
 from qlir.core.counters.multivariate import _maybe_copy
 from qlir.core.ops._helpers import ColsLike, _add_columns_from_series_map, _normalize_cols
 from qlir.core.ops.non_temporal import with_sign
+from qlir.core.registries.columns.registry import ColRegistry
 from qlir.core.semantics.decorators import new_col_func
 from qlir.core.semantics.events import log_column_event
 from qlir.core.semantics.row_derivation import ColumnDerivationSpec, ColumnLifecycleEvent
+from qlir.core.types.annotated_df import AnnotatedDF
 
 # ----------------------------
 # Public API
@@ -137,8 +139,8 @@ def with_shift(
 # ----------------------------
 @new_col_func(
     specs=lambda *, col, **_: {
-        "abs": ColumnDerivationSpec(
-            op="abs",
+        "delta": ColumnDerivationSpec(
+            op="delta",
             base_cols=(col,),
             read_rows=(-1, 0),
             scope="output",
@@ -160,7 +162,7 @@ def with_bar_direction(
     periods: int = 1,
     suffix: Optional[str] = None,
     inplace: bool = False,
-) -> tuple[_pd.DataFrame, dict[str, Any]]:
+) -> AnnotatedDF:
     """
     Direction of bar-to-bar change (sign of diff): {-1, 0, +1}
     Example: open_t vs open_{t-1} -> direction(open)
@@ -171,10 +173,11 @@ def with_bar_direction(
     out, sign_cols = with_sign(out, cols=[diff_col], suffix=suffix or "direction", inplace=True)
     (sign_col, ) = sign_cols
 
-    return (out, {
-        "abs": diff_col,
-        "sign": sign_col,
-    })
+    new_cols = ColRegistry()  
+    new_cols.add(key="delta", column=diff_col)
+    new_cols.add(key="sign", column=sign_col)
+
+    return AnnotatedDF(df=out, new_cols=new_cols)
 
 
 

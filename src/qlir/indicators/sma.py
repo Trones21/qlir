@@ -2,6 +2,8 @@ import logging
 
 import pandas as _pd
 
+from qlir.core.registries.columns.registry import ColRegistry
+from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.df.utils import _ensure_columns
 
 log = logging.getLogger(__name__)
@@ -32,7 +34,7 @@ def sma(
     min_periods: int | None = None,
     decimals: int | None = None,
     in_place: bool = True,
-) -> tuple[_pd.DataFrame, tuple[str]]:
+) -> AnnotatedDF:
     """
     Compute a simple moving average (SMA) for a column.
 
@@ -61,5 +63,7 @@ def sma(
         s = s.round(decimals)
 
     out[name] = s
+    new_col = ColRegistry()
+    new_col.add(key="sma_col", column=name)
 
-    return (df, (name,))
+    return AnnotatedDF(df=df, new_cols=new_col)
