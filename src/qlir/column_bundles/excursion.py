@@ -97,12 +97,10 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     excursion_name = f"{trendname_or_col_prefix}_{direction.value}_{mae_or_mfe.value}"
     
     # Mark the intra leg idx
-    log.info(leg_id) 
-    logdf(df_)
     intra_leg_idx = f'{excursion_name}_intra_leg_idx'
-    df_[intra_leg_idx] = df_.groupby(leg_id).cumcount()
+    df[intra_leg_idx] = df.groupby(leg_id_col).cumcount()
     
-    df_slim = df_.loc[:,[leg_id, intra_leg_idx, "open", "high", "low"]]
+    df_slim = df.loc[:,[leg_id_col, intra_leg_idx, "open", "high", "low"]]
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col=intra_leg_idx, event="created"))
     new_cols.add(key="intra_leg_idx", column=intra_leg_idx)
     log_column_event(caller="excursion", ev=ColumnLifecycleEvent(col="MANY (FILTER)", event="dropped", reason="Excursion filter step: includes str<leg_id>, str<intra_leg_idx>, open, high, low"))
@@ -112,7 +110,7 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     leg_max_idx = f"{excursion_name}_leg_max_idx"
     leg_of_n_bars = f"{excursion_name}_leg_of_n_bars"
     df_slim[leg_max_idx] = (
-        df_slim.groupby(leg_id)[intra_leg_idx]
+        df_slim.groupby(leg_id_col)[intra_leg_idx]
         .transform("last")
     )
     df_slim[leg_of_n_bars] = df_slim[leg_max_idx] + 1
@@ -125,7 +123,7 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     # Get the first open - And apply to: [all rows in group, new col]
     group_first_open = f"{excursion_name}_grp_1st_open"
     df_slim[group_first_open] = (
-        df_slim.groupby(leg_id)["open"]
+        df_slim.groupby(leg_id_col)["open"]
         .transform("first")
     )
 
@@ -137,7 +135,7 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
     df_slim[f"{excursion_name}_exc_bps"] = delta_in_bps(df_slim[f"{excursion_name}_exc"], df_slim[group_first_open])
     
     # Mark the Exc row for each leg
-    mfe_row_idx = df_slim.groupby(leg_id)[f"{excursion_name}_exc_bps"].idxmax()
+    mfe_row_idx = df_slim.groupby(leg_id_col)[f"{excursion_name}_exc_bps"].idxmax()
     df_slim[f"is_{excursion_name}_row"] = False
     df_slim.loc[mfe_row_idx, f"is_{excursion_name}_row"] = True
 

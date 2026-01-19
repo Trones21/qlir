@@ -8,6 +8,7 @@ import pandas as pd
 
 from qlir.data.core.paths import get_agg_dir_path
 from qlir.servers.analysis_server.analyses.conduct_analysis import conduct_analysis
+from qlir.servers.analysis_server.emit.validate import validate_trigger_registry, validate_active_triggers
 from qlir.servers.analysis_server.emit.alert import emit_alert
 from qlir.servers.analysis_server.emit.trigger_registry import TRIGGER_REGISTRY
 from qlir.servers.analysis_server.io.load_clean_data import load_clean_data, wait_get_agg_dir_path
@@ -46,6 +47,9 @@ ACTIVE_TRIGGERS=["sma_14_down_started",
                  "open_sma_14_dn_0.1%_survive",
                  ]
 
+validate_trigger_registry(TRIGGER_REGISTRY)
+validate_active_triggers(ACTIVE_TRIGGERS, TRIGGER_REGISTRY)
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -62,6 +66,7 @@ def get_clean_data(*args, **kwargs) -> pd.DataFrame:
 
 
 def main() -> None:
+    
     alert_states = load_alert_states()
 
     stale_state = alert_states.get(
@@ -72,7 +77,7 @@ def main() -> None:
             backoff_sec=INITIAL_BACKOFF,
         ),
     )
-
+    
     last_processed_ts = load_last_processed_ts()
 
     while True:
@@ -84,7 +89,13 @@ def main() -> None:
             continue
 
         last_row = df.iloc[-1]
-        data_ts = pd.Timestamp(last_row[TS_COL], unit="ms", tz="UTC")
+
+       
+        # Everything assumes tz_start is the open time column... (but im unsure if stuff expects unix ts int or Timestamp )
+        # this might actually be something i need to formalize somewhere (conversion or whatever)
+        # log.info(last_row)
+        # log.info(f"================= {last_row[TS_COL]} {type(last_row[TS_COL])}")
+        data_ts = last_row[TS_COL]
 
         now = utc_now()
         is_stale = is_data_stale(data_ts, MAX_ALLOWED_LAG)

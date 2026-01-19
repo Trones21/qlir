@@ -22,3 +22,14 @@ def sma_plus_directional_leg_persistence(df: _pd.DataFrame, window: int) -> Dire
     down_adf = persistence_down_legs(adf.df, direction_col, sma_col)
 
     return DirectionalDFs(up=up_adf, down=down_adf)
+
+
+def plus_directional_leg_persistence(df: _pd.DataFrame, trendline_col: str) -> DirectionalDFs[AnnotatedDF]:
+    
+    adf = temporal.with_bar_direction(df, col=trendline_col)
+    direction_col = adf.new_cols.get_column("sign") 
+    
+    up_adf = persistence_up_legs(adf.df, direction_col, trendline_col)
+    down_adf = persistence_down_legs(adf.df, direction_col, trendline_col)
+
+    return DirectionalDFs(up=up_adf, down=down_adf)

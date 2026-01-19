@@ -62,7 +62,41 @@ class ColRegistry:
             )
         return decl.column
 
+    def get_columns(self, keys: list[str]) -> list[str]:
+        """
+        Return concrete DataFrame column names for semantic keys.
 
+        Parameters
+        ----------
+        keys : list[str]
+            Semantic column keys produced by this operation.
+
+        Returns
+        -------
+        list[str]
+            Concrete DataFrame column names, in the same order as `keys`.
+
+        Raises
+        ------
+        KeyError
+            If any key was not declared by this operation or has no column bound.
+        """
+        cols: list[str] = []
+        
+        if not keys:
+            raise ValueError("get_columns() requires at least one key")
+        
+        for key in keys:
+            decl = self.lookup(key)
+            if decl is None or decl.column is None:
+                raise KeyError(
+                    f"Column key '{key}' was not produced by this operation"
+                    f"{self._fmt_owner()}. Available keys: {sorted(self._decls.keys())}"
+                )
+            cols.append(decl.column)
+
+        return cols
+    
     def keys(self) -> list[str]:
         return list(self._decls.keys())
 

@@ -20,13 +20,14 @@ class ColumnKeyCatalog:
         if key in self._known_keys:
             return
 
-        msg = (
-            f"Unknown column key referenced: '{key}'. "
-            "This key is not registered in the global column catalog."
-        )
-        if context:
-            msg += f" (context={context})"
-        log.warning(msg)
+        # msg = (
+        #     f"Unknown column key referenced: '{key}'. "
+        #     "This key is not registered in the global column catalog."
+        # )
+        # if context:
+        #     msg += f" (context={context})"
+        # log.warning(msg)
 
 
 COLUMN_KEYS = ColumnKeyCatalog()
+

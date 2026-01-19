@@ -13,8 +13,8 @@ def bucketize_zoom_equal_width(
     max_depth: int = 6,
     int_buckets: bool = False,
     dropna: bool = True,
-    human_friendly_fmt: bool = False,
-    raw_values: bool = True,
+    human_friendly_fmt: bool = True,
+    raw_values: bool = False,
 ) -> list[NamedDF]:
     """
     Progressive zooming equal-width bucketization.
@@ -55,8 +55,8 @@ def bucketize_zoom_equal_width(
             total=total,
             depth=depth,
             parent_bucket_id=None,
-            human_friendly_fmt=True,
-            raw_values=False
+            human_friendly_fmt=human_friendly_fmt,
+            raw_values=raw_values
         )
 
         # e.g. 6.35 - 11.7 (bucket is 7-11 inclusive)

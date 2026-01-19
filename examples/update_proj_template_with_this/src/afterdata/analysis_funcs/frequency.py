@@ -2,9 +2,9 @@ import pandas as pd
 from qlir import indicators
 from qlir.core.ops import temporal
 from qlir.logging.logdf import logdf
-import qlir.df.reducers.distributions.bucketize.equal_width as buckets
+import qlir.df.granularity.distributions.bucketize.lossy.equal_width as buckets
 from qlir.core.types.named_df import NamedDF
-from afterdata.analysis_funcs.persistence import persistence_analysis_prep_down, persistence_analysis_prep_up
+from qlir. import persistence_analysis_prep_down, persistence_analysis_prep_up
 
 
 def frequency_analysis(df: pd.DataFrame, trendline_col: str) -> list[NamedDF]:

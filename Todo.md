@@ -43,6 +43,9 @@ Count mismatch (likely just slicestatus enum not gathering everything... ahhh th
 
 # Priorities
 
+- Figure out whether analysis funcs expect tz_start to be unix ts int or timestamp... 
+    - need a conversion func or something... (maybe with logging to let the user know what they passed)
+
 - rethink summarize_condition_paths (grouping is sumuggled in here ... but maybe ok maybe we just need two smaller funcs or something for clarity.. also need to think through params, ), maybe two top level funcs summarize_condition_paths
 definitely a better doc string... 
     - but really these are such different operations (one is a reducer the other add a new column before the reducer... but then its on you to ensure the condiiton col is right... )
