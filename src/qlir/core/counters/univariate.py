@@ -6,7 +6,7 @@ import numpy as _np
 import pandas as _pd
 
 from qlir.core.semantics.events import log_column_event
-from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
 
 BoolDtype = "boolean"
 
@@ -58,7 +58,7 @@ def with_running_true(
     s = _as_bool_series(out[col])
     name = name or _safe_name(col, "run_true")
     out[name] = _consecutive_true(s)
-    log_column_event(caller="with_running_true", ev=ColumnLifecycleEvent(col=name, event="created"))
+    log_column_event(caller="with_running_true", ev=ColumnLifecycleEvent(key="see caller", col=name, event="created"))
     return out, name 
 
 def with_bars_since_true(
@@ -77,5 +77,5 @@ def with_bars_since_true(
     bars_since = _pd.Series(idx, index=out.index) - last_true_idx
     name = name or _safe_name(col, "bars_since_true")
     out[name] = bars_since.where(~bars_since.isna(), _pd.NA).astype("Int64")
-    log_column_event(caller="with_bars_since_true", ev=ColumnLifecycleEvent(col=name, event="created"))
+    log_column_event(caller="with_bars_since_true", ev=ColumnLifecycleEvent(key="see caller", col=name, event="created"))
     return out, name

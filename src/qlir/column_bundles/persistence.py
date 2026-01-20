@@ -6,7 +6,7 @@ from qlir.core.counters import univariate
 from qlir.core.ops import temporal
 from qlir.core.registries.columns.registry import ColRegistry
 from qlir.core.semantics.events import log_column_event
-from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
 from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.core.types.named_df import NamedDF
 from qlir.df.condition_set.assign_group_ids import assign_condition_group_id
@@ -33,7 +33,7 @@ def persistence_up_legs(df: pd.DataFrame, direction_col: str, trendline_col: str
 
     # Add Persistence (Max of contig per group id )
     df["up_leg_run_len"] = df.groupby(grp_ids_up_legs_col)[contig_true_rows].transform("max")
-    log_column_event(caller="with_bar_direction", ev=ColumnLifecycleEvent(col="up_leg_run_len", event="created"))
+    log_column_event(caller="persistence_up_legs", ev=ColumnLifecycleEvent(key="up_leg_run_len", col="up_leg_run_len", event="created"))
     
     # uncomment for comparison (spt check)
     # logdf(df, from_row_idx=22, max_rows=40)
@@ -89,7 +89,7 @@ def persistence(df: pd.DataFrame, condition_col: str , col_name_for_added_group_
 
     max_run_col = f"{condition_col}_run_len"
     df[max_run_col] = df.groupby(group_ids_col)[contig_true_rows].transform("max")
-    log_column_event(caller="persistence", ev=ColumnLifecycleEvent(col=max_run_col, event="created"))
+    log_column_event(caller="persistence", ev=ColumnLifecycleEvent(key="persistence", col=max_run_col, event="created"))
 
     new_cols = ColRegistry()
     new_cols.add(key="group_ids_col", column=group_ids_col)

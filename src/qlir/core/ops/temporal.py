@@ -9,9 +9,10 @@ from qlir.core.counters.multivariate import _maybe_copy
 from qlir.core.ops._helpers import ColsLike, _add_columns_from_series_map, _normalize_cols
 from qlir.core.ops.non_temporal import with_sign
 from qlir.core.registries.columns.registry import ColRegistry
+from qlir.core.semantics.col_derivation import ColumnDerivationSpec
 from qlir.core.semantics.decorators import new_col_func
 from qlir.core.semantics.events import log_column_event
-from qlir.core.semantics.row_derivation import ColumnDerivationSpec, ColumnLifecycleEvent
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
 from qlir.core.types.annotated_df import AnnotatedDF
 
 # ----------------------------

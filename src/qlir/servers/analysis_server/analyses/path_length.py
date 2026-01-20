@@ -7,6 +7,7 @@ from qlir.df.scalars.units import delta_in_pct, delta_in_bps
 from qlir.df.granularity.distributions.bucketize.lossy.equal_width import bucketize_zoom_equal_width
 from qlir.df.granularity.to_row_per_time_chunk.time_chunk import to_row_per_time_chunk
 from qlir.logging.logdf import logdf
+from qlir.io.writer import write
 import logging
 
 from qlir.time.timefreq import TimeFreq
@@ -26,6 +27,11 @@ def path_length_analysis(df: pd.DataFrame):
     logdf(hourly_gran)
     dists = bucketize_zoom_equal_width(hourly_gran["path_length_%_sum"])
     logdf(dists, max_rows=21)
+
+    # Output for Tableau to Consume (already done)
+    # write(hourly_gran, "~/test.csv")
+
+    
 
 
 def path_length_cols(df: pd.DataFrame):

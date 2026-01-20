@@ -26,12 +26,17 @@ def mae_dists(df: pd.DataFrame, leg_id_col: str):
         mae_or_mfe=ExcursionType.MAE
         )
     
-    keep_cols =adf_mae_up.new_cols.get_columns(["key_1", "key_2"])
-    logdf(adf_mae_up.df, max_rows=200, cols_filter_all_dfs=["open", *keep_cols])
     log.info(adf_mae_up.new_cols.items())
+    view_cols =adf_mae_up.new_cols.get_columns(["group_first_open", "intra_leg_idx", "leg_max_idx", "excursion_bps"])
+    logdf(adf_mae_up.df, max_rows=200, cols_filter_all_dfs=["open", *view_cols])
+    
 
     excursion_bps_col = adf_mae_up.new_cols.get_column("excursion_bps")
-    mae_bps_buckets = bucketize_zoom_equal_width(adf_mae_up.df[excursion_bps_col])
+    
+    # Need to drop to 1 row per leg before bucketizing
+
+
+    mae_bps_buckets = bucketize_zoom_equal_width()
     logdf(mae_bps_buckets)
 
 

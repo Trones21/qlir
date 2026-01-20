@@ -8,7 +8,7 @@ from typing import Callable, Mapping, ParamSpec, Union
 from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.core.semantics.context import get_ctx
 from qlir.core.semantics.explain import explain_created
-from qlir.core.semantics.row_derivation import ColumnDerivationSpec
+from qlir.core.semantics.col_derivation import ColumnDerivationSpec
 
 P = ParamSpec("P")
 
@@ -96,7 +96,7 @@ def new_col_func(
                     continue
 
                 if ctx is not None:
-                    ctx.add_created(col=decl.column, spec=spec)
+                    ctx.add_created(key=decl.key, col=decl.column, spec=spec)
 
                 explain_created(logger=logger, col=decl.column, spec=spec)
 

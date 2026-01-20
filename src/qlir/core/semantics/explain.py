@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from .context import DerivationContext
-from .row_derivation import ColumnDerivationSpec
+from .col_derivation import ColumnDerivationSpec
 
 
 def explain_created(

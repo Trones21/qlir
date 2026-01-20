@@ -5,7 +5,7 @@ import pandas as pd
 from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.ops._helpers import _maybe_copy
 from qlir.core.semantics.decorators import new_col_func
-from qlir.core.semantics.row_derivation import ColumnDerivationSpec
+from qlir.core.semantics.col_derivation import ColumnDerivationSpec
 from qlir.core.types.keep_cols import KeepCols, apply_keep_policy
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.utils import _ensure_columns
@@ -94,7 +94,7 @@ def arp(
         col=range_pct_col,
         window=window,
         prefix_2_default_col_name="arp",
-    )
+    ).df_and("sma_col")
 
     final_col = out_col or arp_col
 

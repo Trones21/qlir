@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .row_derivation import ColumnDerivationSpec
+from .col_derivation import ColumnDerivationSpec
 
 
 def rolling_spec(

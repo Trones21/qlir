@@ -39,6 +39,32 @@ Count mismatch (likely just slicestatus enum not gathering everything... ahhh th
 
      - I added log_column_event, this is quite ergonomic, but doesnt expose as much info (although we could overload it to do so)
 ---
+
+Decide who owns the column registration and announcement... currently using a pracitce where every func owns the logging, but only the "column_bundlers" own the registry updates 
+
+    def persistence(df: pd.DataFrame, condition_col: str , col_name_for_added_group_id_col: str) -> AnnotatedDF:
+    assert df[condition_col].any(), "No True rows for persistence analysis"
+
+
+    #fillna so that all downstream consumers of this column have a clean bool view
+    df[condition_col] = df[condition_col].astype("boolean").fillna(False)
+
+    df, group_ids_col = assign_condition_group_id(df=df, condition_col=condition_col, group_col=col_name_for_added_group_id_col)
+    df, contig_true_rows = univariate.with_running_true(df, group_ids_col)
+
+    max_run_col = f"{condition_col}_run_len"
+    df[max_run_col] = df.groupby(group_ids_col)[contig_true_rows].transform("max")
+    log_column_event(caller="persistence", ev=ColumnLifecycleEvent(key="persistence", col=max_run_col, event="created"))
+
+    new_cols = ColRegistry()
+    new_cols.add(key="group_ids_col", column=group_ids_col)
+    new_cols.add(key="max_run_col", column=max_run_col)
+    new_cols.add(key="contig_true_rows", column=contig_true_rows)
+
+    return AnnotatedDF(df=df, new_cols=new_cols)
+    
+
+---
 ==============================================
 
 # Priorities

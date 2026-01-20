@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class ColKeyDecl:
     key: str
-    column: str | None = None
+    column: str
 
 
 class ColRegistry:
@@ -208,7 +208,4 @@ class ColRegistry:
                 key=new_key,
                 column=decl.column,
             )
-
-
-
 

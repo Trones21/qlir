@@ -16,13 +16,12 @@ def conduct_analysis(clean_data: _pd.DataFrame):
    # Row Filter for Quick Dev Runs
    # clean_data = clean_data.iloc[-2000:]
    
-   path_length_analysis(clean_data)
-
-   # dir_dfs = sma_plus_directional_leg_persistence(df=clean_data, window=14)
-   # up_df = dir_dfs.up.df
-   # # log.info(dir_dfs.up.new_cols.items())
-   # leg_id_col = dir_dfs.up.new_cols.get_column("grp_ids_up_legs_col")
-   # mae.mae_dists(df=up_df, leg_id_col=leg_id_col)
+   # path_length_analysis(clean_data)
+   dir_dfs = sma_plus_directional_leg_persistence(df=clean_data, window=14)
+   up_df = dir_dfs.up.df
+   # log.info(dir_dfs.up.new_cols.items())
+   leg_id_col = dir_dfs.up.new_cols.get_column("grp_ids_up_legs_col")
+   mae.mae_dists(df=up_df, leg_id_col=leg_id_col)
    
    # mfe_analysis(with_necessary_cols)
    # distance_distributions(with_necessary_cols)

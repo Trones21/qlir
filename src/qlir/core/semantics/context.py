@@ -4,7 +4,9 @@ import contextvars
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from .row_derivation import ColumnDerivationSpec, ColumnLifecycleEvent
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
+
+from .col_derivation import ColumnDerivationSpec
 
 _CTX: contextvars.ContextVar["DerivationContext | None"] = contextvars.ContextVar(
     "qlir_derivation_context",
@@ -23,12 +25,12 @@ class DerivationContext:
     specs: List[tuple[str, ColumnDerivationSpec]] = field(default_factory=list)  # (col, spec)
     lifecycle: List[ColumnLifecycleEvent] = field(default_factory=list)
 
-    def add_created(self, *, col: str, spec: ColumnDerivationSpec) -> None:
+    def add_created(self, *, key: str, col: str, spec: ColumnDerivationSpec) -> None:
         self.specs.append((col, spec))
-        self.lifecycle.append(ColumnLifecycleEvent(col=col, event="created"))
+        self.lifecycle.append(ColumnLifecycleEvent(key=key, col=col, event="created"))
 
-    def add_dropped(self, *, col: str, reason: Optional[str] = None) -> None:
-        self.lifecycle.append(ColumnLifecycleEvent(col=col, event="dropped", reason=reason))
+    def add_dropped(self, *, key: str, col: str, reason: Optional[str] = None) -> None:
+        self.lifecycle.append(ColumnLifecycleEvent(key=key, col=col, event="dropped", reason=reason))
 
     def created_cols(self) -> list[str]:
         return [e.col for e in self.lifecycle if e.event == "created"]

@@ -7,7 +7,7 @@ from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.utils import _ensure_columns
 from qlir.core.semantics.events import log_column_event
-from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
 
 __all__ = ["flag_relations"]
 

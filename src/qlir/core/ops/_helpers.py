@@ -8,7 +8,7 @@ import warnings
 from pandas import DataFrame, Series, api
 
 from qlir.core.semantics.events import log_column_event
-from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
 from qlir.core.types.union import ColsLike
 
 
@@ -54,7 +54,7 @@ def _add_columns_from_series_map(
         name = _safe_name(c, suffix)
         out[name] = series_by_col[c]
         new_col_names.append(name)
-        log_column_event(caller=caller_name, ev=ColumnLifecycleEvent(col=name, event="created"))
+        log_column_event(caller=caller_name, ev=ColumnLifecycleEvent(key="unknown", col=name, event="created"))
 
 
     return out, tuple(new_col_names)

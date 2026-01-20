@@ -63,20 +63,3 @@ class ColumnDerivationSpec:
             parts.append(f"grouping={self.grouping}")
         return " | ".join(parts)
 
-
-@dataclass(frozen=True)
-class ColumnLifecycleEvent:
-    """
-    Tracks lifecycle state for derived columns (created, dropped, etc.)
-    without erasing derivation truth.
-    """
-
-    col: str
-    event: Literal["created", "dropped"]
-    reason: Optional[str] = None
-
-
-def ensure_tuple_str(x: Sequence[str] | str) -> Tuple[str, ...]:
-    if isinstance(x, str):
-        return (x,)
-    return tuple(x)

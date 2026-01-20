@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 
 from qlir.core.semantics.decorators import new_col_func
-from qlir.core.semantics.row_derivation import ColumnDerivationSpec
+from qlir.core.semantics.col_derivation import ColumnDerivationSpec
 
 
 @new_col_func(

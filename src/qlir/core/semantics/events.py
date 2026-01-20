@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 
-from qlir.core.semantics.row_derivation import ColumnLifecycleEvent
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
 from qlir.utils.str.fmt import PipeAligner
 
 log = logging.getLogger("qlir.columns")
