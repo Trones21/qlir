@@ -3,11 +3,9 @@
 import pandas as pd
 import pytest
 
-from qlir.servers.analysis_server.df_materialization.registry import (
-    DF_REGISTRY,
-    register_df,
-    materialize_required_dfs,
-)
+from qlir.servers.analysis_server.df_materialization.registry import DF_REGISTRY
+from qlir.servers.analysis_server.df_materialization.registrar import register_df
+from qlir.servers.analysis_server.df_materialization.materialize import materialize_required_dfs
 
 def setup_function():
     DF_REGISTRY.clear()

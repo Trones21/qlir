@@ -46,6 +46,14 @@ test-f-wp:
 	poetry run pytest $(f)
 # make test-f-wp f="./tests/data/test_drift_using_imported_openapi_created_lib.py::test_loop_candles"
 
+test-analysis-server:
+	poetry run pytest tests/servers/analysis_server
+# conftest.py mark application... mark is being applied but tests filtered out idk why (path isnt in addopts...) so just use path 
+# according to chatgpt: Directory-level pytestmark is not guaranteed to be attached early enough to satisfy -m
+
+test-notification-server:
+	poetry run pytest tests/servers/notification_server
+
 # ----- Quality -----
 lint:
 	poetry run ruff check src tests

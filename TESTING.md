@@ -1,15 +1,3 @@
-Nice — that’s a good instinct to keep the **README short and pragmatic**, while still hinting at the longer-term direction.
-
-Below is a **tight rewrite** that:
-
-* keeps everything you already have,
-* adds the *why* in just a few bullets,
-* clearly labels the rest as **future goals**, not current complexity.
-
-You can drop this straight into your README.
-
----
-
 ### Testing
 
 QLIR uses **pytest** with explicit markers to control *how* and *where* tests run.
@@ -25,6 +13,10 @@ markers =
     datasources: tests related to data source integrations
     datasource.<source>: tests specific to a given data source
     datasource.<source>.<endpoint>: tests for a specific endpoint
+    analysis_server: tests for the analysis server 
+    data_server: tests for the data server 
+    agg_server: tests for the agg server 
+    notifications_server: tests for the notifications server 
 ```
 
 > Note: not all endpoints necessarily have dedicated markers — always check the test itself.
