@@ -75,20 +75,29 @@ def _filter_df_by_row_idx(
 
 
 
-def _fmt_df(df: _pd.DataFrame, max_width: int = 120) -> str:
+def _fmt_df(df: _pd.DataFrame, max_width: int = 120, fmt_bool_cols: bool = False) -> str:
     """
     Formats a DataFrame into a human-readable table that fits within max_width.
     Falls back to df.to_string() if tabulate isn't available.
     """
     df_copy = df.copy()
 
-    # Detect and truncate overly wide columns
     for col in df_copy.columns:
-        df_copy[col] = df_copy[col].astype(str)
-        max_len = df_copy[col].str.len().max()
-        if max_len > max_width // len(df_copy.columns):
-            cutoff = max_width // len(df_copy.columns) - 3
-            df_copy[col] = df_copy[col].str.slice(0, cutoff) + "…"
+        s = df_copy[col]
+        # ---- Boolean formatting (opt-in) ----
+        if fmt_bool_cols and _pd.api.types.is_bool_dtype(s):
+            df_copy[col] = s.map(lambda v: "True" if v is True else "")
+            continue
+
+        # ---- Default string conversion + truncation ----
+        s_str = s.astype(str)
+        max_len = s_str.str.len().max()
+
+        if max_len > max_width // max(1, len(df_copy.columns)):
+            cutoff = max_width // max(1, len(df_copy.columns)) - 3
+            s_str = s_str.str.slice(0, cutoff) + "…"
+
+        df_copy[col] = s_str
 
     if _HAS_TABULATE:
         return tabulate(df_copy, headers="keys", tablefmt="github", showindex=True)
@@ -105,6 +114,7 @@ def logdf(
     max_width: int = 200,
     cols_filter_all_dfs: Sequence[str] | None = None,
     cols_filter_by_df_idx: dict[int, Sequence[str] | None] | None = None,
+    fmt_bool_cols: bool = False,
 ) -> None:
     ensure_logging()
 
@@ -135,7 +145,7 @@ def logdf(
         header = f"\n📊 {name or 'DataFrame'} (original_shape={df.shape}) {col_subset_info}"
         excl_idx = from_row_idx + max_rows
         filtered = _filter_df_by_row_idx(view, from_row_idx, excl_idx)
-        table = _fmt_df(filtered, max_width=max_width)
+        table = _fmt_df(filtered, max_width=max_width, fmt_bool_cols=fmt_bool_cols)
 
         footer = ""
         if len(filtered) < len(df):
@@ -178,54 +188,3 @@ def logdf(
                 f"logdf() received unsupported item type: {type(item)!r}"
             )
         
-# def logdf(
-#     df: _pd.DataFrame,
-#     from_row_idx: int = 0,
-#     max_rows: int = 10,
-#     level: str = "info",
-#     name: str | None = None,
-#     max_width: int = 200,
-# ) -> None:
-#     """
-#     Log a DataFrame via the qlir logger tree.
-
-#     Behavior
-#     --------
-#       - Messages go to `qlir.logdf` so they use the same handlers/levels
-#         configured by setup_logging(LogProfile.*).
-#       - If no logging is configured at all, ensure_logging() installs a basic
-#         root handler so output is still visible.
-
-#     Parameters
-#     ----------
-#     df : _pd.DataFrame
-#         DataFrame to display.
-#     from_row_idx : int
-#         Zero-based starting row index (inclusive) in positional terms.
-#     max_rows : int
-#         Maximum number of rows to include (default 10).
-#     level : str
-#         Logging level ("info", "debug", etc.).
-#     name : str, optional
-#         Optional name/label shown before the table.
-#     max_width : int
-#         Max character width before truncating columns.
-#     """
-#     ensure_logging()
-
-#     # Use a child logger under the qlir namespace so it picks up qlir handlers.
-#     logger = logging.getLogger("qlir.logdf")
-
-#     # Map level string → log method with a safe default.
-#     level_str = (level or "info").lower()
-#     emit = getattr(logger, level_str, logger.info)
-
-#     if df is None or df.empty:
-#         emit(f"{name or 'DataFrame'} is empty.")
-#         return
-
-#     header = f"\n📊 {name or 'DataFrame'} (shape={df.shape}):"
-#     excl_idx = from_row_idx + max_rows
-#     filtered_df = _filter_df_by_row_idx(df, start_incl=from_row_idx, end_excl=excl_idx) # converts to using row indices if the dataframe has an index of a different type
-#     table = _fmt_df(filtered_df, max_width=max_width)
-#     emit(f"{header}\n{table}")
