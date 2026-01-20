@@ -1,0 +1,2 @@
+TRIGGER_REGISTRY = {}
+

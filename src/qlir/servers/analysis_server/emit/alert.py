@@ -3,34 +3,74 @@
 from datetime import datetime, timezone
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
-ALERT_OUTBOX = Path("alerts/outbox")
+ALERTS_DIR = Path("alerts")
+OUTBOX_REGISTRY_PATH = ALERTS_DIR / "outboxes.json"
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def emit_alert(data: Any) -> None:
+# -------------------------------
+# Outbox registry
+# -------------------------------
+
+def write_outbox_registry(outboxes: Dict[str, Dict[str, Any]]) -> None:
     """
-    Emit an alert event.
+    Declare available outboxes.
+
+    This is an authoritative, durable declaration.
+    Notification servers discover outboxes from this file.
+    """
+    ALERTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "version": 1,
+        "generated_at": utc_now_iso(),
+        "outboxes": outboxes,
+    }
+
+    OUTBOX_REGISTRY_PATH.write_text(
+        json.dumps(payload, indent=2, sort_keys=True)
+    )
+
+
+def ensure_outbox_declared(outbox: str) -> None:
+    """
+    Defensive check: ensure the outbox exists on disk.
+    Registry validation is intentionally light here.
+    """
+    outbox_dir = ALERTS_DIR / outbox
+    outbox_dir.mkdir(parents=True, exist_ok=True)
+
+
+# -------------------------------
+# Alert emission
+# -------------------------------
+
+def emit_alert(*, outbox: str, data: Any) -> None:
+    """
+    Emit an alert into a specific outbox.
 
     Contract:
     {
       "ts": <UTC now>,
+      "outbox": <outbox name>,
       "data": <opaque payload>
     }
     """
-    ALERT_OUTBOX.mkdir(parents=True, exist_ok=True)
+    ensure_outbox_declared(outbox)
 
     alert = {
         "ts": utc_now_iso(),
+        "outbox": outbox,
         "data": data,
     }
 
-    # filename is for uniqueness + debugging only
+    # Filename is for uniqueness + debugging only
     fname = f"{alert['ts']}.json"
-    path = ALERT_OUTBOX / fname
+    path = ALERTS_DIR / outbox / fname
 
     path.write_text(json.dumps(alert))

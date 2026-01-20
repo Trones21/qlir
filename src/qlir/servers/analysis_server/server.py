@@ -8,8 +8,9 @@ import pandas as pd
 
 from qlir.data.core.paths import get_agg_dir_path
 from qlir.servers.analysis_server.analyses.conduct_analysis import conduct_analysis
+from qlir.servers.analysis_server.emit.outboxes.load import load_outboxes
 from qlir.servers.analysis_server.emit.validate import validate_trigger_registry, validate_active_triggers
-from qlir.servers.analysis_server.emit.alert import emit_alert
+from qlir.servers.analysis_server.emit.alert import emit_alert, write_outbox_registry
 from qlir.servers.analysis_server.emit.trigger_registry import TRIGGER_REGISTRY
 from qlir.servers.analysis_server.io.load_clean_data import load_clean_data, wait_get_agg_dir_path
 from qlir.servers.analysis_server.state import (
@@ -30,25 +31,16 @@ PARQUET_CHUNKS_DIR = wait_get_agg_dir_path("binance", "klines", "SOLUSDT", "1m",
 TS_COL = "tz_start"
 MAX_ALLOWED_LAG = 120  # seconds
 
+write_outbox_registry({
+    "qlir-events": {"alert_level": "events"},
+    "qlir-tradable-binance-bot": {"alert_level": "tradable"},
+    "qlir-tradable-human": {"alert_level": "tradable"},
+    "qlir-positioning": {"alert_level": "positioning"},
+    "qlir-pipeline": {"alert_level": "pipeline"},
+})
+
 POLL_INTERVAL_SEC = 15
 LAST_N_FILES = 5
-
-ACTIVE_TRIGGERS=["sma_14_down_started", 
-                 "sma_14_up_started",
-
-                 "open_sma_14_up_10%_survive",
-                 "open_sma_14_up_5%_survive",
-                 "open_sma_14_up_1%_survive",
-                 "open_sma_14_up_0.1%_survive",
-
-                "open_sma_14_dn_10%_survive",
-                 "open_sma_14_dn_5%_survive",
-                 "open_sma_14_dn_1%_survive",
-                 "open_sma_14_dn_0.1%_survive",
-                 ]
-
-validate_trigger_registry(TRIGGER_REGISTRY)
-validate_active_triggers(ACTIVE_TRIGGERS, TRIGGER_REGISTRY)
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -78,6 +70,11 @@ def main() -> None:
         ),
     )
     
+    outboxes = load_outboxes()
+    for outbox_name, cfg in outboxes.items():
+        validate_trigger_registry(cfg["trigger_registry"])
+        validate_active_triggers(cfg["active_triggers"], cfg["trigger_registry"])
+
     last_processed_ts = load_last_processed_ts()
 
     while True:
@@ -129,25 +126,24 @@ def main() -> None:
              raise RuntimeError()
              time.sleep(POLL_INTERVAL_SEC)
 
+        for outbox_name, cfg in outboxes.items():
+            registry = cfg["trigger_registry"]
+            active = cfg["active_triggers"]
 
-        for col_str in ACTIVE_TRIGGERS:
-            trig = TRIGGER_REGISTRY.get(col_str)
+            for trigger_key in active:
+                trig = registry[trigger_key]
 
-            if trig is None:
-                raise KeyError(
-                    f"Trigger column '{col_str}' in ACTIVE_TRIGGERS but not in registry"
-                )
-            log.info(f"last_row_aa :{last_row_aa.keys()}")
-            if bool(last_row_aa[col_str]):
-                emit_alert({
-                    "trigger_col": col_str,
-                    "type": trig["type"],
-                    "description": trig["description"],
-                    "data_ts": data_ts.isoformat(),
-                    "last_row_open": last_row_aa["open"],
-                    "row_before_that_open": second_last_row_aa["open"]
-                })
-
+                if bool(last_row_aa[trigger_key]):
+                    emit_alert(
+                        outbox=outbox_name,
+                        data={
+                            "trigger": trigger_key,
+                            "event_type": trig["event_type"],
+                            "description": trig["description"],
+                            "df": trig["df"],
+                            "data_ts": data_ts.isoformat(),
+                        },
+                    )
 
 
         save_last_processed_ts(data_ts)
