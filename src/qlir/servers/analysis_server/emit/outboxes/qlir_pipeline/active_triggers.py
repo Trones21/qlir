@@ -1,1 +1,1 @@
-ACTIVE_TRIGGERS=['data_stale']
+ACTIVE_TRIGGERS=['data_stale_asdsadas']

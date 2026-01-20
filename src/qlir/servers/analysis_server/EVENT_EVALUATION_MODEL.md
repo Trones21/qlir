@@ -13,7 +13,7 @@ No trigger state is carried across iterations unless explicitly encoded in DataF
 
 ---
 
-## Terminology (precise)
+## Terminology
 
 * **Pipeline trigger**
   A trigger that validates **system and data integrity** (e.g. stale data, missing slices).
