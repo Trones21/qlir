@@ -27,12 +27,14 @@ def mae_dists(df: pd.DataFrame, leg_id_col: str):
         )
     
     log.info(adf_mae_up.new_cols.items())
-    view_cols =adf_mae_up.new_cols.get_columns(["group_first_open", "intra_leg_idx", "leg_max_idx", "excursion_bps"])
-    logdf(adf_mae_up.df, max_rows=200, cols_filter_all_dfs=["open", *view_cols])
+    view_cols =adf_mae_up.new_cols.get_columns(["intra_leg_idx", "group_first_open", "leg_max_idx",  "is_excursion_row", "excursion_bps"])
+    na_cols =adf_mae_up.new_cols.get_columns(["intra_leg_idx", "leg_max_idx"])
+    logdf(adf_mae_up.df, max_rows=30, from_row_idx=30, cols_filter_all_dfs=["open", *view_cols], fmt_bool_cols=True, display_as_int=True, na_as_empty=["aasd", *na_cols])
+    #logdf(adf_mae_up.df, max_rows=30, from_row_idx=30, cols_filter_all_dfs=["open", *view_cols], fmt_bool_cols=True, display_as_int=)
     
 
     excursion_bps_col = adf_mae_up.new_cols.get_column("excursion_bps")
-    
+    NotImplementedError()
     # Need to drop to 1 row per leg before bucketizing
 
 

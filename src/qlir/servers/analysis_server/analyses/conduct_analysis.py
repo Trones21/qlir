@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 def conduct_analysis(clean_data: _pd.DataFrame):
 
    # Row Filter for Quick Dev Runs
-   # clean_data = clean_data.iloc[-2000:]
+   clean_data = clean_data.iloc[-2000:]
    
    # path_length_analysis(clean_data)
    dir_dfs = sma_plus_directional_leg_persistence(df=clean_data, window=14)
