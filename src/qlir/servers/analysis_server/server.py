@@ -214,7 +214,10 @@ def main() -> None:
             base_df=base_df,
             required_df_names=required_df_names,
         )
-
+        
+        #Shortcut to allow you to do analysis work via the server (instead of in a separate entrypoint/project)
+        raise NotImplementedError("Doing exploratory work, signals not emitted")
+    
         # ------------------------------------------------------------------
         # Phase 4: event evaluation
         # ------------------------------------------------------------------

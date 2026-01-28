@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pandas as _pd
+import logging
+log = logging.getLogger(__name__)
 
 from ...indicators.boll import with_bollinger
 from ..common import distances, temporal
@@ -25,9 +27,14 @@ def with_boll_feature_block(
     out = with_candle_relation_mece(out)
     out = with_candle_line_relations(out)
 
-  
+    # Regimes
+    log.info("Still need to write the boll regimes module")
+
+
     # Derivatives
-    out = temporal.temporal_derivatives(out, cols=["boll_mid", "boll_lower", "boll_upper"])
+    # skip for now
+    log.info("Skipping Boll band temporal derivatives -- i am not sure of exactly what i was going for when i originally wrote this") 
+    # out = temporal.temporal_derivatives(out, cols=["boll_mid", "boll_lower", "boll_upper"])
 
 
     return out

@@ -16,6 +16,11 @@ from typing import Dict
 
 import pandas as pd
 
+from .builders import (
+    build_df_path_len_cols,
+    build_df_boll
+)
+
 # A DF builder takes the shared base_df (load+clean output)
 # and returns a derived DataFrame.
 DFBuilder = Callable[[pd.DataFrame], pd.DataFrame]
@@ -25,4 +30,8 @@ DFBuilder = Callable[[pd.DataFrame], pd.DataFrame]
 # - no imports from analyses
 # - no registration logic
 # - no side effects
-DF_REGISTRY: Dict[str, DFBuilder] = {}
+DF_REGISTRY: Dict[str, DFBuilder] = {
+
+    "df_path_len_cols": build_df_path_len_cols,
+    "df_boll": build_df_boll
+}

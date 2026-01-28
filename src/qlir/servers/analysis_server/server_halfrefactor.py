@@ -7,7 +7,7 @@ import time
 import pandas as pd
 
 from qlir.data.core.paths import get_agg_dir_path
-from qlir.servers.analysis_server.analyses.conduct_analysis import conduct_analysis
+from qlir.servers.analysis_server.analyses._old_conduct_analysis import conduct_analysis
 from qlir.servers.analysis_server.emit.outboxes.load import load_outboxes
 from qlir.servers.analysis_server.emit.validate import validate_trigger_registry, validate_active_triggers
 from qlir.servers.analysis_server.emit.alert import emit_alert, write_outbox_registry
