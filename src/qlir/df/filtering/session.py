@@ -23,17 +23,24 @@ Includes:
 
 from __future__ import annotations
 
+
+
 from datetime import time
 from zoneinfo import ZoneInfo
 
 import pandas as _pd
 
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
+import logging
+log = logging.getLogger(__name__)
 
 def _add_session_label(df: _pd.DataFrame, label: str) -> _pd.DataFrame:
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="add_session_label")
+    log_memory_debug(ev=ev, log=log)
     out["session"] = label
     return out
 

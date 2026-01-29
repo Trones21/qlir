@@ -3,11 +3,16 @@ from __future__ import annotations
 
 import pandas as _pd
 
+import logging
+log = logging.getLogger(__name__)
+
 from qlir.core.constants import DEFAULT_OHLC_COLS
 from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.data.lte.transform.gaps.materialization.assert_materialization_complete import (
     assert_materialization_complete,
 )
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_info
 
 from ...policy.base import FillPolicy
 from ..blocks import find_missing_blocks
@@ -60,7 +65,8 @@ def apply_fill_policy(
     """
     assert_materialization_complete(df)
 
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="apply_fill_policy")
+    log_memory_info(ev=ev, log=log)
 
     open_col, high_col, low_col, close_col = ohlc_cols
 

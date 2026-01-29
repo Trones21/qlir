@@ -1,5 +1,10 @@
 import pandas as _pd
 
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+
+import logging
+log = logging.getLogger(__name__)
 
 def add_utc_timestamp_col(
     df: _pd.DataFrame,
@@ -33,7 +38,11 @@ def add_utc_timestamp_col(
     if unit not in {"s", "ms"}:
         raise ValueError(f"unit must be 's' or 'ms', got {unit!r}")
 
-    out = df.copy() if copy else df
+    if copy:
+        out, ev = df_copy_measured(df=df, label="add_utc_timestamp_col")
+        log_memory_debug(ev=ev, log=log)
+    else:
+        out = df
 
     out[out_col] = (
         _pd.to_datetime(out[unix_col], unit=unit, utc=True)

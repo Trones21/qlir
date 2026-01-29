@@ -3,6 +3,11 @@ from __future__ import annotations
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ["with_distance_metrics"]
 
@@ -19,7 +24,9 @@ def with_distance_metrics(
     
     _ensure_columns(df=df, cols=[price_col, vwap_col], caller="with_distance_metrics")
 
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="with_distance_metrics")
+    log_memory_debug(ev=ev, log=log)
+    
     dist: _pd.Series = out[price_col] - out[vwap_col]
     out[f"{out_prefix}dist"] = dist
     out[f"{out_prefix}dist_pct"] = dist / out[vwap_col] * 100.0

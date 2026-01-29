@@ -1,6 +1,12 @@
 
 import pandas as _pd
 
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+
+import logging
+log = logging.getLogger(__name__)
+
 # ============================================================
 #  Series-level utilities
 # ============================================================
@@ -119,7 +125,10 @@ def ensure_utc_df(df: _pd.DataFrame, col: str) -> _pd.DataFrame:
     """
     if col not in df.columns:
         raise KeyError(f"Column '{col}' not found in DataFrame.")
-    out = df.copy()
+    
+    out, ev = df_copy_measured(df=df, label="ensure_utc_df")
+    log_memory_debug(ev=ev, log=log)
+
     out[col] = ensure_utc_series(out[col])
     return out
 
@@ -131,7 +140,10 @@ def ensure_utc_df_strict(df: _pd.DataFrame, col: str) -> _pd.DataFrame:
     """
     if col not in df.columns:
         raise KeyError(f"Column '{col}' not found in DataFrame.")
-    out = df.copy()
+    
+    out, ev = df_copy_measured(df=df, label="ensure_utc_df_strict")
+    log_memory_debug(ev=ev, log=log)
+
     out[col] = ensure_utc_series_strict_string(out[col])
     return out
 

@@ -3,7 +3,10 @@ import logging
 import numpy as _np
 import pandas as _pd
 
+from qlir.perf.logging import log_memory_debug
+
 log = logging.getLogger(__name__)
+from qlir.perf.df_copy import df_copy_measured
 from qlir.utils.pdtools import null_if
 
 __all__ = ["with_candle_line_relations"]
@@ -21,7 +24,8 @@ def with_candle_line_relations(
     abs_eps: float = 1e-9,     # fallback if width is ~0
     prefix: str = "bb"
 ) -> _pd.DataFrame:
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="with_candle_line_relations")
+    log_memory_debug(ev=ev, log=log)
 
     H, L, C = out[high_col].values, out[low_col].values, out[close_col].values
     lo, md, up = out[lower_col].values, out[mid_col].values, out[upper_col].values
@@ -112,7 +116,8 @@ def with_candle_relation_mece(
     - Designed to complement `with_candle_line_relations()`, which emits
       per-band 3-state columns (`below/touch/above`).
     """
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="with_candle_relation_mece")
+    log_memory_debug(ev=ev, log=log)
 
     H = out[high_col].values
     L = out[low_col].values

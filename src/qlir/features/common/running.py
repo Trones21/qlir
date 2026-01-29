@@ -3,6 +3,11 @@ from __future__ import annotations
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+import logging 
+log = logging.getLogger(__name__)
+
 
 __all__ = ["with_counts_running", "with_streaks"]
 
@@ -66,7 +71,9 @@ def with_counts_running(
     else:
         _ensure_columns(df=df, cols=rel_col, caller="with_counts_running")   
 
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="with_counts_running")
+    log_memory_debug(ev=ev, log=log)
+
     if group_col:
         groups = out[group_col]
     else:
@@ -130,7 +137,9 @@ def with_streaks(
     else:
         _ensure_columns(df=df, cols=rel_col, caller="with_streaks")   
 
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="with_streaks")
+    log_memory_debug(ev=ev, log=log)
+
     boundary_change = out[rel_col].ne(out[rel_col].shift(1))
     if group_col:
         boundary_change |= out[group_col].ne(out[group_col].shift(1))

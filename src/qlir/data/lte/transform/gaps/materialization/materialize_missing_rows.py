@@ -40,7 +40,11 @@ from typing import Optional
 import pandas as _pd
 
 from qlir.data.lte.transform.gaps.materialization.markers import ROW_MATERIALIZED_COL
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_info
 
+import logging
+log = logging.getLogger(__name__)
 
 def materialize_missing_rows(
     df: _pd.DataFrame,
@@ -111,7 +115,8 @@ def materialize_missing_rows(
 
     # Fast path: nothing missing
     if len(full_index) == len(df.index):
-        out = df.copy()
+        out, ev = df_copy_measured(df=df, label="materialize_missing_rows")
+        log_memory_info(ev=ev, log=log)
         out[ROW_MATERIALIZED_COL] = False
         return out
 

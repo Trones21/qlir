@@ -2,6 +2,12 @@ from __future__ import annotations
 
 import pandas as _pd
 
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+
+import logging
+log = logging.getLogger(__name__)
+
 __all__ = ["with_boll_touch_squeeze_flags"]
 
 
@@ -15,7 +21,8 @@ def with_boll_touch_squeeze_flags(
     out_prefix: str = "boll_",
     squeeze_window: int = 20,
 ) -> _pd.DataFrame:
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="with_boll_touch_squeeze_flags")
+    log_memory_debug(ev=ev, log=log)
     close = out[close_col]
     out[f"{out_prefix}touch_upper"] = (close >= out[upper_col]).astype("int8")
     out[f"{out_prefix}touch_lower"] = (close <= out[lower_col]).astype("int8")

@@ -5,9 +5,13 @@ from typing import Iterable
 
 import pandas as _pd
 
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
+import logging
+log = logging.getLogger(__name__)
 
 def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
@@ -133,7 +137,10 @@ def add_date_labels(
     minute: bool = False,
 ) -> _pd.DataFrame:
     df = ensure_utc_df_strict(df, col)
-    out = df.copy()
+
+    out, ev = df_copy_measured(df=df, label="add_date_labels")
+    log_memory_debug(ev=ev, log=log)
+
     dt = out[col]
     if year:
         out["year"] = dt.dt.year

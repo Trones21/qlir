@@ -8,6 +8,11 @@ from qlir.core.types.OHLC_Cols import OHLC_Cols
 from qlir.df.utils import _ensure_columns
 from qlir.core.semantics.events import log_column_event
 from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ["flag_relations"]
 
@@ -23,7 +28,9 @@ def flag_relations(
     out_rel: str = "relation",
 ) -> _pd.DataFrame:
     _ensure_columns(df=df, cols=[vwap_col, price_col, *ohlc], caller="flag_relations")
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="flag_relations")
+    log_memory_debug(ev=ev, log=log)
+
     diff = out[price_col] - out[vwap_col]
     tol = (out[vwap_col].abs() * touch_eps).fillna(0.0)
     if touch_min_abs > 0:

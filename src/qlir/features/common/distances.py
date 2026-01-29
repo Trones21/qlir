@@ -4,6 +4,11 @@ import numpy as _np
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ["with_zscore", "with_distance"]
 
@@ -65,7 +70,9 @@ def with_zscore(
     
     _ensure_columns(df=df, cols=col, caller="with_zscore")
     
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="with_zscore")
+    log_memory_debug(ev=ev, log=log)
+    
     out_col = out_col or f"{col}_z"
     sd = out[col].rolling(window, min_periods=max(5, window//5)).std(ddof=0 if ddof0 else 1)
     out[out_col] = out[col] / sd.replace(0.0, _pd.NA)

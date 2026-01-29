@@ -6,9 +6,13 @@ from typing import Any, Mapping, Sequence
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
+import logging
+log = logging.getLogger(__name__)
 
 def _as_utc(dt: datetime) -> datetime:
     if dt.tzinfo is None:
@@ -59,7 +63,8 @@ def mark_around_events(
     ts = df[col]
 
     evs = _normalize_events(events)
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="mark_around_events")
+    log_memory_debug(ev=ev, log=log)
     out[out_col] = False
     if add_event_id:
         out["event_id"] = _pd.Series([None] * len(out), index=out.index, dtype="Int64")

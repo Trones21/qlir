@@ -1,6 +1,10 @@
 import pandas as _pd
 import qlir.core.ops.temporal as pt 
 from qlir.logging.logdf import logdf
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
+import logging
+log = logging.getLogger(__name__)
 
 def tag_breakouts_simple(
     df: _pd.DataFrame,
@@ -24,7 +28,11 @@ def tag_breakouts_simple(
     if price_col not in df.columns:
         raise KeyError(f"Column '{price_col}' not found")
 
-    raw = df if inplace else df.copy()
+    if inplace:
+        raw = df
+    else:
+        raw, ev = df_copy_measured(df)
+        log_memory_debug(ev=ev, log=log)
     
     suffix=f"pct_{lookback}"
     with_pct_df = pt.with_pct_change(raw, "close", 20, suffix=suffix)

@@ -3,9 +3,13 @@ from __future__ import annotations
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_debug
 from qlir.time.constants import DEFAULT_TS_COL
 from qlir.time.ensure_utc import ensure_utc_df_strict
 
+import logging
+log = logging.getLogger(__name__)
 
 def add_calendar_labels(
     df: _pd.DataFrame,
@@ -23,7 +27,9 @@ def add_calendar_labels(
     """
     _ensure_columns(df=df, cols=col, caller="add_calendar_labels")
     df = ensure_utc_df_strict(df, col)
-    out = df.copy()
+    out, ev = df_copy_measured(df=df, label="add_calendar_labels")
+    log_memory_debug(ev=ev, log=log)
+
     dt = out[col]
     if year:
         out["year"] = dt.dt.year

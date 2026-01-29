@@ -14,6 +14,8 @@ from qlir.data.quality.candles.models.candle_gap import (
 )
 from qlir.data.quality.candles.models.candles_dq_report import CandlesDQReport
 from qlir.logging.logdf import logdf
+from qlir.perf.df_copy import df_copy_measured
+from qlir.perf.logging import log_memory_info
 from qlir.time.ensure_utc import assert_not_epoch_drift, ensure_utc_series
 from qlir.time.timefreq import TimeFreq, TimeUnit
 from qlir.utils.str.color import Ansi, colorize
@@ -42,7 +44,9 @@ def _sort_dedupe(
     if time_col not in df.columns:
         raise ValueError(f"Missing required time column '{time_col}'")
 
-    out = df.copy()
+    out, ev = df_copy_measured(df=df)
+    log_memory_info(ev=ev, log=log)
+
     out[time_col] = ensure_utc_series(out[time_col])
     assert_not_epoch_drift(out[time_col])
     log.debug(f"Sorting {len(df)} records")
