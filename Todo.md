@@ -69,6 +69,16 @@ Decide who owns the column registration and announcement... currently using a pr
 
 # Priorities
 
+- create the pipeline for SMA multiple + count of directional
+- finish the pipeline for bollinger bands
+- pipeline to detect bollinger band squeezes (emit alerts on squeeze)
+- ensure the ops watcher
+- update the simple starter to include the ops watcher  
+- do a full test locally 
+- get remote running again
+
+----------------
+
 - Figure out whether analysis funcs expect tz_start to be unix ts int or timestamp... 
     - need a conversion func or something... (maybe with logging to let the user know what they passed)
 
