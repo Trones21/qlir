@@ -11,7 +11,8 @@ requires-python = ">=3.10, <4.0"
 dependencies = ["pandas", "requests", "numpy", "pyarrow", "tabulate", "matplotlib", 
 # "drift-data-api-client @ file:///home/tjr/datasources/drift/drift-data-api-client/dist/drift_data_api_client-1.0.0-py3-none-any.whl" 
 "httpx (>=0.28.1,<0.29.0)",
-"typing-extensions (>=4.15.0,<5.0.0)"
+"typing-extensions (>=4.15.0,<5.0.0)",
+"psutil (>=7.2.2,<8.0.0)"
 ]
 authors = [{ name = "Thomas Rones" }]
 license = { text = "MIT" }

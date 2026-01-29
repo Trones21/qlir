@@ -19,6 +19,9 @@ def register_df(df_name: str, builder: DFBuilder) -> None:
     """
     Register a derived DataFrame builder.
     """
+    log.debug(DF_REGISTRY)
+    log.info(f"registering dataframe: {df_name} , builder: {builder}")
+    
     if df_name in DF_REGISTRY:
         raise KeyError(f"DF_REGISTRY already contains df '{df_name}'")
     DF_REGISTRY[df_name] = builder

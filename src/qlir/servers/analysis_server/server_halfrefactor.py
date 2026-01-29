@@ -11,7 +11,7 @@ from qlir.servers.analysis_server.analyses._old_conduct_analysis import conduct_
 from qlir.servers.analysis_server.emit.outboxes.load import load_outboxes
 from qlir.servers.analysis_server.emit.validate import validate_trigger_registry, validate_active_triggers
 from qlir.servers.analysis_server.emit.alert import emit_alert, write_outbox_registry
-from qlir.servers.analysis_server.emit.trigger_registry import TRIGGER_REGISTRY
+from qlir.servers.analysis_server.emit.__old_trigger_registry import TRIGGER_REGISTRY
 from qlir.servers.analysis_server.io.load_clean_data import load_clean_data, wait_get_agg_dir_path
 from qlir.servers.analysis_server.state import (
     INITIAL_BACKOFF,

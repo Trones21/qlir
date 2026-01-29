@@ -13,7 +13,7 @@ from qlir.servers.analysis_server.emit.validate import (
     validate_trigger_registry,
     validate_active_triggers,
 )
-from qlir.servers.analysis_server.df_materialization.registration import register_all
+from qlir.servers.analysis_server.df_materialization.registration import df_registration_entrypoint
 from qlir.servers.analysis_server.df_materialization.materialize import materialize_required_dfs
 from qlir.servers.analysis_server.io.load_clean_data import load_clean_data, wait_get_agg_dir_path
 from qlir.servers.analysis_server.state import (
@@ -29,6 +29,17 @@ from qlir.servers.analysis_server.state.progress import (
 )
 
 log = logging.getLogger(__name__)
+
+
+# --------------------------------------------------------------------------
+# Logging Level
+# --------------------------------------------------------------------------
+
+from qlir.servers.logging.logging_setup import LogProfile, setup_logging
+
+# May want to abstract this away, curretly setting here for analysis server refactor
+setup_logging(profile=LogProfile.QLIR_DEBUG)
+
 
 # --------------------------------------------------------------------------
 # Config
@@ -139,7 +150,7 @@ def main() -> None:
         validate_active_triggers(cfg["active_triggers"], cfg["trigger_registry"])
 
     # Register DF builders (CONTROL PLANE)
-    register_all()
+    df_registration_entrypoint()
 
     # Discover required DFs (static)
     required_df_names = _collect_required_df_names(outboxes)

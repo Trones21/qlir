@@ -1,17 +1,3 @@
-
-# TRIGGER_REGISTRY = {
-#     "<trigger_key>": {
-#         "name": str,
-#         "description": str,
-#         "df": str | None,
-#         "column": str | None,
-#     }
-# }
-
-TRIGGER_REGISTRY = {}
-
-
-# Old (actually in use)
 # TRIGGER_REGISTRY = {
 #     "sma_14_up_started": {
 #         "type": "signal",

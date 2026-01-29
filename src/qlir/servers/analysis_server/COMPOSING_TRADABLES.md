@@ -1,10 +1,3 @@
-Perfect — this is a **real architectural fork**, and you’re handling it the right way:
-*don’t over-commit now, but document the escape hatches clearly.*
-
-Below is a **clean, doc-ready section** you can append to the existing document. It states the options, the tradeoffs, and the invariants **without forcing a decision**.
-
----
-
 ## 9️⃣ From Events → Tradable: Composition Models (Explicitly Flexible)
 
 There is **no single mandated workflow** for how `events` become `tradable` signals.
