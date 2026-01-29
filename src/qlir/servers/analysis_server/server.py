@@ -73,7 +73,7 @@ def get_clean_data() -> pd.DataFrame:
 
 
 def _outbox_level(outbox_name: str) -> str:
-    if outbox_name == "qlir-pipeline":
+    if outbox_name == "qlir-data-pipeline":
         return "pipeline"
     if outbox_name == "qlir-events":
         return "events"
@@ -196,7 +196,7 @@ def main() -> None:
             condition=is_data_stale(data_ts, MAX_ALLOWED_LAG_SEC),
             now=now,
             emit=lambda: emit_alert(
-                outbox="qlir-pipeline",
+                outbox="qlir-data-pipeline",
                 data={
                     "trigger": "data_stale",
                     "data_ts": data_ts.isoformat(),

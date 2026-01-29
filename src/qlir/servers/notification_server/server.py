@@ -26,17 +26,31 @@ MAX_RETRIES = 3
 
 OUTBOX_ROUTES: dict[str, list[dict[str, str]]] = {
     
-    "ops": [
+    "qlir-ops": [
         {
             "adapter": "telegram",
             "bot_token_env": "OPS_TELEGRAM_BOT_TOKEN",
             "chat_id_env": "TELEGRAM_CHAT_ID", # Note: Telegram uses your user id for the chat id, so it'll be the same for all your bots"
         }
     ],
-    "qlir-pipeline": [
+    "qlir-data-pipeline": [
         {
             "adapter": "telegram",
             "bot_token_env": "DATA_PIPELINE_TELEGRAM_BOT_TOKEN",
+            "chat_id_env": "TELEGRAM_CHAT_ID",
+        }
+    ],
+    "qlir-tradable-human": [
+        {
+            "adapter": "telegram",
+            "bot_token_env": "TRADABLE_HUMAN_TELEGRAM_BOT_TOKEN",
+            "chat_id_env": "TELEGRAM_CHAT_ID",
+        }
+    ],
+    "qlir-positioning": [
+        {
+            "adapter": "telegram",
+            "bot_token_env": "POSITIONING_TELEGRAM_BOT_TOKEN",
             "chat_id_env": "TELEGRAM_CHAT_ID",
         }
     ],
@@ -91,11 +105,16 @@ def build_outbox_adapters() -> dict[str, list[NotificationAdapter]]:
 # -------------------------------------------------
 # Helpers
 # -------------------------------------------------
+def has_outbox_dirs(alerts_root: Path, outbox_routes_keys: list[str]):
+    for route in outbox_routes_keys:
+        uri = Path(alerts_root / route)
+        if not uri.is_dir():
+            logger.info(f"Outbox directory not found at: {uri.absolute()}") 
 
-def has_outbox_dirs() -> bool:
+def has_root_outbox_dir(alerts_root: Path) -> bool:
     return any(
         d.is_dir() and not d.name.startswith("_")
-        for d in ALERTS_ROOT.iterdir()
+        for d in alerts_root.iterdir()
     )
 
 
@@ -139,20 +158,25 @@ def main() -> None:
     logger.info(
         "notification server started (alerts root: %s)", ALERTS_ROOT
     )
+    logger.info(
+        "TODO: WHEN WE CREATE THE BOT TRADER: Work on Perf... it takes a few hundred ms between each alert send... need to figure out where this massive delay is coming from..."
+    )
+    logger.info(
+        "TODO: Use a logger similar to the data_server and agg_server  found in the example project with all the color formatting"
+    )
 
     # Build + validate all adapters at startup
     outbox_adapters = build_outbox_adapters()
     logger.info("configured outbox routes")
-    logger.info(outbox_adapters['ops'])
+    logger.info(outbox_adapters['qlir-ops'])
     
-    # raise NotImplementedError()
-    # log_outbox_adapters(outbox_adapters)
+    has_outbox_dirs(ALERTS_ROOT, outbox_routes_keys=list(outbox_adapters.keys()))
 
     warned_unrouted: set[str] = set()
 
     while True:
-        if not has_outbox_dirs():
-            logger.info(f"No outbox dirs found in: {ALERTS_ROOT}")
+        if not has_root_outbox_dir(ALERTS_ROOT):
+            raise FileNotFoundError(f"No outbox dirs found in: {ALERTS_ROOT}")
 
         for outbox in iter_outbox_dirs():
             outbox_name = outbox.name
@@ -171,7 +195,9 @@ def main() -> None:
             failed_dir = FAILED_ROOT / outbox_name
             sent_dir.mkdir(parents=True, exist_ok=True)
             failed_dir.mkdir(parents=True, exist_ok=True)
-
+            
+            logger.debug(f"checking {outbox_name}")
+            
             for alert_path in sorted(outbox.glob("*.json")):
                 try:
                     alert = load_alert(alert_path)
