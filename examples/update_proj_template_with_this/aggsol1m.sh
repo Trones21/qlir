@@ -1,1 +1,1 @@
-poetry run binance-agg-server-arg --endpoint klines --symbol SOLUSDT --interval "1m" --limit "1000"
+poetry run binance-agg-server-arg --endpoint klines --symbol SOLUSDT --interval "1m" --limit "1000" --batch-slices 1000

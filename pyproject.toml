@@ -28,6 +28,7 @@ data_server = "qlir.servers.data_server.run_server:main"
 agg_server = "qlir.servers.agg_server.run_server:main"
 notifications_server = "qlir.servers.notification_server.server:main"
 analysis_server = "qlir.servers.analysis_server.server:main"
+ops_watcher = "qlir.servers.ops_watcher.server:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]

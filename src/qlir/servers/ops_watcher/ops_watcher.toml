@@ -1,0 +1,26 @@
+[service]
+interval_seconds = 60
+emit_outbox = "/qlir/outbox/ops"
+state_path = "/tmp/qlir_ops_watcher_state.json"
+
+[self_check]
+enabled = true
+proc_cmdline_contains = "qlir-ops-watcher --config"
+
+[[process_checks]]
+name = "qlir_data_server"
+proc_cmdline_contains = "qlir/data_server.py"
+severity = "critical"
+note = "Match real python entrypoint, not tmux."
+
+[[process_checks]]
+name = "qlir_analysis_server"
+proc_cmdline_contains = "qlir/analysis_server.py"
+severity = "critical"
+
+[[log_growth_checks]]
+name = "analysis_log"
+path = "/var/log/qlir/analysis.log"
+min_growth_bytes = 1024
+window_hours = 24
+severity = "warning"

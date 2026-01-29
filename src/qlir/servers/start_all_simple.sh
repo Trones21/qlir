@@ -2,7 +2,7 @@
 source ~/set_telegram_env_vars.sh
 
 QLIR_MANIFEST_LOG=1
-
+QLIR_ALERTS_DIR=~/alerts
 mkdir -p logs
 
 tmux new-session -d -s qlir_data 'poetry run data_server --endpoint klines --symbol SOLUSDT --interval 1m --limit 1000 2>&1 | tee -a logs/data_server.log'

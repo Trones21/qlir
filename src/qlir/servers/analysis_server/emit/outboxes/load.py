@@ -5,7 +5,6 @@ from pathlib import Path
 
 OUTBOXES_DIR = Path(__file__).parent
 
-
 def load_outboxes():
     outboxes = {}
 

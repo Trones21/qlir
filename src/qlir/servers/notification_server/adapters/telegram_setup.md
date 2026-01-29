@@ -41,6 +41,8 @@ On your phone or desktop:
 2. Open the chat
 3. Press **Start**
 4. Send any message (e.g. `hi`)
+  - it seems that you might need to send a message from your phone... it wasnt working when i sent the messafge from my laptop (telegram web)... 
+   seems odd but idk. also try adding the url param offset=0 
 
 ---
 
@@ -68,8 +70,9 @@ The value of `chat.id` is your **chat ID**.
 ⚠️ **Important**
 
 * Use `chat.id`
-* Do NOT use `from.id`
 * Do NOT use any ID where `"is_bot": true`
+
+Note: This is actually the same value as your user.id, so if you have multiple bots to the same user, then you can just reuse the chat/user id 
 
 ---
 

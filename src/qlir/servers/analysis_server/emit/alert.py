@@ -5,8 +5,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-ALERTS_DIR = Path("alerts")
-OUTBOX_REGISTRY_PATH = ALERTS_DIR / "outboxes.json"
+
+from qlir.servers.alerts.paths import get_alerts_root
+
+ALERTS_DIR = get_alerts_root()
+OUTBOX_REGISTRY_PATH = ALERTS_DIR / "analysis_outboxes.json"
 
 
 def utc_now_iso() -> str:

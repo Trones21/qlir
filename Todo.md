@@ -129,6 +129,11 @@ which passes args and calls `__PROJECT_NAME.binance.etl.data_server`
 - log to files in addition to console (remember that this should have the option to be split by PID or rather endpoint/symbol/interval)
 - Add ability to write to a non-local location (e.g. S3 bucket)
 - metrics/helth endpoints
+- Add differentiate between binance_us and binance_com so that the data and agg are stored under separate paths (currently its just "binance")
+    - and then of course update the param so that its binance_us or binance_com (also eventually InteractiveBrokers) then route to the correct server config based on this
+    - and ensure the url is constructed properly
+- Add Interactive Brokers as a data source (should be able to use everyhing from the binance data server, just need to figure out how to intergrate with minimal duplication. Almost everything in the while loop should be identical (wall clock time, manifest logic, etc.)
+    - but the manifest checks may need like a config passed or something because non-24/7 markets dont have the same convenience where you can just use wall clock time... this will have to be thought about
 
 ---
 ==============================================
