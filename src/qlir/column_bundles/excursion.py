@@ -8,6 +8,7 @@ from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.core.types.direction import Direction
 from qlir.core.types.excursion_type import ExcursionType
 from qlir.df.scalars.units import delta_in_bps
+from qlir.df.utils import _ensure_columns
 from qlir.logging.logdf import logdf
 from typing_extensions import assert_never
 from enum import StrEnum
@@ -144,18 +145,20 @@ def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, di
         registry=new_cols
     )
 
-    df_slim, cols_se = from_start_and_end(df=df_slim, prefix=excursion_name, leg_max_idx_col=leg_max_idx, intra_leg_idx_col=intra_leg_idx)
-    new_cols.extend(cols_se)
+    adf = from_start_and_end(df=df_slim, prefix=excursion_name, leg_max_idx_col=leg_max_idx, intra_leg_idx_col=intra_leg_idx)
+    new_cols.extend(adf.new_cols)
 
-    df_slim, cols_pct = pct_when_excursion_max(df=df_slim, prefix=excursion_name, leg_n_bars_col=leg_of_n_bars)
-    new_cols.extend(cols_pct)
+    adf = pct_when_excursion_max(df=adf.df, prefix=excursion_name, leg_n_bars_col=leg_of_n_bars)
+    new_cols.extend(adf.new_cols)
     
-    return AnnotatedDF(df_slim, new_cols)
+    return AnnotatedDF(adf.df, new_cols)
 
 
 
-def from_start_and_end(df: pd.DataFrame, prefix: str, leg_max_idx_col: str, intra_leg_idx_col: str):
+def from_start_and_end(df: pd.DataFrame, prefix: str, leg_max_idx_col: str, intra_leg_idx_col: str) -> AnnotatedDF:
     # MFE/MAE occurs N candles from start
+
+    _ensure_columns(df=df, cols=[leg_max_idx_col, intra_leg_idx_col], caller="pct_when_excursion_max")
     new_cols = ColRegistry()
     df[f"{prefix}_from_start"] = df[leg_max_idx_col] # no math needed
     
@@ -169,10 +172,12 @@ def from_start_and_end(df: pd.DataFrame, prefix: str, leg_max_idx_col: str, intr
         ], 
         event="created")
     
-    return df, new_cols
+    return AnnotatedDF(df=df, new_cols=new_cols, label="from_start_and_end")
     
 
-def pct_when_excursion_max(df: pd.DataFrame, prefix: str, leg_n_bars_col: str):
+def pct_when_excursion_max(df: pd.DataFrame, prefix: str, leg_n_bars_col: str) -> AnnotatedDF:
+
+    _ensure_columns(df=df, cols=leg_n_bars_col, caller="pct_when_excursion_max")
 
     #“What fraction of the entire realized leg had elapsed when MFE/MAE was first achieved?”
     pct_from_start_col = f"{prefix}_pct_from_start"
@@ -194,13 +199,5 @@ def pct_when_excursion_max(df: pd.DataFrame, prefix: str, leg_n_bars_col: str):
         ], 
         event="created")
 
-    return df , new_cols
+    return AnnotatedDF(df=df , new_cols=new_cols, label="pct_when_excursion_max")
 
-
-
-
-
-
-
-# # Filter to only the MFE/MAE rows 
-# df_mfe = df_slim.loc[df_slim["is_mfe_row"] == True , :].copy()

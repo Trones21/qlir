@@ -3,6 +3,10 @@ from __future__ import annotations
 import numpy as _np
 import pandas as _pd
 
+from qlir.core.registries.columns.lifecycle import ColumnLifecycleEvent
+from qlir.core.registries.columns.registry import ColRegistry
+from qlir.core.semantics.events import log_column_event
+from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.df.utils import _ensure_columns
 from qlir.perf.df_copy import df_copy_measured
 from qlir.perf.logging import log_memory_debug
@@ -18,10 +22,10 @@ def with_distance(
     *,
     from_: str,   # baseline (e.g., 'vwap')
     to_: str,     # primary  (e.g., 'close')
-    include_pct: bool = True,
+    include_pct_and_bps: bool = True,
     prefix: str | None = None,
     in_place: bool = False,
-) -> _pd.DataFrame:
+) -> AnnotatedDF:
     """
     distance   = to_ - from_
     pct_dist   = (to_ - from_) / from_
@@ -46,16 +50,24 @@ def with_distance(
     pref = prefix or f"{base_name}_to_{ref_name}"
     dist_col = f"{pref}_dist"
     pct_col  = f"{pref}_pct"
+    bps_col  = f"{pref}_bps"
 
     # Vectorized, index-aligned math
     dist = ref.sub(base)
     out[dist_col] = dist
 
-    if include_pct:
+    if include_pct_and_bps:
         denom = base.replace(0.0, _np.nan)  # guard div-by-zero
         out[pct_col] = dist.div(denom)
+        out[bps_col] = dist.div(denom) / 100
 
-    return out
+    new_cols = ColRegistry()
+    new_cols.add("pct_col", pct_col)
+    new_cols.add("bps_col", bps_col)
+    log_column_event(caller="with_distance", ev=ColumnLifecycleEvent(key="pct_col", col=pct_col, event="created"))
+    log_column_event(caller="with_distance", ev=ColumnLifecycleEvent(key="bps_col", col=bps_col, event="created"))
+
+    return AnnotatedDF(df=out, new_cols=new_cols, label="with_index_aligned_Δ")
 
 
 

@@ -3,6 +3,9 @@ from __future__ import annotations
 import numpy as _np
 import pandas as _pd
 
+from qlir.core.registries.columns.announce_and_register import announce_column_lifecycle
+from qlir.core.registries.columns.registry import ColKeyDecl, ColRegistry
+from qlir.core.types.annotated_df import AnnotatedDF
 from qlir.df.utils import _ensure_columns
 
 __all__ = ["with_bollinger"]
@@ -19,7 +22,7 @@ def with_bollinger(
     out_lower: str = "boll_lower",
     out_valid: str | None = "boll_valid",
     in_place: bool = True,
-) -> _pd.DataFrame:
+) -> AnnotatedDF:
     """
     Adds Bollinger Bands to a DataFrame.
 
@@ -58,4 +61,13 @@ def with_bollinger(
         # Strictly valid only after `period - 1` rows
         out[out_valid] = _np.arange(len(out)) >= (period - 1)
 
-    return out
+    new_cols = ColRegistry()
+    announce_column_lifecycle(caller="with_bollinger", registry=new_cols, 
+        decls=[
+            ColKeyDecl(key="out_lower", column=out_lower), 
+            ColKeyDecl(key="out_mid", column=out_mid), 
+            ColKeyDecl(key="out_upper", column=out_upper), 
+        ], 
+        event="created")
+
+    return AnnotatedDF(df=out, new_cols=new_cols, label="with_bollinger")
