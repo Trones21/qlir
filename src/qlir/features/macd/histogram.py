@@ -74,3 +74,84 @@ def with_colored_histogram(
 
     return AnnotatedDF(df=df, new_cols=new_cols, label="with_colored_histogram")
 
+
+
+def mark_segment_max_excursion(
+    df: _pd.DataFrame,
+    *,
+    value_col: str,
+    sign_col: str,
+    out_col: str = "is_segment_max_excursion",
+    min_segment_len: int = 3,
+) -> AnnotatedDF:
+    """
+    Marks the bar of maximum excursion within each contiguous sign segment.
+
+    A segment is defined by constant `sign_col` (e.g. histogram sign).
+    Only segments with length >= min_segment_len are considered.
+
+    Exactly one bar per qualifying segment is marked True.
+    All other rows are False.
+    """
+    new_cols = ColRegistry()
+
+    values = df[value_col].tolist()
+    signs = df[sign_col].tolist()
+    n = len(values)
+
+    result = [False] * n
+
+    i = 0
+    while i < n:
+        start = i
+        sgn = signs[i]
+
+        j = i + 1
+        while j < n and signs[j] == sgn:
+            j += 1
+
+        # segment is [start, j)
+        seg_len = j - start
+        if seg_len >= min_segment_len:
+            seg_vals = values[start:j]
+
+            # index of max excursion (first occurrence)
+            k = max(range(seg_len), key=lambda x: abs(seg_vals[x]))
+
+            result[start + k] = True
+
+        i = j
+
+    df[out_col] = result
+
+    announce_column_lifecycle(
+        caller="mark_segment_max_excursion",
+        registry=new_cols,
+        decls=[
+            ColKeyDecl(key="segment_max_excursion", column=out_col),
+        ],
+        event="created",
+    )
+
+    return AnnotatedDF(
+        df=df,
+        new_cols=new_cols,
+        label="mark_segment_max_excursion",
+    )
+
+
+
+# How to use the max excursion
+# absolute excursion per histogram segment
+# mark_segment_max_excursion(
+#     df,
+#     value_col="macd_hist_abs",
+#     sign_col="macd_hist_positive",
+# )
+
+# # signed excursion peak (still works)
+# mark_segment_max_excursion(
+#     df,
+#     value_col="macd_hist",
+#     sign_col="macd_hist_positive",
+# )

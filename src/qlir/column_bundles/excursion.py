@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 
 def excursion(df: pd.DataFrame, trendname_or_col_prefix:str, leg_id_col: str, direction: Direction, mae_or_mfe: ExcursionType) -> AnnotatedDF:
     """
-    Compute per-leg price excursion metrics (MAE or MFE) for directional trend legs.
+    Compute per-leg price excursion metrics for directional trend legs.
 
     This function operates on a pre-segmented price DataFrame containing
     directional trend legs (e.g. SMA up/down legs). For each leg, it computes:
