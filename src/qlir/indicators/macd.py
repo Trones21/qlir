@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as _pd
 
 from qlir.df.utils import _ensure_columns
+
+import logging
+log = logging.getLogger(__name__)
 
 __all__ = ["with_macd"]
 
@@ -37,9 +41,11 @@ def with_macd(
     out[out_signal] = sig
     out[out_hist] = macd - sig
 
+
+    pos = np.arange(len(out))
     # MACD line only valid once we have enough data 
-    out["macd_line_ready"] = df.index >= (slow - 1)
+    out["macd_line_ready"] = pos >= (slow - 1)
     # Signal line & Histogram need even more time
-    out["macd_signal_line_and_hist_ready"] = df.index >= (slow + signal - 1)
+    out["macd_signal_line_and_hist_ready"] = pos >= (slow + signal - 1)
 
     return out

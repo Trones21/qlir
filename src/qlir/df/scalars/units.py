@@ -22,7 +22,7 @@ def delta_in_bps(delta_move: pd.Series, ref_price: pd.Series) -> pd.Series: ...
 
 def delta_in_bps(delta_move, ref_price):
     """
-    Convert an deltaolute price move into basis points (bps)
+    Convert an price move into basis points (bps)
     relative to a reference price.
 
     This function is intentionally written in a *scalar style*
