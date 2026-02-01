@@ -36,6 +36,6 @@ def macd_entry(clean_data: pd.DataFrame) -> pd.DataFrame:
                                        contig_true_rows,
                                        "pyramid_len"
 
-                                       ], from_row_idx=200060, max_rows=100)
+                                       ])
     
     return df

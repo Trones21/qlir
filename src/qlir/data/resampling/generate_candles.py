@@ -12,7 +12,7 @@ from qlir.data.quality.candles.candles import (
 )
 from qlir.df.utils import materialize_index, move_column
 from qlir.logging.logdf import logdf
-from qlir.time.ensure_utc import ensure_utc_series_strict
+from qlir.time.ensure_utc import ensure_utc_series_strict_string
 from qlir.time.timefreq import TimeFreq, TimeUnit
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def _generate(
     # ensure datetime index
     if df.index.name != dt_col:
         log.info(f"Setting index to datetime column '{dt_col}' with UTC normalization")
-        df[dt_col] = ensure_utc_series_strict(df[dt_col])
+        df[dt_col] = ensure_utc_series_strict_string(df[dt_col])
         df = df.set_index(dt_col)
     df = df.sort_index()
 
@@ -102,6 +102,15 @@ def _generate(
     return out
 
 
+def minute_range(start: int, end: int, *, include_1m: bool = True) -> list[int]:
+    if start < 1 or end < 1 or end < start:
+        raise ValueError("start/end must be >= 1 and end >= start")
+    mins = list(range(start, end + 1))
+    if include_1m and 1 not in mins:
+        mins = [1] + mins
+    return mins
+
+
 def generate_candles_from_1m(
     df,
     *,
@@ -122,7 +131,7 @@ def generate_candles_from_1m(
     gaps = detect_missing_candles(df, freq)
     if gaps:
         logdf(NamedDF(df=df, name="canlde_gaps_failure"), level="critical")
-        raise ValueError({"message":"Found gaps in 1 minute data", "gaps": gaps})
+        raise ValueError({"message":"Found gaps in 1 minute data. Please fill data first. you can always filter out the events that overlap the fabricated data by using basically WHERE NOT is_generated_data", "gaps": gaps})
 
     ensure_homogeneous_candle_size(df)
 

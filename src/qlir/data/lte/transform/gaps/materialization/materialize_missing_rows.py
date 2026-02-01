@@ -124,6 +124,10 @@ def materialize_missing_rows(
     # Reindex + mark materialized rows
     # ------------------------------------------------------------------
     out = df.reindex(full_index)
+    
+    # re-materialize timestamp column
+    ts_col = timestamp_col or "tz_start"
+    out[ts_col] = out.index
 
     materialized_mask = ~out.index.isin(df.index)
     out[ROW_MATERIALIZED_COL] = materialized_mask
