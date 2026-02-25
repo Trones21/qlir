@@ -4,7 +4,7 @@ from pandas.api.types import is_datetime64_any_dtype
 def groupby_time(
     df: pd.DataFrame,
     *,
-    ts_col: str | None,
+    ts_col: str | pd.DatetimeIndex | None,
     freq: str,
 ):
     if ts_col is None:

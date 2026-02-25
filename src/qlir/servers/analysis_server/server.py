@@ -6,7 +6,7 @@ import time
 from typing import Any, Mapping
 
 import pandas as pd
-
+from qlir.io.writer import write
 from qlir.servers.analysis_server.emit.alert import emit_alert, write_outbox_registry
 from qlir.servers.analysis_server.emit.outboxes.load import load_outboxes
 from qlir.servers.analysis_server.emit.validate import (
@@ -16,6 +16,7 @@ from qlir.servers.analysis_server.emit.validate import (
 from qlir.servers.analysis_server.df_materialization.registration import df_registration_entrypoint
 from qlir.servers.analysis_server.df_materialization.materialize import materialize_required_dfs
 from qlir.servers.analysis_server.io.load_clean_data import load_clean_data, wait_get_agg_dir_path
+from qlir.servers.analysis_server.runtime_state import end_loop_and_sleep, update_runtime_state, runtime_state_get
 from qlir.servers.analysis_server.state import (
     INITIAL_BACKOFF,
     AlertBackoffState,
@@ -52,6 +53,7 @@ POLL_INTERVAL_SEC = 15
 LAST_N_FILES = 5
 MAX_ALLOWED_LAG_SEC = 120
 
+STATE_PATH = "~/.qlir/state/analysis_server.json"
 
 # --------------------------------------------------------------------------
 # Helpers
@@ -134,6 +136,21 @@ def _eval_events_condition(
     raise ValueError(f"Unsupported events_condition: {condition!r}")
 
 
+def handle_empty_base_df():
+    now = utc_now()
+
+    update_runtime_state("status.mode", "NO_DATA")
+    update_runtime_state("status.reason", "base_df_empty")
+    update_runtime_state("status.last_at", now.isoformat())
+
+    # only set once
+    if runtime_state_get("status.since") is None:
+        update_runtime_state("status.since", now.isoformat())
+
+    # Make it explicit that downstream is not current
+    update_runtime_state("dfs.current", None)
+    update_runtime_state("loop.skip_reason", "base_df_empty")
+
 # --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
@@ -163,6 +180,7 @@ def main() -> None:
 
     alert_states = load_alert_states()
     last_processed_ts = load_last_processed_ts()
+    update_runtime_state("last_processed_ts", last_processed_ts)
 
     # ----------------------------------------------------------------------
     # Analysis loop
@@ -171,7 +189,8 @@ def main() -> None:
     while True:
         base_df = get_clean_data()
         if base_df.empty:
-            time.sleep(POLL_INTERVAL_SEC)
+            handle_empty_base_df()
+            end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)
             continue
 
         data_ts = base_df.iloc[-1][TS_COL]
@@ -214,7 +233,7 @@ def main() -> None:
         # ------------------------------------------------------------------
 
         if last_processed_ts is not None and data_ts <= last_processed_ts:
-            time.sleep(POLL_INTERVAL_SEC)
+            end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)
             continue
 
         # ------------------------------------------------------------------
@@ -225,10 +244,8 @@ def main() -> None:
             base_df=base_df,
             required_df_names=required_df_names,
         )
+        update_runtime_state("materialized_dfs", derived_dfs)
         
-        #Shortcut to allow you to do analysis work via the server (instead of in a separate entrypoint/project)
-        raise NotImplementedError("Doing exploratory work, signals not emitted")
-    
         # ------------------------------------------------------------------
         # Phase 4: event evaluation
         # ------------------------------------------------------------------
@@ -239,6 +256,8 @@ def main() -> None:
         if events_cfg:
             registry = events_cfg["trigger_registry"]
             active = events_cfg["active_triggers"]
+            update_runtime_state("triggers.all", registry)
+            update_runtime_state("triggers.active", active)
 
             for trigger_key in active:
                 spec = registry[trigger_key]
@@ -309,8 +328,9 @@ def main() -> None:
 
         save_last_processed_ts(data_ts)
         last_processed_ts = data_ts
+        update_runtime_state("last_processed_ts", last_processed_ts)
 
-        time.sleep(POLL_INTERVAL_SEC)
+        end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)
 
 
 if __name__ == "__main__":

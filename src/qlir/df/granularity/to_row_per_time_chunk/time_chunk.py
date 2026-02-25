@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Literal, Optional
 
 import pandas as pd
 
@@ -11,10 +12,10 @@ from ..dtype_guard import _validate_metric_dtype
 def to_row_per_time_chunk(
     df: pd.DataFrame,
     *,
-    ts_col: str,
+    ts_col: str | None = None,
     freq: TimeFreq,
     metrics: list[MetricSpec],
-    include_src_row_count: bool = False,
+    include_all_wall_clock_chunks: bool
 ) -> pd.DataFrame:
     """
     Reduce a row-aligned DataFrame to one row per fixed time chunk.
@@ -23,7 +24,7 @@ def to_row_per_time_chunk(
     ----------
     df : pd.DataFrame
         Row-aligned input data.
-    ts_col : str
+    ts_col : str | Literal['__index__']
         Timestamp column used for chunking.
     freq : TimeFreq
         Time frequency definition.
@@ -35,15 +36,16 @@ def to_row_per_time_chunk(
 
     # ---- basic validation --------------------------------------------------
 
-    _validate_ts_ref(df=df, ts_col=ts_col)
+    if ts_col is None:
+        if not isinstance(df.index, pd.DatetimeIndex):
+            raise TypeError("df.index must be DatetimeIndex when ts_col=None")
+    else:
+        _validate_ts_ref(df=df, ts_col=ts_col)
 
     if not isinstance(freq, TimeFreq):
         raise TypeError(
             f"freq must be a TimeFreq instance, got {type(freq).__name__}"
         )
-
-    if not metrics and not include_src_row_count:
-        raise ValueError("No metrics provided and include_src_row_count=False")
 
     # ---- validate metrics --------------------------------------------------
 
@@ -75,10 +77,9 @@ def to_row_per_time_chunk(
 
     # ---- structural metric -------------------------------------------------
 
-    if include_src_row_count:
-        s = grouped.size()
-        s.name = "src_row_count"
-        result_parts.append(s)
+    s = grouped.size()
+    s.name = "src_row_count"
+    result_parts.append(s)
 
     # ---- column metrics ----------------------------------------------------
 
@@ -107,6 +108,23 @@ def to_row_per_time_chunk(
 
     # ---- assemble ----------------------------------------------------------
 
-    out_df = pd.concat(result_parts, axis=1).reset_index()
+    out_df = pd.concat(result_parts, axis=1)
+
+    if not include_all_wall_clock_chunks:
+        out_df = out_df.loc[out_df["src_row_count"] > 0]
+
+    # src_row_count should be zero for the bucekts we created (no src rows)
+    if include_all_wall_clock_chunks:
+        out_df["src_row_count"] = out_df["src_row_count"].fillna(0).astype(int)
+
+    # also for count_true metrics (otherwise this would be NA, but we likely want zero)
+    for m in metrics:
+        if m.agg == Aggregation.COUNT_TRUE:
+            out_df[m.resolve_out_name()] = (
+                out_df[m.resolve_out_name()].fillna(0).astype(int)
+            )
+
+
+    out_df = out_df.reset_index().rename(columns={"index": "dt"})
 
     return out_df

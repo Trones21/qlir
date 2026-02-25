@@ -5,8 +5,7 @@ from .builders import (
     build_df_boll
 )
 
-from dataclasses import dataclass
-from typing import Iterable
+
 from qlir.exceptions import QLIRRegistrationError, RegistryNotEmptyDetails
 
 
@@ -55,5 +54,6 @@ def example():
     # register_df("df_path_length", path_length)
 
     # -- initial test ---
+    #register_df()
     register_df("df_path_len", build_df_path_len_cols)
     register_df("df_boll", build_df_boll)
