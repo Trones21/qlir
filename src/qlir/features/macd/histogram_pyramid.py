@@ -238,6 +238,7 @@ def macd_full_pyramidal_annotation(
     """
     out, mem_ev = df_copy_measured(df=df, label="macd_full_pyramidal_annotation")
     log_memory_info(ev=mem_ev, log=log)
+    
     if hist_col not in out.columns:
         raise KeyError(f"hist_col={hist_col!r} not found in df")
     if group_col not in out.columns:
