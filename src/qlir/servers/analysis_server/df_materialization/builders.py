@@ -2,7 +2,7 @@ import pandas as pd
 
 from qlir.servers.analysis_server.analyses.path_length import path_length_cols
 from qlir.servers.analysis_server.analyses.boll.boll_initial import boll_entry
-from qlir.servers.analysis_server.analyses.macd.macd_initial import macd_entry
+from qlir.servers.analysis_server.analyses.macd.macd_initial import macd_basic, macd_pyramid_perfect_frontside_plus_one_backside_light
 # 
 
 # examples 
@@ -18,5 +18,6 @@ def build_df_path_len_cols(base_df: pd.DataFrame) -> pd.DataFrame:
 def build_df_boll(base_df: pd.DataFrame) -> pd.DataFrame:
     return boll_entry(base_df)
 
-def build_macd(base_df: pd.DataFrame) -> pd.DataFrame:
-    return macd_entry(base_df)
+def build_macd_1m(base_df: pd.DataFrame) -> pd.DataFrame:
+    df = macd_basic(base_df)
+    return macd_pyramid_perfect_frontside_plus_one_backside_light(df)

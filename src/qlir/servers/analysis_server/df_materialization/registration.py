@@ -2,7 +2,9 @@ from qlir.servers.analysis_server.df_materialization.registrar import register_d
 
 from .builders import (
     build_df_path_len_cols,
-    build_df_boll
+    build_df_boll,
+    build_macd_1m
+
 )
 
 
@@ -54,6 +56,6 @@ def example():
     # register_df("df_path_length", path_length)
 
     # -- initial test ---
-    #register_df()
-    register_df("df_path_len", build_df_path_len_cols)
-    register_df("df_boll", build_df_boll)
+    register_df("1m_macd_with_pyramids", builder=build_macd_1m)
+    # register_df("df_path_len", build_df_path_len_cols)
+    # register_df("df_boll", build_df_boll)

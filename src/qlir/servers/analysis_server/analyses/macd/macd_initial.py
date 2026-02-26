@@ -13,7 +13,7 @@ from qlir.df.scalars.units import delta_in_bps
 import logging
 log = logging.getLogger(__name__)
 
-def macd_entry(clean_data: pd.DataFrame) -> pd.DataFrame:
+def macd_basic(clean_data: pd.DataFrame) -> pd.DataFrame:
 
     df = with_macd(df=clean_data)
     df["normalized_macd_Δ"] = delta_in_bps(df["macd"], df["close"])
@@ -38,4 +38,10 @@ def macd_entry(clean_data: pd.DataFrame) -> pd.DataFrame:
 
                                        ])
     
+    return df
+
+
+def macd_pyramid_perfect_frontside_plus_one_backside_light(df: pd.DataFrame):
+    logdf(df)
+    raise NotImplementedError("We need to add the column perfect_frontside_plus_1_light")
     return df

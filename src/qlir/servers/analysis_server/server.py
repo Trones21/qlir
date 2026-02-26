@@ -161,8 +161,11 @@ def main() -> None:
     # ----------------------------------------------------------------------
 
     outboxes = load_outboxes()
+    update_runtime_state("outboxes", outboxes)
 
     for outbox_name, cfg in outboxes.items():
+        log.info(f"outbox name: {outbox_name}")
+        log.info(f"outbox cfg: {cfg}")
         validate_trigger_registry(cfg["trigger_registry"])
         validate_active_triggers(cfg["active_triggers"], cfg["trigger_registry"])
 

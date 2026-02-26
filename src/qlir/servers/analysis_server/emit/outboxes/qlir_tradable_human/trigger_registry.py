@@ -14,4 +14,12 @@
 #     }
 # }
 
-TRIGGER_REGISTRY = {} 
+TRIGGER_REGISTRY = {
+    "perfect_macd_pyramid_frontside_reversal_point": {
+        "type": "df_column", 
+        "name": "perfect_macd_pyramid_frontside_reversal_point",
+        "description": "When we have a perfect frontside (either direction), and we get the reversal signal. DF granularity determined by the DF",
+        "df": "1m_macd_with_pyramids",
+        "column": "perfect_frontside_plus_1_light",
+    }
+}
