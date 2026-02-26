@@ -19,5 +19,5 @@ def build_df_boll(base_df: pd.DataFrame) -> pd.DataFrame:
     return boll_entry(base_df)
 
 def build_macd_1m(base_df: pd.DataFrame) -> pd.DataFrame:
-    df = df_macd_full_pyramidal_annotation(base_df)
-    return macd_pyramid_perfect_frontside_plus_one_backside_light(df)
+    adf = df_macd_full_pyramidal_annotation(base_df)
+    return macd_pyramid_perfect_frontside_plus_one_backside_light(adf)
