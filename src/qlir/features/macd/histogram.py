@@ -2,53 +2,68 @@ import pandas as _pd
 from qlir.core.registries.columns.announce_and_register import announce_column_lifecycle
 from qlir.core.registries.columns.registry import ColKeyDecl, ColRegistry
 from qlir.core.types.annotated_df import AnnotatedDF
+from qlir.df.utils import _ensure_columns
 
 
 def with_colored_histogram(
     df: _pd.DataFrame,
     *,
-    fast_col: str,
-    slow_col: str,
+    hist_col: str = "macd_hist",
     prefix: str = "macd",
     as_int: bool = False,
 ) -> AnnotatedDF:
     """
-    Encodes MACD fast/slow distance with N-1 expansion logic.
+    Encodes MACD histogram acceleration state using N-1 expansion logic.
+
+    Inputs:
+        hist_col : MACD histogram column (macd_line - signal_line)
 
     Outputs:
-        {prefix}_dist       : signed distance (fast - slow)
-        {prefix}_dist_abs   : absolute distance
-        {prefix}_dist_color : expansion-aware color
+        {prefix}_hist_abs   : absolute histogram magnitude
+        {prefix}_hist_color : expansion-aware color
+        {prefix}_rg         : regime-only color ("green"|"red")
 
-    String encoding (default):
-        "dark_green"  = bullish, expanding
-        "light_green" = bullish, contracting
-        "light_red"   = bearish, contracting
-        "dark_red"    = bearish, expanding
+    String encoding:
+        dark_green  = bullish acceleration increasing
+        light_green = bullish acceleration decreasing
+        light_red   = bearish acceleration decreasing
+        dark_red    = bearish acceleration increasing
 
-    Integer encoding (as_int=True):
+    Integer encoding:
         +2 = dark green
         +1 = light green
         -1 = light red
         -2 = dark red
     """
+
     new_cols = ColRegistry()
 
-    dist_col = f"{prefix}_dist"
-    dist_abs_col = f"{prefix}_dist_abs"
-    color_col = f"{prefix}_dist_color"
+    hist_abs_col = f"{prefix}_hist_abs"
+    color_col = f"{prefix}_hist_color"
+    rg_col = f"{prefix}_rg"
+
+    _ensure_columns(df=df, cols=hist_col, caller="with_colored_histogram")
+
+    hist = df[hist_col]
 
     # --- core math ---
-    df[dist_col] = df[fast_col] - df[slow_col]
-    df[dist_abs_col] = df[dist_col].abs()
+    df[hist_abs_col] = hist.abs()
 
-    expanding = df[dist_abs_col] > df[dist_abs_col].shift(1)
-    bullish = df[dist_col] > 0
+    expanding = df[hist_abs_col] > df[hist_abs_col].shift(1)
+    bullish = hist > 0
 
     mag = expanding.map({True: 2, False: 1})
     sign = bullish.map({True: 1, False: -1})
 
     color_int = mag * sign
+
+    # --- regime only ---
+    df[rg_col] = color_int.map({
+        2: "green",
+        1: "green",
+        -1: "red",
+        -2: "red",
+    })
 
     # --- final encoding ---
     if as_int:
@@ -62,18 +77,17 @@ def with_colored_histogram(
         })
 
     announce_column_lifecycle(
-        caller="macd_distance_color",
+        caller="macd_histogram_color",
         registry=new_cols,
         decls=[
-            ColKeyDecl(key="dist", column=dist_col),
-            ColKeyDecl(key="dist_abs", column=dist_abs_col),
-            ColKeyDecl(key="dist_color", column=color_col),
+            ColKeyDecl(key="hist_abs", column=hist_abs_col),
+            ColKeyDecl(key="hist_color", column=color_col),
+            ColKeyDecl(key="rg", column=rg_col),
         ],
         event="created",
     )
 
     return AnnotatedDF(df=df, new_cols=new_cols, label="with_colored_histogram")
-
 
 
 def mark_segment_max_excursion(

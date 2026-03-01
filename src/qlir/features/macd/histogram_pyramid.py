@@ -187,13 +187,23 @@ class PyrCols:
     apex_val: str
     is_front: str
     is_back: str
+    side: str         
     ord: str
     front_ord: str
     front_len: str
     back_ord: str
     back_len: str
-    viol_front: str
-    viol_back: str
+    is_viol_front: str
+    is_viol_back: str
+    viol_any: str
+    viol_front_run_dense: str
+    viol_back_run_dense: str
+    viol_front_run_sparse: str
+    viol_back_run_sparse: str
+    viol_total: str
+    viol_front_total: str
+    viol_back_total: str
+
 
 def _pyr_cols(out_prefix: str) -> PyrCols:
     return PyrCols(
@@ -201,13 +211,22 @@ def _pyr_cols(out_prefix: str) -> PyrCols:
         apex_val=f"{out_prefix}apex_val",
         is_front=f"is_{out_prefix}front",
         is_back=f"is_{out_prefix}back",
+        side=f"{out_prefix}side",
         ord=f"{out_prefix}ord",
         front_ord=f"{out_prefix}front_ord",
         front_len=f"{out_prefix}front_len",
         back_ord=f"{out_prefix}back_ord",
         back_len=f"{out_prefix}back_len",
-        viol_front=f"{out_prefix}viol_front",
-        viol_back=f"{out_prefix}viol_back",
+        is_viol_front=f"{out_prefix}is_viol_front",
+        is_viol_back=f"{out_prefix}is_viol_back",
+        viol_any=f"{out_prefix}viol_any",
+        viol_front_run_dense=f"{out_prefix}viol_front_run_dense",
+        viol_back_run_dense=f"{out_prefix}viol_back_run_dense",
+        viol_front_run_sparse=f"{out_prefix}viol_front_run_sparse",
+        viol_back_run_sparse=f"{out_prefix}viol_back_run_sparse",
+        viol_front_total=f"{out_prefix}viol_front_total",
+        viol_back_total=f"{out_prefix}viol_back_total",
+        viol_total=f"{out_prefix}viol_total",
     )
 
 
@@ -250,34 +269,48 @@ def macd_full_pyramidal_annotation(
 
     abs_hist = out[hist_col].abs()
 
-
-
     new_cols = ColRegistry(owner="macd_full_pyramidal_annotation")
     cols = _pyr_cols(out_prefix)
+    
     # ------------------------------------------------------------------
-    # 1. Identify apex per pyramid (max |hist| inside each group)
-    # ------------------------------------------------------------------
-    # Series: group_id -> index label of max |hist|
-    apex_idx_by_group = abs_hist.groupby(out[group_col], sort=False).idxmax()
-    # Series: group_id -> apex |hist|
-    apex_val_by_group = abs_hist.loc[apex_idx_by_group.values].to_numpy()
-    apex_val_by_group = _pd.Series(apex_val_by_group, index=apex_idx_by_group.index)
-
-    # Broadcast to rows
-    out[cols.apex_idx] = out[group_col].map(apex_idx_by_group)
-    out[cols.apex_val] = out[group_col].map(apex_val_by_group)
-
-    # ------------------------------------------------------------------
-    # 2. Classify rows as front/back relative to apex index
-    # ------------------------------------------------------------------
-    # Apex row is neither front nor back (both False)
-    out[cols.is_front] = out.index < out[cols.apex_idx]
-    out[cols.is_back] = out.index > out[cols.apex_idx]
-
-    # ------------------------------------------------------------------
-    # 3. Ordinal position within entire pyramid
+    # 0. Ordinal position within entire pyramid (needed for apex ordinal)
     # ------------------------------------------------------------------
     out[cols.ord] = out.groupby(group_col, sort=False).cumcount()
+
+    abs_hist = out[hist_col].abs()
+
+    # ------------------------------------------------------------------
+    # 1. Identify apex per pyramid (ordinal position of max |hist|)
+    # ------------------------------------------------------------------
+    # Per-row max(|hist|) within group
+    gmax = abs_hist.groupby(out[group_col], sort=False).transform("max")
+
+    # Rows that hit the max (ties possible)
+    is_apex_candidate = abs_hist.eq(gmax)
+
+    # Apex ordinal = first ordinal in the group that hits the max
+    apex_ord = (
+        out[cols.ord]
+        .where(is_apex_candidate)
+        .groupby(out[group_col], sort=False)
+        .transform("min")
+    )
+
+    # Broadcast to rows
+    out[cols.apex_idx] = apex_ord  # NOTE: pyr_apex_idx is now ordinal, not datetime
+    out[cols.apex_val] = gmax      # apex |hist| (same for all rows in group)
+
+    # ------------------------------------------------------------------
+    # 2. Classify rows as front/back relative to apex ordinal
+    #    Apex is considered FRONT.
+    # ------------------------------------------------------------------
+    out[cols.is_front] = out[cols.ord] <= out[cols.apex_idx]  # <= includes apex
+    out[cols.is_back]  = out[cols.ord] >  out[cols.apex_idx]
+
+    # ------------------------------------------------------------------
+    # 3. Side enum (string)
+    # ------------------------------------------------------------------
+    out[cols.side] = _np.where(out[cols.is_front].to_numpy(), "frontside", "backside")
 
     # ------------------------------------------------------------------
     # 4/5. Ordinal positions + lengths within front/back sides
@@ -308,22 +341,76 @@ def macd_full_pyramidal_annotation(
     # 7/8. Monotonic violations on each side (strict expectation)
     # ------------------------------------------------------------------
     # Front: |hist| should be non-decreasing toward apex => diff < 0 is violation
-    out[cols.viol_front] = False
+    out[cols.is_viol_front] = False
     if front_mask.any():
         d_front = abs_hist.loc[front_mask].groupby(out.loc[front_mask, group_col], sort=False).diff()
-        out.loc[front_mask, cols.viol_front] = (d_front < 0).fillna(False).to_numpy()
+        out.loc[front_mask, cols.is_viol_front] = (d_front < 0).fillna(False).to_numpy()
 
     # Back: |hist| should be non-increasing away from apex => diff > 0 is violation
-    out[cols.viol_back] = False
+    out[cols.is_viol_back] = False
     if back_mask.any():
         d_back = abs_hist.loc[back_mask].groupby(out.loc[back_mask, group_col], sort=False).diff()
-        out.loc[back_mask, cols.viol_back] = (d_back > 0).fillna(False).to_numpy()
+        out.loc[back_mask, cols.is_viol_back] = (d_back > 0).fillna(False).to_numpy()
 
     # Optional derived convenience cols (keep front/back as ground truth)
-    out[f"{out_prefix}viol_any"] = out[cols.viol_front] | out[cols.viol_back]
-    out[f"{out_prefix}viol_total"] = (
-        out[cols.viol_front].astype(_np.int8) + out[cols.viol_back].astype(_np.int8)
-    )
+
+    out[f"{out_prefix}viol_any"] = out[cols.is_viol_front] | out[cols.is_viol_back]
+
+    # ==== Frontside - Running Counts (dense, sparse (to be implemented) and Total =====================
+
+    out[cols.viol_front_run] = 0
+
+    if front_mask.any():
+        out.loc[front_mask, cols.viol_front_run] = (
+            out.loc[front_mask, cols.is_viol_front]
+                .groupby(out.loc[front_mask, group_col], sort=False)
+                .cumsum()
+                .astype("int64")
+                .to_numpy()
+        )
+
+    out[cols.viol_front_total] = 0
+
+    if front_mask.any():
+        out.loc[front_mask, cols.viol_front_total] = (
+            out.loc[front_mask, cols.viol_front_run]
+                .groupby(out.loc[front_mask, group_col], sort=False)
+                .transform("max")
+                .astype("int64")
+                .to_numpy()
+        )
+
+    out[f"{out_prefix}viol_front_total"] = out[cols.viol_front_total].astype(_np.int8) 
+    
+    # ==== Backside - Running Counts (dense, sparse (to be implemented) and Total =====================
+
+    out[cols.viol_back_run] = 0
+
+    if back_mask.any():
+        out.loc[back_mask, cols.viol_back_run] = (
+            out.loc[back_mask, cols.is_viol_back]
+                .groupby(out.loc[back_mask, group_col], sort=False)
+                .cumsum()
+                .astype("int64")
+                .to_numpy()
+        )
+
+    out[cols.viol_back_total] = 0
+
+    if back_mask.any():
+        out.loc[back_mask, cols.viol_back_total] = (
+            out.loc[back_mask, cols.viol_back_run]
+                .groupby(out.loc[back_mask, group_col], sort=False)
+                .transform("max")
+                .astype("int64")
+                .to_numpy()
+        )
+
+    out[f"{out_prefix}viol_back_total"] = out[cols.viol_back_total].astype(_np.int8) 
+    
+    
+    out[f"{out_prefix}viol_total"] = "tbimp"
+
 
     announce_column_lifecycle(
         caller="macd_full_pyramidal_annotation",
@@ -331,27 +418,30 @@ def macd_full_pyramidal_annotation(
         decls=[
             ColKeyDecl("pyr_apex_idx", cols.apex_idx),
             ColKeyDecl("pyr_apex_val", cols.apex_val),
-            ColKeyDecl("pyr_is_front", cols.is_front),
-            ColKeyDecl("pyr_is_back", cols.is_back),
+            ColKeyDecl("is_pyr_front", cols.is_front),
+            ColKeyDecl("is_pyr_back", cols.is_back),
+            ColKeyDecl("pyr_side", cols.side),
             ColKeyDecl("pyr_ord", cols.ord),
             ColKeyDecl("pyr_front_ord", cols.front_ord),
             ColKeyDecl("pyr_front_len", cols.front_len),
             ColKeyDecl("pyr_back_ord", cols.back_ord),
             ColKeyDecl("pyr_back_len", cols.back_len),
-            ColKeyDecl("pyr_viol_front", cols.viol_front),
-            ColKeyDecl("pyr_viol_back", cols.viol_back),
-            # optional derived outputs if you add them:
-            # ColKeyDecl("pyr_viol_any", f"{out_prefix}viol_any"),
-            # ColKeyDecl("pyr_viol_total", f"{out_prefix}viol_total"),
+            ColKeyDecl("pyr_is_viol_front", cols.is_viol_front),
+            ColKeyDecl("pyr_is_viol_back", cols.is_viol_back),
+            # some derived outputs:
+            ColKeyDecl("pyr_viol_any", f"{out_prefix}viol_any"),
+            ColKeyDecl("pyr_viol_front_run_dense", f"{out_prefix}viol_front_run_dense"),
+            ColKeyDecl("pyr_viol_back_run_dense", f"{out_prefix}viol_back_run_dense"),
+            ColKeyDecl("pyr_viol_front_run_sparse", f"{out_prefix}viol_front_run_sparse"),
+            ColKeyDecl("pyr_viol_front_run_sparse", f"{out_prefix}viol_front_run_sparse"),
+            ColKeyDecl("pyr_viol_front_total", f"{out_prefix}viol_front_total"),
+            ColKeyDecl("pyr_viol_back_total", f"{out_prefix}viol_back_total"),
+            ColKeyDecl("pyr_viol_total", f"{out_prefix}viol_total"),
         ],
         event="created",
     )
     verify_declared_cols_exist(df=out, registry=new_cols, caller="macd_full_pyramidal_annotation")
     return AnnotatedDF(df=out, new_cols=new_cols, label="macd_full_pyramidal_annotation")
-
-
-
-
 
 
 # def macd_full_pyramidal_annotation(
