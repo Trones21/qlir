@@ -46,11 +46,21 @@ def df_macd_full_pyramidal_annotation(clean_data: pd.DataFrame) -> AnnotatedDF:
 def macd_pyramid_perfect_frontside_plus_one_backside_light(adf: AnnotatedDF):
     log.info(f"df columns {adf.df.columns}")
     log.info([k for k in adf.new_cols.keys()])
+
+    frontside_viol_grps = adf.df.groupby(['group_id', 'is_pyr_front'])['pyr_viol_front_total']
+
+    adf.df['perfect_frontside'] = frontside_viol_grps.transform('max') == 0
+
+    adf.df['perf_front_plus_one_mark'] = (
+    (adf.df['pyr_side'] == 'backside') &
+    (adf.df['perfect_frontside'].shift(1) == True)
+)
+
     # mask = adf.df["pyr_viol_total"].eq(1).groupby(adf.df["group_id"]).transform("any")
     #df_filtered = adf.df[mask]
-    df_filtered = adf.df
+    df_filtered = adf.df.tail(100)
     # logdf(df_filtered,  max_rows=100, cols_filter_all_dfs=["group_id", "macd_hist", "macd_hist_color", *adf.new_cols.keys()])
-    logdf(df_filtered,  max_rows=100, cols_filter_all_dfs=["group_id", "macd_hist", "macd_hist_color", "pyr_apex_idx", "pyr_ord", "pyr_side", "pyr_is_viol_front", "pyr_viol_front_run", "pyr_viol_front_total"])
+    logdf(df_filtered,  max_rows=200, cols_filter_all_dfs=["group_id", "macd_hist", "macd_hist_color", "pyr_apex_idx", "pyr_ord", "pyr_side", "pyr_is_viol_front", "pyr_viol_front_run", "pyr_viol_front_total"])
 
     raise NotImplementedError("We need to add the column perfect_frontside_plus_1_light")
     return df
