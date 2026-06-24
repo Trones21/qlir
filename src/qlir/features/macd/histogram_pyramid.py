@@ -572,7 +572,6 @@ def mark_side_apex_events(
     return df
 
 
-
 # old implementation 
 # def macd_full_pyramidal_annotation(
 #     df: _pd.DataFrame,

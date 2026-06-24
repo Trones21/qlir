@@ -8,7 +8,7 @@ QLIR_REFRESH_ON_METADATA_SCHEMA_MISMATCH=1
 # e.g. tail -f /home/tjr/qlir_data/binance/klines/raw/BTCUSDT/1m/limit=1000/logs/
 
 # Run the Data Server
-poetry run binance-data-server-arg --endpoint klines --symbol BTCUSDT --interval "1s" --log-profile "qlir-debug" 
+poetry run data_server --endpoint klines --symbol BTCUSDT --interval "1s" --log-profile "qlir-debug" 
 
 # 10m test run
 # 

@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED / OLD — reference only.**
+> This is an older `afterdata`-style scaffold and is **not** how the live QLIR pipeline
+> runs today. It uses the legacy multi-entry-point ETL (`binance-data-server-arg`,
+> `binance-agg-server-arg`, `fetch_raw_*`, `aggregate_raw`). The current pipeline uses the
+> collapsed `data_server` / `agg_server` entry points and runs as long-lived services —
+> see [`src/qlir/servers/README.md`](../../src/qlir/servers/README.md). Kept here for
+> historical reference; don't copy these scripts/entry points into new work.
+
 # afterdata
 
 🚀 **QLIR Quickstart Scaffold**
