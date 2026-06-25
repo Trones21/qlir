@@ -1,8 +1,6 @@
-#!/bin/bash/
-
-# This script installs the dependcencies and sets up the servers  
-
 #!/usr/bin/env bash
+
+# This script installs the dependencies and sets up the servers
 
 set -euo pipefail
 
@@ -85,8 +83,30 @@ log "Python found: $PYTHON ($PYTHON_VERSION)"
 
 log "Checking for pip..."
 if ! $PYTHON -m pip --version >/dev/null 2>&1; then
-  warn "pip not found. Attempting to bootstrap pip..."
-  $PYTHON -m ensurepip --upgrade || error "Failed to install pip"
+  warn "pip not found. Installing..."
+
+  # 1) Try the stdlib bootstrap (works when ensurepip is present).
+  if $PYTHON -m ensurepip --upgrade >/dev/null 2>&1; then
+    log "pip bootstrapped via ensurepip"
+  # 2) Fall back to the system package manager (ensurepip is often absent on Debian/Ubuntu).
+  elif command_exists apt-get; then
+    sudo apt-get update
+    sudo apt-get install -y python3-pip
+  elif command_exists dnf; then
+    sudo dnf install -y python3-pip
+  elif command_exists pacman; then
+    sudo pacman -S --noconfirm python-pip
+  elif command_exists brew; then
+    warn "On macOS pip ships with python3; ensure Python was installed via brew/python.org"
+  # 3) Last resort: official get-pip.py bootstrap script.
+  elif command_exists curl; then
+    warn "Falling back to get-pip.py..."
+    curl -sSL https://bootstrap.pypa.io/get-pip.py | $PYTHON - || error "Failed to install pip"
+  else
+    error "Could not install pip: no ensurepip, package manager, or curl available"
+  fi
+
+  $PYTHON -m pip --version >/dev/null 2>&1 || error "pip installation did not succeed"
 fi
 
 log "pip found: $($PYTHON -m pip --version)"

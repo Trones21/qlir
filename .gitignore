@@ -56,7 +56,9 @@ __pypackages__/
 *.csv
 
 # Accidental notification server alerts folder 
-/alerts/
-src/qlir/servers/alerts/
 alert_backoff_state.json
 analysis_state.json
+
+
+#temp
+talking-points.md

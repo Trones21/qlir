@@ -84,6 +84,22 @@ workflow is documented in:
 
 ---
 
+## Installation
+
+Setup scripts for running the pipeline live in [src/qlir/servers/](src/qlir/servers/):
+
+- **[full_install.sh](src/qlir/servers/full_install.sh)** — one-shot installer; runs the two
+  scripts below in order.
+- **[install_system_deps.sh](src/qlir/servers/install_system_deps.sh)** — installs system
+  prerequisites: `tmux`, checks `git`/Python, and bootstraps `pip` and `poetry`.
+- **[clone_repo_and_install_py_deps.sh](src/qlir/servers/clone_repo_and_install_py_deps.sh)** —
+  clones the repo and runs `poetry install`.
+
+```bash
+cd src/qlir/servers
+bash ./full_install.sh        # or run install_system_deps.sh / clone_repo_and_install_py_deps.sh individually
+```
+
 ## Quickstart
 
 ```text
