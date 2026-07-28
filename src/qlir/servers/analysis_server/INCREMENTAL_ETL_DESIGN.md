@@ -219,11 +219,50 @@ pieces — the freshness fingerprint, the window load, and (step 2) the splice �
 so each loop prints how long each stage took and idle-vs-active loops are
 directly comparable.
 
-## Validation without a real dataset
+## Testing (no real dataset required)
 
-We do **not** need the production dataset to prove correctness. Build **synthetic
-candle fixtures** with dupes and gaps placed exactly on chunk boundaries, then
-assert `full_each_loop` output == `incremental` output **row-for-row** over a
-replayed sequence of chunk/head states. That parity harness is the acceptance
-gate; the real dataset is only needed later for the (separate) Polars-vs-pandas
-performance comparison.
+There are **two different things** to test, and they must not be conflated:
+
+### 1. Does the provider machinery splice correctly? (our code)
+`tests/.../io/test_clean_data_provider_parity.py` replays an evolving directory
+(append, rotate, seam gap + duplicate boundary candle, window slide) and asserts
+`incremental == full_each_loop` row-for-row, for a dedupe-only and a
+gap-materializing pipeline, at `last_n_files` 0 and 3. This is the acceptance
+gate for the splice itself.
+
+### 2. Is a user's ETL pipeline incremental-safe? (their code)
+This is the real ongoing risk: the ETL is **user-authored**, and incremental
+mode only matches full mode when the pipeline's cross-row dependencies stay
+within `overlap_files` chunks. A pipeline that reaches further back — a global
+normalization, a cumulative over all history, a rolling window wider than the
+overlap — will **silently** diverge in incremental mode.
+
+So we ship the parity check as a reusable, framework-agnostic helper,
+`etl/parity.py :: assert_incremental_parity(pipeline, raw_stream, tmp_path=...)`.
+It needs no production data — only a *representative* raw stream. It simulates
+the agg server (rows arrive, full chunks seal write-once, the tail stays as the
+volatile head), and asserts `incremental == full` at every step and for several
+window sizes. Every pipeline author should have a one-line test:
+
+```python
+def test_my_pipeline_is_incremental_safe(tmp_path):
+    assert_incremental_parity(MY_PIPELINE, my_representative_raw_rows(), tmp_path=tmp_path)
+```
+
+**The checker has teeth** — proven by `tests/.../etl/test_pipeline_parity_helper.py`,
+which includes a deliberately non-local pipeline (a column that depends on the
+count of all rows) and asserts the helper *catches* it. A parity checker that
+never fails would be worthless; this one demonstrably fails on a contract
+violation.
+
+### 3. Optional: a live parity guard on real data (future, needs a decision)
+When real data does start flowing, the strongest possible check is to run **both**
+modes for a bounded window (e.g. the first N loops, or every K loops) and assert
+they agree, alerting loudly on divergence. This turns real production data into
+the test oracle without anyone pre-collecting a fixture — directly addressing
+"we don't have the data yet." Cost: it doubles the ETL work while active, so it
+would be opt-in (e.g. `QLIR_ETL_PARITY_CHECK=<n_loops>`) and off by default.
+Deferred pending a decision on shape (how long/often, alert vs hard-fail).
+
+The real dataset is otherwise only needed later for the (separate)
+Polars-vs-pandas performance comparison.
