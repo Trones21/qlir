@@ -1,122 +1,95 @@
-# Polars vs Pandas benchmark (analysis pipelines)
+# Polars vs Pandas — op-class map (technical-analysis library)
 
-A runbook to measure how analysis-pipeline compute scales on **pandas** vs
-**polars**, so the choice is driven by data instead of vibes.
+A runbook to measure **which operation classes** are faster in pandas vs polars,
+so the choice is driven by a durable map instead of per-pipeline surprises.
 
-## Why this exists / what it answers
+## Why the unit is the *operation*, not the pipeline
 
-The ETL redundancy is already solved (incremental ETL), so the open question is
-the **analysis** compute: on larger, higher-frequency data, is pandas a
-bottleneck, and would polars help? The honest answer is **pipeline- and
-size-dependent** — this harness measures it rather than guessing.
+A pipeline is a composition of primitives, and the engine winner is a property of
+the **op-class** (rolling, groupby-transform, cumulative, …), not the pipeline.
+Benchmarking whole pipelines gave a different answer each time — because each
+pipeline is a different *mix* of op-classes. Benchmarking the primitives instead
+yields a **map** ("rolling → ~1.2x polars, groupby → polars at scale, segment →
+pandas, …") that generalizes to any pipeline built from them.
 
-## What's compared
+This is a **library** concern, not the analysis server: the engine decision is
+made per primitive (`indicators.sma`, the groupby bundles, …).
 
-Two representative pipelines, each implemented in **matched pandas + polars
-twins** (so parity is easy to verify — see below). They stress different
-operations because polars' relative advantage varies a lot by operation type:
+## Two suites
 
-- **`indicators`** — rolling mean/std + `ewm` (indicator computation).
-- **`events`** — condition → segment id (`cumsum` on change) → per-segment run
-  length + range via groupby (event/segment analysis).
+- **`ops`** (default) — primitive micro-benchmarks in `ops.py`, tagged by
+  op-class. This produces the map.
+- **`pipelines`** — composed pipelines in `pipelines.py`. Kept as a *validation*
+  layer: does a pipeline's measured time ≈ the sum of its ops? If yes, the map is
+  trustworthy for reasoning about pipelines.
 
-Add more in `pipelines.py` as `<name>_pandas` / `<name>_polars`.
+Each op/pipeline is implemented as matched pandas + polars twins; parity is
+enforced (`tests/benchmarks/test_op_parity.py`, `test_pipeline_parity.py`) so a
+faster wrong answer never counts.
 
 ## Data
 
-Synthetic **1-second** OHLCV candles. Performance depends on row count and
-dtypes, not on realistic market structure, so **no production data is needed**
-for a speed comparison (real data was only needed for ETL *correctness*).
-
-1-second is the regime that matters: at 1-minute, even complex analyses finish
-in seconds. Row-count → time-span reference:
-
-| rows   | ~span of 1s candles |
-|--------|---------------------|
-| 100k   | ~1 day              |
-| 1M     | ~11.6 days          |
-| 5M     | ~2 months           |
-| 30M    | ~1 year             |
-
-**Memory is the real ceiling.** ~30M float64 rows × 6 cols ≈ 1.4 GB per copy,
-and pandas ops copy — size to what the machine can hold.
+Synthetic **1-second** OHLCV candles. Speed depends on row count and dtypes, not
+market realism, so **no production data is needed**. 1s is the regime that
+matters (1-minute analyses finish in seconds). Row-count → span: 100k ≈ 1 day,
+1M ≈ 11.6 days, 5M ≈ 2 months, 30M ≈ 1 year. **Memory is the ceiling** (~30M
+float64 × 6 cols ≈ 1.4 GB per copy; pandas ops copy).
 
 ## Runbook
 
 ```bash
-# 0. one-time: install the bench extra (adds polars)
-pip install -e '.[bench]'          # or: poetry run pip install polars
+pip install -e '.[bench]'                                   # adds polars
 
-# 1. generate datasets (comma list; k/m suffixes ok)
-python -m benchmarks.gen_data --rows 100k,1m,5m --out benchmarks/data
+python -m benchmarks.gen_data  --rows 100k,1m,5m            # sized 1s candles
+python -m pytest tests/benchmarks/                          # verify twins agree
+python -m benchmarks.run_bench --suite ops --repeats 5      # the op map
+python -m benchmarks.plot_results                           # -> results/plots/*.png
 
-# 2. run the matrix (pipeline x engine x size), 5 repeats each
-python -m benchmarks.run_bench --pipelines indicators,events \
-    --engines pandas,polars --repeats 5
-
-# 3. results:
-#    benchmarks/results/results.csv   appended, one row per pipeline/engine/size
-#    benchmarks/results/logs/*.json   raw per-run timings, persisted
-
-# 4. charts from results.csv
-python -m benchmarks.plot_results
-#    benchmarks/results/plots/{wall_time,peak_memory,speedup}.png
+# validation layer (optional): do the composed pipelines match the sum of ops?
+python -m benchmarks.run_bench --suite pipelines --repeats 5
 ```
 
-Each config runs in its **own subprocess**, so peak memory (`ru_maxrss`) is
-isolated and a big pandas run can't inflate a polars measurement.
-`results.csv` and `data/` are git-ignored (environment-specific / large);
-regenerate as needed.
+Outputs: `results/results.csv` (appended, one row per unit/engine/size),
+`results/logs/*.json` (raw), `results/plots/{speedup_map,speedup_vs_size}.png`.
+`data/` and `results/` are git-ignored (regenerable / environment-specific).
 
-### Verify the implementations agree (do this first / when editing pipelines)
+## Reading the results — before you conclude anything
 
-```bash
-python -m pytest tests/benchmarks/test_pipeline_parity.py
-```
+- **Fair implementations matter more than the engine.** A naive pandas
+  `groupby.transform(lambda …)` once made polars look 57–70x faster; the
+  idiomatic vectorized form flipped it. `ops.py` uses idiomatic code on both
+  sides — keep it that way when you add ops.
+- **Memory pressure invalidates timings — the harness guards it.** Each run
+  records peak RSS, bytes swapped out during timing, available RAM, and frame
+  size. A run is flagged `mem_pressure` if it swapped **or** peak RSS exceeded
+  90% of RAM; the runner prints `** MEM-PRESSURE **` and the plots drop those
+  points. If a size can't load at all, the OOM killer takes only that isolated
+  worker (each config is a subprocess) and it's recorded as a failure — the run
+  continues. **Push sizes up until you hit mem-pressure / OOM; that boundary is
+  itself a result**, and trust only the clean side of it.
+- **Conversion cost is measured, not on the speedup axis.** The `convert` op
+  times pandas→polars and polars→pandas — the tax you'd pay if you *mixed*
+  engines per op inside one pipeline. It's excluded from the speedup map (it's a
+  directional cost, not a same-computation race), but it lives in `results.csv`.
+  It matters the moment you consider a mixed library: per-op wins can be erased
+  by converting between them.
+- **Threads / hardware.** Polars is multi-threaded; its advantage grows with core
+  count. A small/constrained box understates it. Run on your hardware.
 
-A faster wrong answer is not a win, so timings only count if the pandas and
-polars twins produce the same output.
+## Example: op map on a small container (16 GB, 1M rows, 3 repeats)
 
-## Interpreting results — read this before drawing conclusions
+Speedup = pandas / polars (>1 = polars faster). Illustrative — noisy at small
+sizes / few repeats:
 
-- **Fair implementations matter more than the engine.** In a first pass, the
-  naive pandas `events` used `groupby.transform(lambda x: x.max() - x.min())` —
-  a Python-lambda transform — and polars looked **57–70x** faster. Switching to
-  the idiomatic vectorized `transform("max") - transform("min")` collapsed that
-  to pandas being *faster* than polars on `events`. Always compare
-  reasonably-optimized code on both sides, or the number is meaningless.
-- **Memory pressure invalidates timings — the harness guards against it.**
-  Once a run spills to swap, you're timing paging, not the engine (swap is
-  orders of magnitude slower than RAM). Each run records peak RSS, bytes swapped
-  out during the timed section, available RAM, and the loaded frame's size. A run
-  is flagged `mem_pressure` if it swapped **or** peak RSS exceeded 90% of total
-  RAM; the runner prints `** MEM-PRESSURE: timing distorted **`, and the plots
-  draw those points as a red X and exclude them from the fitted lines and the
-  speedup. If a size is too big to load at all, the OOM killer takes only that
-  isolated worker (each config runs in its own subprocess) — the run continues
-  and records the config as a failure instead of crashing the whole matrix.
-  Net: **push sizes up until you see mem-pressure flags or OOM failures — that
-  boundary is itself a result** (it's where the engine stops fitting in RAM), and
-  the timings on the clean side of it are the ones to trust.
-- **Size regime.** At small sizes both engines finish in milliseconds; the
-  interesting range is large data on real hardware. Push the sizes up until you
-  see a divergence (or hit the memory boundary above).
-- **Threads.** Polars is multi-threaded by default; its advantage grows with
-  core count. Results on a small/constrained box understate polars.
-- **Eager vs lazy.** These twins use eager polars for an apples-to-apples
-  comparison. A lazy (`LazyFrame`) variant can optimize further — worth adding
-  if a pipeline looks promising.
+| op (class) | speedup | | op (class) | speedup |
+|---|---|---|---|---|
+| unique_rows (dedup) | 3.7x | | rolling_std (rolling) | 1.07x |
+| groupby_agg (reduction) | 2.1x | | diff (elementwise) | 0.96x |
+| sort (reshape) | 1.8x | | cummax (cumulative) | 0.84x |
+| groupby_transform | 1.6x | | segment_id (segment) | 0.64x |
+| ewm_mean / rolling_mean | ~1.2x | | filter_mask (filter) | 0.30x |
 
-## Example: smoke run on a small, constrained container (16 GB, no swap)
-
-Fair implementations, speedup = pandas median / polars median (>1 = polars faster):
-
-| pipeline   | 50k  | 250k | 500k | 1M   |
-|------------|------|------|------|------|
-| indicators | 1.9x | 2.0x | 2.6x | 2.5x |
-| events     | 0.71x | 0.63x | 0.50x | 0.72x |
-
-Takeaway from this (small) sample: polars clearly wins on rolling indicators (and
-the gap widens with size); pandas wins on this groupby/segment shape. **This is
-why you run it on your hardware at your sizes** — the conclusion is not
-universal, and it flips per pipeline.
+Emerging shape: **polars wins on group/sort/dedup (and widens with size); pandas
+holds on segment/filter/elementwise/cumulative.** So a rolling+groupby-heavy
+pipeline leans polars; a segment/filter-heavy one leans pandas. Run it at your
+sizes on your hardware to firm up the map — then read any pipeline off it.

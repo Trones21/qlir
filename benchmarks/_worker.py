@@ -8,14 +8,13 @@ inflate a polars measurement.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import resource
 import time
 
 import pandas as pd
 import psutil
-
-from benchmarks import pipelines
 
 
 def load(engine: str, path: str):
@@ -35,14 +34,17 @@ def frame_mem_bytes(frame) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--engine", required=True)
-    ap.add_argument("--pipeline", required=True)
+    ap.add_argument("--suite", default="ops", help="ops | pipelines")
+    ap.add_argument("--unit", required=True, help="op or pipeline name")
     ap.add_argument("--file", required=True)
     ap.add_argument("--repeats", type=int, default=5)
     args = ap.parse_args()
 
+    suite = importlib.import_module(f"benchmarks.{args.suite}")
+
     vm = psutil.virtual_memory()
     frame = load(args.engine, args.file)
-    fn = pipelines.get(args.pipeline, args.engine)
+    fn = suite.get(args.unit, args.engine)
 
     fn(frame)  # warmup (imports / lazy caches) — not timed
 
@@ -67,7 +69,9 @@ def main() -> None:
         json.dumps(
             {
                 "engine": args.engine,
-                "pipeline": args.pipeline,
+                "suite": args.suite,
+                "unit": args.unit,
+                "unit_class": suite.unit_class(args.unit),
                 "n_rows": int(len(frame)),
                 "repeats": args.repeats,
                 "times": times,

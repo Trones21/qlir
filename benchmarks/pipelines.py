@@ -89,5 +89,12 @@ def events_polars(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+NAMES = PIPELINES
+
+
 def get(pipeline: str, engine: str):
     return globals()[f"{pipeline}_{engine}"]
+
+
+def unit_class(name: str) -> str:
+    return "pipeline"
