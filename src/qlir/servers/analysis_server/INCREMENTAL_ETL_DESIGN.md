@@ -116,15 +116,100 @@ evolving-directory replay (append, rotate, seam gap + duplicate boundary candle,
 window slide) asserts `incremental == full_each_loop` row-for-row, for both a
 dedupe-only pipeline and a gap-*materializing* one, at `last_n_files` 0 and 3.
 
-### Known cost / future optimization
-`sealed_clean` is recomputed in full whenever the sealed set changes (a rotation,
-or a window slide when `last_n_files > 0`). Between those events — i.e. every
-idle/append loop — only `overlap_files` sealed chunks + head are recomputed, which
-is the common case and the whole win. For `last_n_files = 0` (full dataset) a
-rotation therefore re-cleans the entire sealed history once. A later optimization
-is to *fold* a newly-sealed chunk into `sealed_clean` incrementally (same overlap
-splice, one seam) instead of recomputing all sealed — deferred to keep v1 simple
-and obviously correct.
+---
+==============================================
+
+## Appendix: the "fold" optimization, explained
+
+This is a **deferred** optimization. It is written out here because the win is
+narrow and the reasoning is subtle — read this before deciding to build it.
+
+### How incremental mode works *today*
+
+In `incremental` mode the provider holds **two** things in memory:
+
+1. `sealed_clean` — the cleaned output of every **sealed** chunk in the window.
+   Sealed chunks are immutable, so this only needs to change when the *set* of
+   sealed chunks changes. It is cached and keyed by the sealed file identities
+   `(name, size, mtime)`.
+2. Nothing else is cached — the **head** is volatile, so it is re-read and
+   re-cleaned every loop.
+
+Each loop does:
+
+```
+recompute = clean( last_overlap_sealed_chunks  +  head )   # small, every loop
+result    = sealed_clean  ++  recompute-rows-after-last-sealed-ts   # splice
+```
+
+The trailing sealed chunk is fed into `recompute` only as **left-context**, so
+the first gap/dedupe right after the last sealed candle is correct. We keep
+`sealed_clean` for everything up to the last sealed candle and take only the
+freshly-recomputed rows after it.
+
+The key question is: **when does `sealed_clean` get rebuilt?** Answer: whenever
+the sealed set changes — and the only thing that changes it is a **rotation**
+(the head fills up, gets sealed into a new numbered chunk, and a fresh head
+starts). When that happens today, we **throw `sealed_clean` away and re-clean
+every sealed chunk from scratch.**
+
+### Worked example (chunks of 10 candles, `last_n_files = 0`, i.e. full dataset)
+
+```
+Loop 1   files: [part_000 (0–9)] [head (10–13)]
+         sealed = {part_000}     -> sealed_clean = clean(part_000)     [BUILD]
+         per loop: clean(part_000 + head), splice                       [cheap]
+
+... head grows 10→19, sealed unchanged -> sealed_clean reused ...       [cheap]
+
+Rotation head(10–19) becomes part_001, new head(20–…)
+         sealed = {part_000, part_001} -> key changed
+         -> sealed_clean = clean(part_000 + part_001)  FROM SCRATCH     [REBUILD]
+```
+
+Now imagine this has been running a long time and there are **500 sealed
+chunks**. On the next rotation, "re-clean every sealed chunk from scratch" means
+cleaning all 500 chunks again — just to add the one that sealed. That is the
+cost. It happens **once per rotation** (rare — for 1-minute data with big
+chunks, hours apart), but it is O(entire history).
+
+### What "fold" would change
+
+Instead of rebuilding `sealed_clean` from scratch on rotation, **extend it** by
+applying the *same splice we already use for the head* — but to promote the
+newly-sealed chunk into the cache:
+
+```
+# on rotation, with part_500 newly sealed and sealed_clean already covering 000–499:
+TODAY:  sealed_clean = clean(part_000 + … + part_500)          # re-clean 501 chunks
+FOLD:   sealed_clean = sealed_clean ++ splice( clean(part_499 + part_500) )
+                                                               # clean ~2 chunks
+```
+
+`part_499` is included only as left-context for the seam, exactly like the head
+splice. So a rotation would cost ~2 chunks of cleaning instead of the whole
+history.
+
+**Why this is safe:** the newly-sealed chunk is now immutable, and its boundary
+with the previous chunk was *already being cleaned together every loop* while it
+was the head (it lived in the `overlap + head` region). Folding just makes
+permanent what we were already computing. The same `overlap_files` locality
+contract that makes the head splice correct makes the fold splice correct.
+
+### When it matters, and why it is deferred
+
+- In **windowed mode** (`last_n_files = 5`, the current server config) the rebuild
+  is *already* bounded to the last few files — "all sealed chunks in the window"
+  is only 4 chunks. Fold saves essentially nothing here.
+- The rebuild is only painful in **`last_n_files = 0` (full dataset) with a long
+  history**, where "all sealed chunks" grows without bound.
+- Fold adds a **second splice path** (promoting sealed, on top of splicing the
+  head) — more seam logic, more surface area for a subtle parity bug. It would
+  need its own coverage in the parity harness before being trusted.
+
+**Recommendation:** leave it deferred. Build it only if/when full-dataset mode is
+actually run at scale and the once-per-rotation rebuild is a felt problem. v1
+keeps a single splice path, which the parity harness already proves correct.
 
 ## Performance logging
 
