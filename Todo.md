@@ -1,3 +1,13 @@
+# Manual Actions (Claude can't do these)
+
+- [ ] **Delete stale remote branch** `claude/analysis-server-perf-kh3rj5`.
+      It was renamed to `claude/analysis-server-etl-full-vs-incremental-kh3rj5`
+      (new branch pushed fine), but the managed git proxy returned HTTP 403 on
+      the remote delete, so the old branch still exists on GitHub. Delete it
+      from the GitHub Branches page. No PR or commits depend on it — it's orphaned.
+
+---
+
 # Decisions Already Made 
 
 Program logic for enums should never use .value, always serialize/deserialize at read/write boundary
