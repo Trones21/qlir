@@ -1,0 +1,4 @@
+# Generated benchmark inputs and outputs are environment-specific / large.
+# Regenerate with gen_data.py; results are persisted locally per run.
+data/
+results/

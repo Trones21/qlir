@@ -35,6 +35,7 @@ analysis = "qlir.servers.analysis_server.run_analysis:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
+bench = ["polars>=1.0"]
 
 # Optional CLI entry point if you add qlir/cli.py
 # [project.scripts]
