@@ -31,6 +31,11 @@ FIELDS = [
     "wall_median_s",
     "wall_min_s",
     "peak_mem_mb",
+    "frame_mem_mb",
+    "swap_out_mb",
+    "swapped",
+    "mem_pressure",
+    "ram_avail_start_mb",
 ]
 
 
@@ -59,6 +64,7 @@ def main() -> None:
     ts = datetime.now(timezone.utc).isoformat()
     stamp = ts.replace(":", "").replace(".", "")
     rows: list[dict] = []
+    failures: list[str] = []
 
     for f in files:
         for pipeline in args.pipelines.split(","):
@@ -70,7 +76,16 @@ def main() -> None:
                 ]
                 proc = subprocess.run(cmd, capture_output=True, text=True)
                 if proc.returncode != 0:
-                    print(f"FAIL {engine}/{pipeline}/{f.name}:\n{proc.stderr[-800:]}")
+                    # A worker killed by the OOM killer returns -9 / 137. Isolation
+                    # means only this config dies; the rest of the matrix continues.
+                    reason = (
+                        "OOM (worker killed)"
+                        if proc.returncode in (-9, 137)
+                        else f"rc={proc.returncode}"
+                    )
+                    tail = (proc.stderr.strip().splitlines() or [""])[-1][:180]
+                    print(f"FAIL    {engine:7} {pipeline:11} {f.name}: {reason}  {tail}")
+                    failures.append(f"{engine}/{pipeline}/{f.name}: {reason}")
                     continue
 
                 m = json.loads(proc.stdout.strip().splitlines()[-1])
@@ -86,11 +101,17 @@ def main() -> None:
                     "wall_median_s": round(statistics.median(m["times"]), 6),
                     "wall_min_s": round(min(m["times"]), 6),
                     "peak_mem_mb": m["peak_mem_mb"],
+                    "frame_mem_mb": m.get("frame_mem_mb"),
+                    "swap_out_mb": m.get("swap_out_mb"),
+                    "swapped": m.get("swapped"),
+                    "mem_pressure": m.get("mem_pressure"),
+                    "ram_avail_start_mb": m.get("ram_avail_start_mb"),
                 }
                 rows.append(row)
+                flag = "  ** MEM-PRESSURE: timing distorted **" if m.get("mem_pressure") else ""
                 print(
                     f"{engine:7} {pipeline:11} {m['n_rows']:>11,} rows  "
-                    f"median {row['wall_median_s'] * 1000:9.2f} ms  peak {row['peak_mem_mb']:.0f} MB"
+                    f"median {row['wall_median_s'] * 1000:9.2f} ms  peak {row['peak_mem_mb']:.0f} MB{flag}"
                 )
 
     results_csv = out / "results.csv"
@@ -109,6 +130,17 @@ def main() -> None:
     for (pipe, n), d in sorted(by.items(), key=lambda kv: (kv[0][0], kv[0][1])):
         if d.get("pandas") and d.get("polars"):
             print(f"{pipe:11} {n:>11,} rows  pandas/polars = {d['pandas'] / d['polars']:.2f}x")
+
+    distorted = [r for r in rows if r.get("mem_pressure")]
+    if distorted:
+        print(
+            f"\n!! {len(distorted)} run(s) hit memory pressure (swap / near-OOM) — "
+            "their timings reflect paging, not engine speed. Excluded from plots by default."
+        )
+    if failures:
+        print(f"\n!! {len(failures)} config(s) failed (likely OOM at this size):")
+        for msg in failures:
+            print(f"   - {msg}")
 
 
 if __name__ == "__main__":
