@@ -316,6 +316,7 @@ def refresh_head_from_raw(
     *,
     agg: AggManifest,
     paths: DatasetPaths,
+    slice_loader=load_binance_kline_slice_json,
 ) -> None:
     """this is needed because the most current slice will have already been discovered, but it will have new data after one interval
         e.g. lets say the most current slice is SOLUSDT:1m:<someopentime>:1000
@@ -342,7 +343,7 @@ def refresh_head_from_raw(
         raw_path = paths.raw_responses_dir / f"{sid}.json"
 
         try:
-            df = load_binance_kline_slice_json(raw_path)
+            df = slice_loader(raw_path)
         except Exception as exc:
             log.warning("[agg] failed to refresh head slice %s: %s", sid, exc)
             return  # abort refresh safely
@@ -371,7 +372,13 @@ def run_agg_daemon(
     paths: DatasetPaths,
     dataset_meta: dict[str, Any],
     cfg: AggConfig,
+    slice_loader=load_binance_kline_slice_json,
 ) -> None:
+    """
+    slice_loader: reads one raw response file -> DataFrame (with an "open_time" column).
+    Defaults to the Binance kline loader; pass qlir.data.agg.schema_ibkr_bars.load_ibkr_bar_slice_json
+    for the interactive_brokers datasource.
+    """
     paths.agg_root.mkdir(parents=True, exist_ok=True)
     paths.agg_parts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -382,7 +389,7 @@ def run_agg_daemon(
 
 
         # 🔥 ALWAYS refresh head first (because current slice is being updated every interval (1s or 1m))
-        refresh_head_from_raw(agg=agg, paths=paths)
+        refresh_head_from_raw(agg=agg, paths=paths, slice_loader=slice_loader)
 
         todo = get_slices_needing_to_be_aggregated(raw_manifest, agg)
 
@@ -408,7 +415,7 @@ def run_agg_daemon(
             h = s.slice_id
             raw_path = paths.raw_responses_dir / f"{h}.json"
             try:
-                df = load_binance_kline_slice_json(raw_path)
+                df = slice_loader(raw_path)
                 new_frames.append(df)
                 new_slice_ids.append(h)
             except Exception as exc:

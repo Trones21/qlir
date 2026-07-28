@@ -116,16 +116,35 @@ from `qlir.data.sources.common.slices` — unchanged. Full contract identity
   so open-time-spacing invariants don't apply) — see
   [manifest/validation/orchestrator.py](../../data/sources/interactive_brokers/endpoints/historical_bars/manifest/validation/orchestrator.py).
 
-## Phase 2 follow-ups (NOT in this branch — needed for end-to-end)
+## End-to-end (Phase 2 — DONE)
 
-Ingest is standalone and verifiable by inspecting the raw tree. To run IBKR through the rest
-of the pipeline:
+The rest of the pipeline can now consume IBKR:
 
-1. **agg** — [agg_server/run_server.py](../agg_server/run_server.py) hardcodes `"binance"` in
-   its paths; add a `--datasource` arg. And [schema_binance_klines.py](../../data/agg/schema_binance_klines.py)
-   is Binance-specific; add a `schema_ibkr_bars.py` to parse IBKR raw responses → parquet.
-2. **analysis** — [analysis_server/server.py](../analysis_server/server.py) currently hardcodes
-   the SOLUSDT/binance agg path; parameterize the datasource/symbol to consume IBKR parquet.
+1. **agg** — [agg_server](../agg_server/README.md) takes `--datasource interactive_brokers`
+   and uses [schema_ibkr_bars.py](../../data/agg/schema_ibkr_bars.py) to parse IBKR raw
+   responses → parquet:
+   ```bash
+   poetry run agg_server --datasource interactive_brokers --endpoint historical_bars \
+     --symbol AAPL --interval 1m --limit 1000 --batch-slices 1000
+   ```
+2. **analysis** — [analysis_server/server.py](../analysis_server/server.py) is now env-driven
+   (defaults unchanged = Binance/SOLUSDT):
+   ```bash
+   QLIR_ANALYSIS_DATASOURCE=interactive_brokers \
+   QLIR_ANALYSIS_ENDPOINT=historical_bars \
+   QLIR_ANALYSIS_SYMBOL=AAPL \
+   QLIR_ANALYSIS_INTERVAL=1m \
+   poetry run analysis_server
+   ```
+
+### Phase 2b caveat (equity data quality)
+
+The analysis ETL ([first_pipeline.clean_data](../analysis_server/etl/pipelines/first_pipeline.py))
+currently hardcodes a **1-minute** candle-quality check that assumes **contiguous** candles.
+IBKR 1m bars flow through it, but equities have legitimate overnight/weekend/holiday gaps, so
+`validate_candles` will emit noisy data-quality warnings (it does not drop rows). Making the
+DQ layer interval-aware and equity-gap-aware is a follow-up before triggers should be trusted
+on IBKR data.
 
 ## Setup & startup automation
 

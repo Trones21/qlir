@@ -60,11 +60,23 @@ like the data server. See [../tmux/aggsol1m.sh](../tmux/aggsol1m.sh),
 
 | Flag | Required | Meaning |
 |---|---|---|
-| `--endpoint` | yes | `klines` or `uiklines`. Selects the data directory. |
-| `--symbol` | yes | Single trading pair, e.g. `SOLUSDT`, `BTCUSDT`. |
-| `--interval` | yes | Candle interval, e.g. `1s`, `1m`. |
+| `--datasource` | no | `binance` (default) or `interactive_brokers`. Selects the top-level data dir **and** the raw-response parser (Binance klines vs IBKR bars). |
+| `--endpoint` | yes | `klines`/`uiklines` (binance) or `historical_bars` (ibkr). Selects the data directory. |
+| `--symbol` | yes | Single symbol, e.g. `SOLUSDT`, `BTCUSDT`, `AAPL`. |
+| `--interval` | yes | Bar interval, e.g. `1s`, `1m`. |
 | `--limit` | yes | Raw slice size; used to locate the matching raw directory (`limit=<n>`). |
 | `--batch-slices` | yes | Number of slices packed into each sealed Parquet part. |
+
+To aggregate IBKR data instead of Binance:
+
+```bash
+poetry run agg_server --datasource interactive_brokers --endpoint historical_bars \
+  --symbol AAPL --interval 1m --limit 1000 --batch-slices 1000
+```
+
+The datasource picks the slice loader ([schema_binance_klines.py](../../data/agg/schema_binance_klines.py)
+vs [schema_ibkr_bars.py](../../data/agg/schema_ibkr_bars.py)); everything else (head/part
+sealing, manifest) is identical.
 
 `--batch-slices` sets **both** `AggConfig.batch_slices` (slices per part) and
 `AggConfig.ingest_chunk_slices` (slices loaded per poll). It is a **layout/throughput knob,
