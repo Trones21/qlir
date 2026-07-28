@@ -137,14 +137,25 @@ The rest of the pipeline can now consume IBKR:
    poetry run analysis_server
    ```
 
-### Phase 2b caveat (equity data quality)
+### Equity gaps: handled by the ETL's fill policy (by design, not a caveat)
 
-The analysis ETL ([first_pipeline.clean_data](../analysis_server/etl/pipelines/first_pipeline.py))
-currently hardcodes a **1-minute** candle-quality check that assumes **contiguous** candles.
-IBKR 1m bars flow through it, but equities have legitimate overnight/weekend/holiday gaps, so
-`validate_candles` will emit noisy data-quality warnings (it does not drop rows). Making the
-DQ layer interval-aware and equity-gap-aware is a follow-up before triggers should be trusted
-on IBKR data.
+QLIR never pretends time doesn't exist — **missing time ≠ missing prices**, and you *always*
+fill the gaps; you just choose *how*. So equity nights/weekends/holidays aren't a data-quality
+problem, they're a **fill-policy choice** made in the ETL. See
+[data/lte/transform/gap_fills.md](../../data/lte/transform/gap_fills.md): materialize the dense
+time grid, then apply a policy — `ConstantFillPolicy` (carry-forward flatline) or
+`WindowedLinearFillPolicy` (interpolate from local context). Synthetic rows are explicitly
+tagged and attributable to a named policy.
+
+Practical note for IBKR: the default analysis ETL
+([first_pipeline.clean_data](../analysis_server/etl/pipelines/first_pipeline.py)) is a
+crypto/24-7 pipeline — it validates candles but does **not** materialize/fill gaps. To analyze
+equities, wire an ETL that runs
+[materialize_missing_rows](../../data/lte/transform/gaps/materialization/materialize_missing_rows.py)
++ [apply_fill_policy](../../data/lte/transform/gaps/materialization/apply_fill_policy.py) for
+your chosen interval (exactly what `run_analysis.py` demonstrates with
+`materialize_missing_rows(base_df, interval_s=60)`). That's the normal QLIR workflow, not a
+special IBKR fix.
 
 ## Setup & startup automation
 
