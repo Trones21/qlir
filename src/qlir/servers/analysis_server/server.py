@@ -11,6 +11,8 @@ import pandas as pd
 from qlir.io.writer import write
 from qlir.telemetry.telemetry import telemetry
 from qlir.servers.analysis_server.io.freshness import DirFingerprint, dir_data_fingerprint
+from qlir.servers.analysis_server.io.clean_data_provider import CleanDataProvider
+from qlir.servers.analysis_server.etl.pipeline_spec import get_pipeline
 from qlir.servers.analysis_server.emit.alert import emit_alert, write_outbox_registry
 from qlir.servers.analysis_server.emit.outboxes.load import load_outboxes
 from qlir.servers.analysis_server.emit.validate import (
@@ -59,6 +61,12 @@ ANALYSIS_ENDPOINT = os.environ.get("QLIR_ANALYSIS_ENDPOINT", "klines")
 ANALYSIS_SYMBOL = os.environ.get("QLIR_ANALYSIS_SYMBOL", "SOLUSDT")
 ANALYSIS_INTERVAL = os.environ.get("QLIR_ANALYSIS_INTERVAL", "1m")
 ANALYSIS_LIMIT = int(os.environ.get("QLIR_ANALYSIS_LIMIT", "1000"))
+
+# ETL execution strategy. `full_each_loop` (default) re-runs the whole ETL every
+# loop — simple, obviously correct, and the parity oracle. `incremental` caches
+# the cleaned sealed history and only recomputes the head each loop.
+ANALYSIS_ETL_MODE = os.environ.get("QLIR_ETL_MODE", "full_each_loop")
+ANALYSIS_ETL_PIPELINE = os.environ.get("QLIR_ETL_PIPELINE", "candles_v1")
 
 PARQUET_CHUNKS_DIR = wait_get_agg_dir_path(
     ANALYSIS_DATASOURCE, ANALYSIS_ENDPOINT, ANALYSIS_SYMBOL, ANALYSIS_INTERVAL, ANALYSIS_LIMIT
@@ -244,6 +252,18 @@ def main() -> None:
     last_processed_ts = load_last_processed_ts()
     update_runtime_state("last_processed_ts", last_processed_ts)
 
+    # ETL provider (owns the incremental cache when enabled)
+    provider = CleanDataProvider(
+        PARQUET_CHUNKS_DIR,
+        get_pipeline(ANALYSIS_ETL_PIPELINE),
+        last_n_files=LAST_N_FILES,
+        mode=ANALYSIS_ETL_MODE,
+    )
+    log.info(
+        "ETL provider: pipeline=%s mode=%s last_n_files=%d",
+        ANALYSIS_ETL_PIPELINE, provider.mode, LAST_N_FILES,
+    )
+
     # ----------------------------------------------------------------------
     # Analysis loop
     # ----------------------------------------------------------------------
@@ -267,7 +287,7 @@ def main() -> None:
             continue
         last_fingerprint = fingerprint
 
-        base_df = get_clean_data()
+        base_df = provider.get()
         if base_df.empty:
             handle_empty_base_df()
             end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)

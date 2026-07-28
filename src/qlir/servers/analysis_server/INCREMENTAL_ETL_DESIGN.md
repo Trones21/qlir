@@ -96,8 +96,35 @@ The fingerprint over-approximates "new data" (any write bumps it), so it never
 wrongly skips real new data — the safe direction. This alone removes the wasted
 ETL on idle loops and needs no in-memory cache.
 
-**Step 2 — Incremental provider.** The `CleanDataProvider` + `ETLPipeline` spec
-+ sealed-cache/head-recompute described above.
+**Step 2 — Incremental provider. [IMPLEMENTED]**
+- `etl/pipeline_spec.py` — `ETLPipeline(name, run_full, overlap_files,
+  incremental_safe, ts_col)` + a tiny registry (`candles_v1` = the existing
+  `clean_data`). Selected via `QLIR_ETL_PIPELINE`.
+- `io/parquet_dir.py` — classify a dir into `(sealed_sorted, head)`, read a file
+  list, and key a sealed set by `(name, size, mtime_ns)`.
+- `io/clean_data_provider.py` — `CleanDataProvider` with `full_each_loop` and
+  `incremental` modes. Splice = keep cached `sealed_clean`, take only recomputed
+  head rows strictly after the last sealed ts (`cut`); trailing sealed chunks are
+  recomputed each loop purely as left-context. `incremental_safe=False` falls
+  back to full-each-loop.
+- `server.py` — builds one provider in `main()`, calls `provider.get()` per loop.
+  Mode via `QLIR_ETL_MODE` (default `full_each_loop`, so default behavior is
+  unchanged).
+
+Parity is proven by `tests/.../io/test_clean_data_provider_parity.py`: an
+evolving-directory replay (append, rotate, seam gap + duplicate boundary candle,
+window slide) asserts `incremental == full_each_loop` row-for-row, for both a
+dedupe-only pipeline and a gap-*materializing* one, at `last_n_files` 0 and 3.
+
+### Known cost / future optimization
+`sealed_clean` is recomputed in full whenever the sealed set changes (a rotation,
+or a window slide when `last_n_files > 0`). Between those events — i.e. every
+idle/append loop — only `overlap_files` sealed chunks + head are recomputed, which
+is the common case and the whole win. For `last_n_files = 0` (full dataset) a
+rotation therefore re-cleans the entire sealed history once. A later optimization
+is to *fold* a newly-sealed chunk into `sealed_clean` incrementally (same overlap
+splice, one seam) instead of recomputing all sealed — deferred to keep v1 simple
+and obviously correct.
 
 ## Performance logging
 
