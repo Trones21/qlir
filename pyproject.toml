@@ -12,7 +12,8 @@ dependencies = ["pandas", "requests", "numpy", "pyarrow", "tabulate", "matplotli
 # "drift-data-api-client @ file:///home/tjr/datasources/drift/drift-data-api-client/dist/drift_data_api_client-1.0.0-py3-none-any.whl" 
 "httpx (>=0.28.1,<0.29.0)",
 "typing-extensions (>=4.15.0,<5.0.0)",
-"psutil (>=7.2.2,<8.0.0)"
+"psutil (>=7.2.2,<8.0.0)",
+"ib-async (>=1.0.0)"
 ]
 authors = [{ name = "Thomas Rones" }]
 license = { text = "MIT" }
@@ -25,6 +26,7 @@ urls = { "Source" = "https://github.com/Trones21poet/qlir" }
 
 [project.scripts]
 data_server = "qlir.servers.data_server.run_server:main"
+ibkr_data_server = "qlir.servers.ibkr_data_server.run_server:main"
 agg_server = "qlir.servers.agg_server.run_server:main"
 notifications_server = "qlir.servers.notification_server.server:main"
 analysis_server = "qlir.servers.analysis_server.server:main"
