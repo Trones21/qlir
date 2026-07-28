@@ -35,10 +35,17 @@ def parse_args(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--datasource",
+        choices=["binance", "interactive_brokers"],
+        default="binance",
+        help="Datasource whose raw responses to aggregate (default: binance)",
+    )
+
+    parser.add_argument(
         "--endpoint",
-        choices=["klines", "uiklines"],
+        choices=["klines", "uiklines", "historical_bars"],
         required=True,
-        help="The endpoint name [klines, uiklines]"
+        help="The endpoint name [klines, uiklines (binance), historical_bars (ibkr)]",
     )
 
     parser.add_argument(
@@ -80,10 +87,10 @@ def main() -> None:
     args = parser.parse_args()
 
     data_root = get_data_root()
-    
+
     raw_root = (
         Path(data_root)
-        / "binance"
+        / args.datasource
         / args.endpoint
         / "raw"
         / args.symbol
@@ -93,7 +100,7 @@ def main() -> None:
 
     agg_root = (
         Path(data_root)
-        / "binance"
+        / args.datasource
         / args.endpoint
         / "agg"
         / args.symbol
@@ -107,22 +114,27 @@ def main() -> None:
     )
 
     dataset_meta = {
-        "source": "binance",
+        "source": args.datasource,
         "dataset": args.endpoint,
         "symbol": args.symbol,
         "interval": args.interval,
         "limit": args.limit,
     }
-    
-    
-    
+
+    # Pick the raw-response -> DataFrame loader for this datasource.
+    if args.datasource == "interactive_brokers":
+        from qlir.data.agg.schema_ibkr_bars import load_ibkr_bar_slice_json as slice_loader
+    else:
+        from qlir.data.agg.schema_binance_klines import load_binance_kline_slice_json as slice_loader
+
     cfg = AggConfig(batch_slices=args.batch_slices, ingest_chunk_slices=args.batch_slices)
 
     print(f"Args received by agg_server.py {args}")
 
     print(
         "[agg_server] starting with\n"
-        f"  symbol={args.endpoint}\n"
+        f"  datasource={args.datasource}\n"
+        f"  endpoint={args.endpoint}\n"
         f"  symbol={args.symbol}\n"
         f"  interval={args.interval}\n"
         f"  limit={args.limit}\n"
@@ -130,11 +142,12 @@ def main() -> None:
         f"  raw_root={raw_root}\n"
         f"  agg_root={agg_root}"
     )
-    
+
     run_agg_daemon(
         paths=paths,
         dataset_meta=dataset_meta,
         cfg=cfg,
+        slice_loader=slice_loader,
     )
 
 if __name__ == "__main__":

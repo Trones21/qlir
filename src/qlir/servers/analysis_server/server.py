@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import logging
+import os
 import time
 from typing import Any, Mapping
 
@@ -46,7 +47,19 @@ setup_logging(profile=LogProfile.QLIR_DEBUG)
 # Config
 # --------------------------------------------------------------------------
 
-PARQUET_CHUNKS_DIR = wait_get_agg_dir_path("binance", "klines", "SOLUSDT", "1m", 1000)
+# Which agg dataset to analyze. Env-driven so the same server can point at Binance or IBKR
+# without a code change; defaults preserve the original Binance/SOLUSDT/1m behavior.
+#   e.g. IBKR: QLIR_ANALYSIS_DATASOURCE=interactive_brokers QLIR_ANALYSIS_ENDPOINT=historical_bars
+#              QLIR_ANALYSIS_SYMBOL=AAPL QLIR_ANALYSIS_INTERVAL=1m
+ANALYSIS_DATASOURCE = os.environ.get("QLIR_ANALYSIS_DATASOURCE", "binance")
+ANALYSIS_ENDPOINT = os.environ.get("QLIR_ANALYSIS_ENDPOINT", "klines")
+ANALYSIS_SYMBOL = os.environ.get("QLIR_ANALYSIS_SYMBOL", "SOLUSDT")
+ANALYSIS_INTERVAL = os.environ.get("QLIR_ANALYSIS_INTERVAL", "1m")
+ANALYSIS_LIMIT = int(os.environ.get("QLIR_ANALYSIS_LIMIT", "1000"))
+
+PARQUET_CHUNKS_DIR = wait_get_agg_dir_path(
+    ANALYSIS_DATASOURCE, ANALYSIS_ENDPOINT, ANALYSIS_SYMBOL, ANALYSIS_INTERVAL, ANALYSIS_LIMIT
+)
 TS_COL = "tz_start"
 
 POLL_INTERVAL_SEC = 15

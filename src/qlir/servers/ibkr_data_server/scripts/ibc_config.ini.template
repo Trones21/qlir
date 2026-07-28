@@ -1,0 +1,29 @@
+# IBC config template for headless PAPER IB Gateway (data-only / read-only API).
+# ib_gateway_up.sh renders this to $IBC_INI with credentials from the environment and
+# chmod 600s it. Docs: https://github.com/IbcAlpha/IBC
+#
+# NOTE: ${VARS} are substituted from the environment by the launch script (envsubst).
+
+# ---- Login ----
+IbLoginId=${IB_USERNAME}
+IbPassword=${IB_PASSWORD}
+TradingMode=${IB_TRADING_MODE}
+
+# ---- API socket ----
+OverrideTwsApiPort=${IB_PORT}
+AcceptIncomingConnectionAction=accept
+# Read-only: this pipeline only pulls historical data; it never places orders.
+ReadOnlyApi=yes
+
+# ---- Headless dialog handling (so no human has to click anything) ----
+AcceptNonBrokerageAccountWarning=yes
+DismissPasswordExpiryWarningScreen=yes
+DismissNSEComplianceNotice=yes
+ExistingSessionDetectedAction=primary
+MinimizeMainWindow=yes
+StoreSettingsOnServer=no
+
+# ---- Keep-alive ----
+# IB Gateway forces a daily restart; IBC handles the auto-relogin. Leave auto-restart on.
+IbAutoClosedown=no
+ClosedownAt=
