@@ -255,14 +255,26 @@ count of all rows) and asserts the helper *catches* it. A parity checker that
 never fails would be worthless; this one demonstrably fails on a contract
 violation.
 
-### 3. Optional: a live parity guard on real data (future, needs a decision)
-When real data does start flowing, the strongest possible check is to run **both**
-modes for a bounded window (e.g. the first N loops, or every K loops) and assert
-they agree, alerting loudly on divergence. This turns real production data into
-the test oracle without anyone pre-collecting a fixture — directly addressing
-"we don't have the data yet." Cost: it doubles the ETL work while active, so it
-would be opt-in (e.g. `QLIR_ETL_PARITY_CHECK=<n_loops>`) and off by default.
-Deferred pending a decision on shape (how long/often, alert vs hard-fail).
+### 3. Live parity guard on real data — DECIDED: not building it
+A live guard would run **both** modes each loop for a while and alert on
+divergence, turning production data into the oracle. We considered it and decided
+against it, because it solves the same problem the offline helper already solves,
+with far more machinery:
+
+- The offline `assert_incremental_parity` helper runs against **any** raw stream,
+  including a **small captured real sample**. So the day real data exists, the
+  go-live gate is: capture one or two real parquet chunks, feed them to the same
+  helper, done. No parallel instances, no shadow clean, no hot-loop coupling.
+- A live guard can't be cleanly pushed off the hot loop — to validate the
+  new-data splice it must see the same new-data event — so it's genuinely fiddly
+  for a low-probability payoff.
+- Even in the worst case (incremental silently diverges in production),
+  `full_each_loop` is the default and an **instant, reversible escape hatch**:
+  flip `QLIR_ETL_MODE` back to the proven-correct path.
+
+**Go-live gate for incremental:** run `assert_incremental_parity` against a small
+captured real sample before enabling `QLIR_ETL_MODE=incremental`. That is
+sufficient; no continuous live validation.
 
 The real dataset is otherwise only needed later for the (separate)
 Polars-vs-pandas performance comparison.
