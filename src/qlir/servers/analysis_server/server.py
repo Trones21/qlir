@@ -3,11 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import logging
 import os
+from pathlib import Path
 import time
 from typing import Any, Mapping
 
 import pandas as pd
 from qlir.io.writer import write
+from qlir.telemetry.telemetry import telemetry
+from qlir.servers.analysis_server.io.freshness import DirFingerprint, dir_data_fingerprint
 from qlir.servers.analysis_server.emit.alert import emit_alert, write_outbox_registry
 from qlir.servers.analysis_server.emit.outboxes.load import load_outboxes
 from qlir.servers.analysis_server.emit.validate import (
@@ -80,11 +83,54 @@ def is_data_stale(data_ts: datetime, max_lag_sec: int) -> bool:
     return (utc_now() - data_ts).total_seconds() > max_lag_sec
 
 
+@telemetry(console=True, log_path=Path("telemetry/etl_times.log"))
 def get_clean_data() -> pd.DataFrame:
     return load_clean_data(
         PARQUET_CHUNKS_DIR,
         last_n_files=LAST_N_FILES,
     )
+
+
+def run_staleness_check(
+    *,
+    data_ts: datetime,
+    now: datetime,
+    alert_states: dict,
+) -> None:
+    """
+    Emit the data-stale pipeline alert (with backoff) for the latest data ts.
+
+    Extracted so it can run on *every* loop — including loops the freshness gate
+    skips — so that staleness keeps firing while data goes stale, even when no
+    new data has arrived and the ETL is skipped.
+    """
+    stale_key = "data_stale"
+    stale_state = alert_states.get(
+        stale_key,
+        AlertBackoffState(
+            key=stale_key,
+            last_emitted_at=None,
+            backoff_sec=INITIAL_BACKOFF,
+        ),
+    )
+
+    stale_state = maybe_emit_alert_with_backoff(
+        state=stale_state,
+        condition=is_data_stale(data_ts, MAX_ALLOWED_LAG_SEC),
+        now=now,
+        emit=lambda: emit_alert(
+            outbox="qlir-data-pipeline",
+            data={
+                "trigger": "data_stale",
+                "data_ts": data_ts.isoformat(),
+                "now": now.isoformat(),
+                "lag_sec": int((now - data_ts).total_seconds()),
+            },
+        ),
+    )
+
+    alert_states[stale_key] = stale_state
+    save_alert_states(alert_states)
 
 
 def _outbox_level(outbox_name: str) -> str:
@@ -202,7 +248,25 @@ def main() -> None:
     # Analysis loop
     # ----------------------------------------------------------------------
 
+    last_fingerprint: DirFingerprint | None = None
+
     while True:
+        now = utc_now()
+
+        # ------------------------------------------------------------------
+        # Phase 0: freshness gate
+        # ------------------------------------------------------------------
+        # If nothing new has landed on disk since the last loop, skip the ETL
+        # entirely. Staleness must still be evaluated (data keeps getting older),
+        # so we run it against the last known data ts before sleeping.
+        fingerprint = dir_data_fingerprint(PARQUET_CHUNKS_DIR)
+        if fingerprint == last_fingerprint and last_processed_ts is not None:
+            run_staleness_check(data_ts=last_processed_ts, now=now, alert_states=alert_states)
+            update_runtime_state("loop.skip_reason", "no_new_data")
+            end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)
+            continue
+        last_fingerprint = fingerprint
+
         base_df = get_clean_data()
         if base_df.empty:
             handle_empty_base_df()
@@ -210,39 +274,12 @@ def main() -> None:
             continue
 
         data_ts = base_df.iloc[-1][TS_COL]
-        now = utc_now()
 
         # ------------------------------------------------------------------
         # Phase 1: pipeline triggers (trust)
         # ------------------------------------------------------------------
 
-        stale_key = "data_stale"
-        stale_state = alert_states.get(
-            stale_key,
-            AlertBackoffState(
-                key=stale_key,
-                last_emitted_at=None,
-                backoff_sec=INITIAL_BACKOFF,
-            ),
-        )
-
-        stale_state = maybe_emit_alert_with_backoff(
-            state=stale_state,
-            condition=is_data_stale(data_ts, MAX_ALLOWED_LAG_SEC),
-            now=now,
-            emit=lambda: emit_alert(
-                outbox="qlir-data-pipeline",
-                data={
-                    "trigger": "data_stale",
-                    "data_ts": data_ts.isoformat(),
-                    "now": now.isoformat(),
-                    "lag_sec": int((now - data_ts).total_seconds()),
-                },
-            ),
-        )
-
-        alert_states[stale_key] = stale_state
-        save_alert_states(alert_states)
+        run_staleness_check(data_ts=data_ts, now=now, alert_states=alert_states)
 
         # ------------------------------------------------------------------
         # Phase 2: watermark gate
