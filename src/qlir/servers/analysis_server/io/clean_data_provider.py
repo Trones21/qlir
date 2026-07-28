@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 
 FULL_EACH_LOOP = "full_each_loop"
 INCREMENTAL = "incremental"
+VALID_MODES = (FULL_EACH_LOOP, INCREMENTAL)
 _ETL_LOG = Path("telemetry/etl_times.log")
 
 
@@ -52,6 +53,12 @@ class CleanDataProvider:
         last_n_files: int,
         mode: str = FULL_EACH_LOOP,
     ) -> None:
+        if mode not in VALID_MODES:
+            raise ValueError(
+                f"Unknown ETL mode {mode!r}; expected one of {VALID_MODES}. "
+                "Check QLIR_ETL_MODE."
+            )
+
         self.agg_dir = Path(agg_dir)
         self.pipeline = pipeline
         self.last_n_files = last_n_files
@@ -67,6 +74,15 @@ class CleanDataProvider:
                 pipeline.name,
             )
             self.mode = FULL_EACH_LOOP
+
+        if self.mode == INCREMENTAL and last_n_files <= 0:
+            log.warning(
+                "incremental mode with last_n_files=%d (full dataset) keeps the "
+                "entire cleaned history in memory and grows without bound over a "
+                "long run. Use a bounded window (last_n_files > 0) for long-lived "
+                "servers.",
+                last_n_files,
+            )
 
     # -- public -----------------------------------------------------------
 

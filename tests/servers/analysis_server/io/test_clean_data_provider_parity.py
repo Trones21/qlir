@@ -121,3 +121,9 @@ def test_incremental_safe_false_falls_back_to_full(tmp_path):
     unsafe = ETLPipeline(name="unsafe", run_full=clean_data, incremental_safe=False)
     p = CleanDataProvider(tmp_path, unsafe, last_n_files=3, mode=INCREMENTAL)
     assert p.mode == FULL_EACH_LOOP
+
+
+def test_unknown_mode_raises(tmp_path):
+    # A typo (e.g. trailing space) must fail loud, not silently run full.
+    with pytest.raises(ValueError):
+        CleanDataProvider(tmp_path, CANDLES_V1, last_n_files=3, mode="incremental ")
