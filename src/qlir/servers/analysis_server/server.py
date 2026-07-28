@@ -3,11 +3,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import logging
 import os
+from pathlib import Path
 import time
 from typing import Any, Mapping
 
 import pandas as pd
 from qlir.io.writer import write
+from qlir.telemetry.telemetry import telemetry
+from qlir.servers.analysis_server.io.freshness import DirFingerprint, dir_data_fingerprint
+from qlir.servers.analysis_server.io.clean_data_provider import CleanDataProvider
+from qlir.servers.analysis_server.etl.pipeline_spec import get_pipeline
 from qlir.servers.analysis_server.emit.alert import emit_alert, write_outbox_registry
 from qlir.servers.analysis_server.emit.outboxes.load import load_outboxes
 from qlir.servers.analysis_server.emit.validate import (
@@ -57,6 +62,12 @@ ANALYSIS_SYMBOL = os.environ.get("QLIR_ANALYSIS_SYMBOL", "SOLUSDT")
 ANALYSIS_INTERVAL = os.environ.get("QLIR_ANALYSIS_INTERVAL", "1m")
 ANALYSIS_LIMIT = int(os.environ.get("QLIR_ANALYSIS_LIMIT", "1000"))
 
+# ETL execution strategy. `full_each_loop` (default) re-runs the whole ETL every
+# loop — simple, obviously correct, and the parity oracle. `incremental` caches
+# the cleaned sealed history and only recomputes the head each loop.
+ANALYSIS_ETL_MODE = os.environ.get("QLIR_ETL_MODE", "full_each_loop")
+ANALYSIS_ETL_PIPELINE = os.environ.get("QLIR_ETL_PIPELINE", "candles_v1")
+
 PARQUET_CHUNKS_DIR = wait_get_agg_dir_path(
     ANALYSIS_DATASOURCE, ANALYSIS_ENDPOINT, ANALYSIS_SYMBOL, ANALYSIS_INTERVAL, ANALYSIS_LIMIT
 )
@@ -80,11 +91,54 @@ def is_data_stale(data_ts: datetime, max_lag_sec: int) -> bool:
     return (utc_now() - data_ts).total_seconds() > max_lag_sec
 
 
+@telemetry(console=True, log_path=Path("telemetry/etl_times.log"))
 def get_clean_data() -> pd.DataFrame:
     return load_clean_data(
         PARQUET_CHUNKS_DIR,
         last_n_files=LAST_N_FILES,
     )
+
+
+def run_staleness_check(
+    *,
+    data_ts: datetime,
+    now: datetime,
+    alert_states: dict,
+) -> None:
+    """
+    Emit the data-stale pipeline alert (with backoff) for the latest data ts.
+
+    Extracted so it can run on *every* loop — including loops the freshness gate
+    skips — so that staleness keeps firing while data goes stale, even when no
+    new data has arrived and the ETL is skipped.
+    """
+    stale_key = "data_stale"
+    stale_state = alert_states.get(
+        stale_key,
+        AlertBackoffState(
+            key=stale_key,
+            last_emitted_at=None,
+            backoff_sec=INITIAL_BACKOFF,
+        ),
+    )
+
+    stale_state = maybe_emit_alert_with_backoff(
+        state=stale_state,
+        condition=is_data_stale(data_ts, MAX_ALLOWED_LAG_SEC),
+        now=now,
+        emit=lambda: emit_alert(
+            outbox="qlir-data-pipeline",
+            data={
+                "trigger": "data_stale",
+                "data_ts": data_ts.isoformat(),
+                "now": now.isoformat(),
+                "lag_sec": int((now - data_ts).total_seconds()),
+            },
+        ),
+    )
+
+    alert_states[stale_key] = stale_state
+    save_alert_states(alert_states)
 
 
 def _outbox_level(outbox_name: str) -> str:
@@ -165,6 +219,164 @@ def handle_empty_base_df():
     update_runtime_state("loop.skip_reason", "base_df_empty")
 
 # --------------------------------------------------------------------------
+# Loop iteration
+# --------------------------------------------------------------------------
+
+def run_loop_iteration(
+    *,
+    provider: CleanDataProvider,
+    parquet_dir,
+    outboxes: Mapping[str, Any],
+    required_df_names: set[str],
+    alert_states: dict,
+    last_processed_ts,
+    last_fingerprint,
+    now: datetime,
+    poll_interval_sec: int = POLL_INTERVAL_SEC,
+    state_path: str | Any = STATE_PATH,
+):
+    """
+    Run a single analysis-loop iteration and return the updated
+    (last_processed_ts, last_fingerprint). `alert_states` is mutated in place.
+
+    Extracted from the `while True` loop so the loop mechanics (freshness gate,
+    watermark gate, phase ordering) are unit-testable without the infinite loop.
+    """
+    # ----------------------------------------------------------------------
+    # Phase 0: freshness gate
+    # ----------------------------------------------------------------------
+    # If nothing new has landed on disk since the last loop, skip the ETL
+    # entirely. Staleness must still be evaluated (data keeps getting older),
+    # so we run it against the last known data ts before sleeping.
+    fingerprint = dir_data_fingerprint(parquet_dir)
+    if fingerprint == last_fingerprint and last_processed_ts is not None:
+        run_staleness_check(data_ts=last_processed_ts, now=now, alert_states=alert_states)
+        update_runtime_state("loop.skip_reason", "no_new_data")
+        end_loop_and_sleep(state_path=state_path, sleep_sec=poll_interval_sec)
+        return last_processed_ts, fingerprint
+    last_fingerprint = fingerprint
+
+    base_df = provider.get()
+    if base_df.empty:
+        handle_empty_base_df()
+        end_loop_and_sleep(state_path=state_path, sleep_sec=poll_interval_sec)
+        return last_processed_ts, last_fingerprint
+
+    data_ts = base_df.iloc[-1][TS_COL]
+
+    # ----------------------------------------------------------------------
+    # Phase 1: pipeline triggers (trust)
+    # ----------------------------------------------------------------------
+
+    run_staleness_check(data_ts=data_ts, now=now, alert_states=alert_states)
+
+    # ----------------------------------------------------------------------
+    # Phase 2: watermark gate
+    # ----------------------------------------------------------------------
+
+    if last_processed_ts is not None and data_ts <= last_processed_ts:
+        end_loop_and_sleep(state_path=state_path, sleep_sec=poll_interval_sec)
+        return last_processed_ts, last_fingerprint
+
+    # ----------------------------------------------------------------------
+    # Phase 3: materialize derived DFs
+    # ----------------------------------------------------------------------
+
+    derived_dfs = materialize_required_dfs(
+        base_df=base_df,
+        required_df_names=required_df_names,
+    )
+    update_runtime_state("materialized_dfs", derived_dfs)
+
+    # ----------------------------------------------------------------------
+    # Phase 4: event evaluation
+    # ----------------------------------------------------------------------
+
+    triggered_events: set[str] = set()
+
+    events_cfg = outboxes.get("qlir-events")
+    if events_cfg:
+        registry = events_cfg["trigger_registry"]
+        active = events_cfg["active_triggers"]
+        update_runtime_state("triggers.all", registry)
+        update_runtime_state("triggers.active", active)
+
+        for trigger_key in active:
+            spec = registry[trigger_key]
+            df_name = spec["df"]
+            col = spec["column"]
+
+            last = _last_row(derived_dfs[df_name], df_name)
+
+            if bool(last[col]):
+                triggered_events.add(trigger_key)
+                emit_alert(
+                    outbox="qlir-events",
+                    data={
+                        "trigger": trigger_key,
+                        "description": spec.get("description"),
+                        "df": df_name,
+                        "column": col,
+                        "data_ts": data_ts.isoformat(),
+                    },
+                )
+
+    # ----------------------------------------------------------------------
+    # Phase 5: non-event triggers (tradable / positioning)
+    # ----------------------------------------------------------------------
+
+    for outbox_name, cfg in outboxes.items():
+        if outbox_name in ("qlir-events", "qlir-pipeline"):
+            continue
+
+        registry = cfg["trigger_registry"]
+        active = cfg["active_triggers"]
+
+        for trigger_key in active:
+            spec = registry[trigger_key]
+
+            df_name = spec.get("df")
+            col = spec.get("column")
+            events = spec.get("events")
+
+            fired = False
+
+            if events is not None:
+                fired = _eval_events_condition(
+                    required_events=events,
+                    condition=spec.get("events_condition"),
+                    triggered_events=triggered_events,
+                )
+            else:
+                last = _last_row(derived_dfs[df_name], df_name)
+                fired = bool(last[col])
+
+            if fired:
+                emit_alert(
+                    outbox=outbox_name,
+                    data={
+                        "trigger": trigger_key,
+                        "description": spec.get("description"),
+                        "df": df_name,
+                        "column": col,
+                        "events": events,
+                        "data_ts": data_ts.isoformat(),
+                    },
+                )
+
+    # ----------------------------------------------------------------------
+    # Phase 6: persist watermark
+    # ----------------------------------------------------------------------
+
+    save_last_processed_ts(data_ts)
+    last_processed_ts = data_ts
+    update_runtime_state("last_processed_ts", last_processed_ts)
+
+    end_loop_and_sleep(state_path=state_path, sleep_sec=poll_interval_sec)
+    return last_processed_ts, last_fingerprint
+
+
+# --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
 
@@ -198,155 +410,36 @@ def main() -> None:
     last_processed_ts = load_last_processed_ts()
     update_runtime_state("last_processed_ts", last_processed_ts)
 
+    # ETL provider (owns the incremental cache when enabled)
+    provider = CleanDataProvider(
+        PARQUET_CHUNKS_DIR,
+        get_pipeline(ANALYSIS_ETL_PIPELINE),
+        last_n_files=LAST_N_FILES,
+        mode=ANALYSIS_ETL_MODE,
+    )
+    log.info(
+        "ETL provider: pipeline=%s mode=%s last_n_files=%d",
+        ANALYSIS_ETL_PIPELINE, provider.mode, LAST_N_FILES,
+    )
+
     # ----------------------------------------------------------------------
     # Analysis loop
     # ----------------------------------------------------------------------
 
+    last_fingerprint: DirFingerprint | None = None
+
     while True:
-        base_df = get_clean_data()
-        if base_df.empty:
-            handle_empty_base_df()
-            end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)
-            continue
-
-        data_ts = base_df.iloc[-1][TS_COL]
         now = utc_now()
-
-        # ------------------------------------------------------------------
-        # Phase 1: pipeline triggers (trust)
-        # ------------------------------------------------------------------
-
-        stale_key = "data_stale"
-        stale_state = alert_states.get(
-            stale_key,
-            AlertBackoffState(
-                key=stale_key,
-                last_emitted_at=None,
-                backoff_sec=INITIAL_BACKOFF,
-            ),
-        )
-
-        stale_state = maybe_emit_alert_with_backoff(
-            state=stale_state,
-            condition=is_data_stale(data_ts, MAX_ALLOWED_LAG_SEC),
-            now=now,
-            emit=lambda: emit_alert(
-                outbox="qlir-data-pipeline",
-                data={
-                    "trigger": "data_stale",
-                    "data_ts": data_ts.isoformat(),
-                    "now": now.isoformat(),
-                    "lag_sec": int((now - data_ts).total_seconds()),
-                },
-            ),
-        )
-
-        alert_states[stale_key] = stale_state
-        save_alert_states(alert_states)
-
-        # ------------------------------------------------------------------
-        # Phase 2: watermark gate
-        # ------------------------------------------------------------------
-
-        if last_processed_ts is not None and data_ts <= last_processed_ts:
-            end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)
-            continue
-
-        # ------------------------------------------------------------------
-        # Phase 3: materialize derived DFs
-        # ------------------------------------------------------------------
-
-        derived_dfs = materialize_required_dfs(
-            base_df=base_df,
+        last_processed_ts, last_fingerprint = run_loop_iteration(
+            provider=provider,
+            parquet_dir=PARQUET_CHUNKS_DIR,
+            outboxes=outboxes,
             required_df_names=required_df_names,
+            alert_states=alert_states,
+            last_processed_ts=last_processed_ts,
+            last_fingerprint=last_fingerprint,
+            now=now,
         )
-        update_runtime_state("materialized_dfs", derived_dfs)
-        
-        # ------------------------------------------------------------------
-        # Phase 4: event evaluation
-        # ------------------------------------------------------------------
-
-        triggered_events: set[str] = set()
-
-        events_cfg = outboxes.get("qlir-events")
-        if events_cfg:
-            registry = events_cfg["trigger_registry"]
-            active = events_cfg["active_triggers"]
-            update_runtime_state("triggers.all", registry)
-            update_runtime_state("triggers.active", active)
-
-            for trigger_key in active:
-                spec = registry[trigger_key]
-                df_name = spec["df"]
-                col = spec["column"]
-
-                last = _last_row(derived_dfs[df_name], df_name)
-
-                if bool(last[col]):
-                    triggered_events.add(trigger_key)
-                    emit_alert(
-                        outbox="qlir-events",
-                        data={
-                            "trigger": trigger_key,
-                            "description": spec.get("description"),
-                            "df": df_name,
-                            "column": col,
-                            "data_ts": data_ts.isoformat(),
-                        },
-                    )
-
-        # ------------------------------------------------------------------
-        # Phase 5: non-event triggers (tradable / positioning)
-        # ------------------------------------------------------------------
-
-        for outbox_name, cfg in outboxes.items():
-            if outbox_name in ("qlir-events", "qlir-pipeline"):
-                continue
-
-            registry = cfg["trigger_registry"]
-            active = cfg["active_triggers"]
-
-            for trigger_key in active:
-                spec = registry[trigger_key]
-
-                df_name = spec.get("df")
-                col = spec.get("column")
-                events = spec.get("events")
-
-                fired = False
-
-                if events is not None:
-                    fired = _eval_events_condition(
-                        required_events=events,
-                        condition=spec.get("events_condition"),
-                        triggered_events=triggered_events,
-                    )
-                else:
-                    last = _last_row(derived_dfs[df_name], df_name)
-                    fired = bool(last[col])
-
-                if fired:
-                    emit_alert(
-                        outbox=outbox_name,
-                        data={
-                            "trigger": trigger_key,
-                            "description": spec.get("description"),
-                            "df": df_name,
-                            "column": col,
-                            "events": events,
-                            "data_ts": data_ts.isoformat(),
-                        },
-                    )
-
-        # ------------------------------------------------------------------
-        # Phase 6: persist watermark
-        # ------------------------------------------------------------------
-
-        save_last_processed_ts(data_ts)
-        last_processed_ts = data_ts
-        update_runtime_state("last_processed_ts", last_processed_ts)
-
-        end_loop_and_sleep(state_path=STATE_PATH, sleep_sec=POLL_INTERVAL_SEC)
 
 
 if __name__ == "__main__":
