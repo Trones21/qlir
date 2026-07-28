@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# QLIR bootstrap (Ubuntu 24.04).
+#   mode=install -> deps + clone + `poetry install` (no services started)
+#   mode=start   -> the above, then pull secrets from Secrets Manager and start the pipeline
+# NOTE: mirrors infra/cloudformation/qlir-ec2.yaml UserData — keep them in sync.
+set -euxo pipefail
+
+# Log EVERYTHING (commands + output) to a dedicated file as well as cloud-init's log.
+exec > >(tee -a /var/log/qlir-bootstrap.log) 2>&1
+export DEBIAN_FRONTEND=noninteractive
+
+MODE="${mode}"
+SECRET_NAME="${secret_name}"
+AWS_REGION="${aws_region}"
+REPO_URL="${repo_url}"
+REPO_DIR=/home/ubuntu/qlir
+ENV_FILE=/home/ubuntu/set_telegram_env_vars.sh
+
+echo "================ QLIR bootstrap START ================"
+echo "mode=$MODE region=$AWS_REGION repo=$REPO_URL"
+date -u
+
+# --- deps + repo + python deps -------------------------------------------------
+apt-get update -y
+apt-get install -y git curl
+
+if [ ! -d "$REPO_DIR/.git" ]; then
+  echo "--- cloning $REPO_URL -> $REPO_DIR"
+  sudo -u ubuntu git clone "$REPO_URL" "$REPO_DIR"
+else
+  echo "--- repo already present at $REPO_DIR"
+fi
+
+echo "--- installing system deps (tmux, pip, poetry) via repo script"
+sudo -u ubuntu bash "$REPO_DIR/src/qlir/servers/install_system_deps.sh"
+
+echo "--- poetry install"
+sudo -u ubuntu bash -lc "cd $REPO_DIR && ~/.local/bin/poetry install"
+
+SECRETS_LOADED="no"
+SERVICES_STARTED="no"
+
+# --- start mode: fetch secrets, write env file, launch pipeline ----------------
+if [ "$MODE" = "start" ]; then
+  echo "--- start mode: installing awscli and fetching secret '$SECRET_NAME'"
+  apt-get install -y awscli
+  SECRET_JSON="$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --region "$AWS_REGION" --query SecretString --output text)"
+
+  # Convert the secret JSON into an env file that start_all_simple.sh sources.
+  # (start_all_simple.sh does `source ~/set_telegram_env_vars.sh`.)
+  printf '%s' "$SECRET_JSON" \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print("\n".join(f"export {k}=\"{v}\"" for k,v in d.items()))' \
+    > "$ENV_FILE"
+  # Also export the pipeline dirs the servers need (QLIR_ALERTS_DIR is required).
+  {
+    echo 'export QLIR_ALERTS_DIR="$HOME/alerts"'
+    echo 'export QLIR_DATA_ROOT="$HOME/qlir_data"'
+  } >> "$ENV_FILE"
+  chown ubuntu:ubuntu "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+
+  SECRET_KEYS="$(printf '%s' "$SECRET_JSON" | python3 -c 'import json,sys; print(", ".join(json.load(sys.stdin).keys()))')"
+  SECRETS_LOADED="yes (keys: $SECRET_KEYS + QLIR_ALERTS_DIR, QLIR_DATA_ROOT)"
+
+  echo "--- starting pipeline via start_all_simple.sh"
+  sudo -u ubuntu bash -lc "cd $REPO_DIR/src/qlir/servers && ./start_all_simple.sh" \
+    && SERVICES_STARTED="yes" \
+    || { SERVICES_STARTED="FAILED (see log above)"; echo "WARN: start_all_simple.sh returned non-zero"; }
+fi
+
+# --- final banner --------------------------------------------------------------
+cat <<BANNER
+
+============================================================
+ QLIR bootstrap COMPLETE
+============================================================
+ mode              : $MODE
+ repo              : $REPO_DIR
+ python deps       : poetry install done
+ secrets loaded    : $SECRETS_LOADED
+ services started  : $SERVICES_STARTED
+ env file          : $ENV_FILE  (start mode only)
+ bootstrap log     : /var/log/qlir-bootstrap.log
+ cloud-init log    : /var/log/cloud-init-output.log
+------------------------------------------------------------
+ Check services (start mode):   sudo -u ubuntu tmux ls
+ Tail service logs:             tail -f $REPO_DIR/src/qlir/servers/logs/*.log
+ Manual start (install mode):   cd $REPO_DIR/src/qlir/servers && ./start_all_simple.sh
+============================================================
+BANNER
+date -u
+echo "================ QLIR bootstrap END ================"

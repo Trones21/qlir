@@ -1,0 +1,235 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >-
+  QLIR single EC2 host (Ubuntu 24.04). IMPORTANT: deploy this stack into a NON-US
+  region (Binance blocks US IPs). Europe recommended, e.g. eu-central-1. CloudFormation
+  cannot self-enforce the deploy region, so pass --region eu-central-1 (or another non-US
+  region) when you deploy. SSH inbound only; the pipeline is outbound-only.
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Existing EC2 key pair for SSH access (must exist in the target region).
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC to launch into (your default VPC is fine).
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet to launch into (a public subnet in the chosen VPC).
+
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    Description: EC2 instance type.
+
+  SshIngressCidr:
+    Type: String
+    Description: >-
+      CIDR allowed to SSH in. No default on purpose — set it to your IP. Tip:
+      SshIngressCidr=$(curl -s https://checkip.amazonaws.com)/32
+    AllowedPattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
+    ConstraintDescription: Must be a CIDR like 203.0.113.4/32.
+
+  RootVolumeGb:
+    Type: Number
+    Default: 50
+    MinValue: 20
+    Description: Root EBS volume size (GiB). 1s data + parquet grows.
+
+  Mode:
+    Type: String
+    Default: install
+    AllowedValues: [none, install, start]
+    Description: >-
+      none = bare instance. install = deps + clone + poetry install (no services).
+      start = install, then pull secrets from Secrets Manager and start the pipeline
+      (requires SecretName; attaches a scoped IAM role).
+
+  SecretName:
+    Type: String
+    Default: ""
+    Description: >-
+      (start mode only) Secrets Manager secret NAME holding a JSON object of env vars, e.g.
+      {"OPS_TELEGRAM_BOT_TOKEN":"...","TELEGRAM_CHAT_ID":"..."}. The instance gets read
+      access to only this secret.
+
+  RepoUrl:
+    Type: String
+    Default: https://github.com/Trones21/qlir.git
+    Description: Git URL cloned during bootstrap.
+
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
+    Description: Ubuntu 24.04 LTS AMI, resolved from Canonical's public SSM parameter (do not edit).
+
+Conditions:
+  HasUserData: !Not [!Equals [!Ref Mode, none]]
+  StartMode: !Equals [!Ref Mode, start]
+
+Resources:
+  QlirSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "QLIR: SSH in only; all egress"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - Description: SSH
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SshIngressCidr
+      SecurityGroupEgress:
+        - Description: All outbound (Binance API, Telegram, package installs)
+          IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - { Key: Name, Value: qlir-sg }
+
+  # IAM role granting read access to ONLY the pipeline secret (start mode).
+  QlirRole:
+    Type: AWS::IAM::Role
+    Condition: StartMode
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: qlir-secret-read
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${SecretName}-*"
+
+  QlirInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Condition: StartMode
+    Properties:
+      Roles: [!Ref QlirRole]
+
+  QlirInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref QlirSecurityGroup
+      IamInstanceProfile: !If [StartMode, !Ref QlirInstanceProfile, !Ref "AWS::NoValue"]
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: !Ref RootVolumeGb
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - { Key: Name, Value: qlir }
+        - { Key: Project, Value: qlir }
+      UserData:
+        Fn::If:
+          - HasUserData
+          - Fn::Base64: !Sub |
+              #!/usr/bin/env bash
+              # QLIR bootstrap (Ubuntu 24.04). mode=install|start.
+              # NOTE: mirrors infra/terraform/user_data.sh.tftpl — keep them in sync.
+              set -euxo pipefail
+              exec > >(tee -a /var/log/qlir-bootstrap.log) 2>&1
+              export DEBIAN_FRONTEND=noninteractive
+
+              MODE="${Mode}"
+              SECRET_NAME="${SecretName}"
+              AWS_REGION="${AWS::Region}"
+              REPO_URL="${RepoUrl}"
+              REPO_DIR=/home/ubuntu/qlir
+              ENV_FILE=/home/ubuntu/set_telegram_env_vars.sh
+
+              echo "================ QLIR bootstrap START ================"
+              echo "mode=$MODE region=$AWS_REGION repo=$REPO_URL"
+              date -u
+
+              apt-get update -y
+              apt-get install -y git curl
+
+              if [ ! -d "$REPO_DIR/.git" ]; then
+                sudo -u ubuntu git clone "$REPO_URL" "$REPO_DIR"
+              fi
+
+              sudo -u ubuntu bash "$REPO_DIR/src/qlir/servers/install_system_deps.sh"
+              sudo -u ubuntu bash -lc "cd $REPO_DIR && ~/.local/bin/poetry install"
+
+              SECRETS_LOADED="no"
+              SERVICES_STARTED="no"
+
+              if [ "$MODE" = "start" ]; then
+                apt-get install -y awscli
+                SECRET_JSON="$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --region "$AWS_REGION" --query SecretString --output text)"
+                printf '%s' "$SECRET_JSON" \
+                  | python3 -c 'import json,sys; d=json.load(sys.stdin); print("\n".join(f"export {k}=\"{v}\"" for k,v in d.items()))' \
+                  > "$ENV_FILE"
+                {
+                  echo 'export QLIR_ALERTS_DIR="$HOME/alerts"'
+                  echo 'export QLIR_DATA_ROOT="$HOME/qlir_data"'
+                } >> "$ENV_FILE"
+                chown ubuntu:ubuntu "$ENV_FILE"
+                chmod 600 "$ENV_FILE"
+                SECRETS_LOADED="yes"
+                sudo -u ubuntu bash -lc "cd $REPO_DIR/src/qlir/servers && ./start_all_simple.sh" \
+                  && SERVICES_STARTED="yes" \
+                  || { SERVICES_STARTED="FAILED (see log above)"; echo "WARN: start_all_simple.sh returned non-zero"; }
+              fi
+
+              cat <<BANNER
+
+              ============================================================
+               QLIR bootstrap COMPLETE
+              ============================================================
+               mode              : $MODE
+               repo              : $REPO_DIR
+               secrets loaded    : $SECRETS_LOADED
+               services started  : $SERVICES_STARTED
+               bootstrap log     : /var/log/qlir-bootstrap.log
+               cloud-init log    : /var/log/cloud-init-output.log
+              ------------------------------------------------------------
+               Check services (start mode):   sudo -u ubuntu tmux ls
+               Tail service logs:             tail -f $REPO_DIR/src/qlir/servers/logs/*.log
+               Manual start (install mode):   cd $REPO_DIR/src/qlir/servers && ./start_all_simple.sh
+              ============================================================
+              BANNER
+              date -u
+              echo "================ QLIR bootstrap END ================"
+          - !Ref "AWS::NoValue"
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID.
+    Value: !Ref QlirInstance
+  PublicIp:
+    Description: Public IPv4 address.
+    Value: !GetAtt QlirInstance.PublicIp
+  PublicDnsName:
+    Description: Public DNS name.
+    Value: !GetAtt QlirInstance.PublicDnsName
+  Region:
+    Description: Region the instance runs in (must be non-US for Binance).
+    Value: !Ref "AWS::Region"
+  Mode:
+    Description: Bootstrap mode used.
+    Value: !Ref Mode
+  SshAllowedFrom:
+    Description: CIDR permitted to SSH.
+    Value: !Ref SshIngressCidr
+  SshCommand:
+    Description: Convenience SSH command (Ubuntu AMIs use the 'ubuntu' user).
+    Value: !Sub "ssh ubuntu@${QlirInstance.PublicDnsName}"
+  WatchBootstrap:
+    Description: Tail the bootstrap log on the instance.
+    Value: !Sub "ssh ubuntu@${QlirInstance.PublicDnsName} 'sudo tail -f /var/log/qlir-bootstrap.log'"

@@ -1,0 +1,24 @@
+# Copy to terraform.tfvars and edit.
+
+# REQUIRED: an existing EC2 key pair in the target region.
+key_name = "my-eu-keypair"
+
+# Region MUST be non-US (Binance blocks US IPs). Europe recommended. AZ doesn't matter.
+aws_region = "eu-central-1"
+
+# SSH lockdown: leave empty to auto-detect THIS machine's public IP (/32).
+# Override with an explicit CIDR if you prefer, e.g. "203.0.113.4/32".
+ssh_ingress_cidr = ""
+
+# Bootstrap mode: "none" | "install" | "start"
+#   install = deps + clone + poetry install (no services)
+#   start   = install + pull secrets + start pipeline (requires secret_name below)
+mode = "install"
+
+# Only for mode = "start": name of a Secrets Manager secret holding a JSON object of env vars,
+# e.g. {"OPS_TELEGRAM_BOT_TOKEN":"...","TELEGRAM_CHAT_ID":"...", ...}
+# secret_name = "qlir/telegram"
+
+# instance_type  = "t3.medium"
+# root_volume_gb = 50
+# repo_url       = "https://github.com/Trones21/qlir.git"

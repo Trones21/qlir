@@ -109,7 +109,7 @@ def has_outbox_dirs(alerts_root: Path, outbox_routes_keys: list[str]):
     for route in outbox_routes_keys:
         uri = Path(alerts_root / route)
         if not uri.is_dir():
-            logger.info(f"Outbox directory not found at: {uri.absolute()}") 
+            logger.info(f"notification_server/server.py::OUTBOX_ROUTES specifies an outbox, but the directory was not found. Expected at: {uri.absolute()}") 
 
 def has_root_outbox_dir(alerts_root: Path) -> bool:
     return any(

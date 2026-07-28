@@ -21,5 +21,5 @@ TRIGGER_REGISTRY = {
         "description": "When we have a perfect frontside (either direction), and we get the reversal signal. DF granularity determined by the DF",
         "df": "1m_macd_with_pyramids",
         "column": "perfect_frontside_plus_1_light",
-    }
+    },
 }

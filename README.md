@@ -100,6 +100,10 @@ cd src/qlir/servers
 bash ./full_install.sh        # or run install_system_deps.sh / clone_repo_and_install_py_deps.sh individually
 ```
 
+To provision a cloud host instead, see **[infra/](infra/)** (Terraform and CloudFormation for a
+single EC2 instance). ⚠️ The instance **must run outside the United States** — Binance blocks
+US IPs — so deploy to a non-US region (Europe recommended).
+
 ## Quickstart
 
 ```text

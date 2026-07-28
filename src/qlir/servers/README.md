@@ -206,6 +206,11 @@ Telegram env vars are conventionally sourced from `~/set_telegram_env_vars.sh` (
 
 ## Running the pipeline
 
+> ⚠️ **Hosting requirement:** the data server calls the Binance API, which **blocks US IP
+> addresses.** Run the pipeline (at minimum the data server) on a host **outside the United
+> States** — Europe is recommended. For cloud provisioning that enforces this, see
+> [infra/](../../../infra/) (Terraform/CloudFormation for a non-US EC2 instance).
+
 Each service runs in its own `tmux` session so it survives your shell and can be attached
 for logs.
 
