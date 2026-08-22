@@ -6,7 +6,7 @@ from typing import Any, Iterable
 
 from .adapters.base import NotificationAdapter
 from .adapters.registry import SinkConfigError
-from .config import build_adapters, load_config, read_declared_outboxes
+from .config import NoOutboxesYet, build_adapters, load_config, read_declared_outboxes
 from .logging import setup_logging
 
 from qlir.servers.alerts.paths import get_alerts_root
@@ -81,6 +81,55 @@ def report_routing(
 # Main loop
 # -------------------------------------------------
 
+def wait_for_routing(
+    alerts_root: Path,
+    *,
+    poll_seconds: float = 2.0,
+    log_every_seconds: float = 30.0,
+):
+    """
+    Block until there is something to route, then return (config, declared).
+
+    With no notifications.toml, routing falls back to console for whatever the
+    analysis server has declared -- so if it has not declared anything yet, there
+    is nothing to route. Wait for it rather than exiting: the services are
+    decoupled and may be started in any order, so "notification server came up
+    first" is a normal state, not a failure.
+
+    A genuinely broken config (SinkConfigError) still propagates immediately --
+    waiting would not fix a missing Telegram token.
+    """
+    waiting_since = time.monotonic()
+    last_logged: float | None = None
+
+    while True:
+        declared = read_declared_outboxes(alerts_root)
+
+        try:
+            cfg = load_config(declared_outboxes=sorted(declared))
+        except NoOutboxesYet:
+            now = time.monotonic()
+            if last_logged is None or (now - last_logged) >= log_every_seconds:
+                logger.info(
+                    "Waiting on upstream analysis_server: no notifications.toml and no "
+                    "outboxes declared in %s yet. Waited %.0fs; polling every %.1fs. "
+                    "Create notifications.toml to route explicitly instead of waiting.",
+                    alerts_root / "analysis_outboxes.json",
+                    now - waiting_since,
+                    poll_seconds,
+                )
+                last_logged = now
+            time.sleep(poll_seconds)
+            continue
+
+        if declared:
+            logger.info(
+                "analysis server declares %d outbox(es): %s",
+                len(declared), ", ".join(sorted(declared)),
+            )
+        return cfg, declared
+
+
 def main() -> None:
     alerts_root = get_alerts_root()
     sent_root = alerts_root / "_sent"
@@ -92,24 +141,15 @@ def main() -> None:
 
     logger.info("notification server starting (alerts root: %s)", alerts_root)
 
-    declared = read_declared_outboxes(alerts_root)
-    if declared:
-        logger.info("analysis server declares %d outbox(es): %s",
-                    len(declared), ", ".join(sorted(declared)))
-    else:
-        logger.info(
-            "No analysis_outboxes.json yet -- the analysis server has not declared any "
-            "outboxes. This is fine; it may not have started."
-        )
-
     try:
-        cfg = load_config(declared_outboxes=sorted(declared))
-        outbox_adapters = build_adapters(cfg)
+        cfg, declared = wait_for_routing(alerts_root)
     except SinkConfigError as e:
         # A selected channel is unusable. Fail loudly with setup steps rather than
         # starting up and silently dropping alerts.
         logger.error("%s", e)
         raise SystemExit(1)
+
+    outbox_adapters = build_adapters(cfg)
 
     logger.info("notification config: %s", cfg.source)
     report_routing(outbox_adapters, declared)

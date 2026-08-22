@@ -40,6 +40,16 @@ except ModuleNotFoundError:  # py3.10
 
 log = logging.getLogger(__name__)
 
+class NoOutboxesYet(RuntimeError):
+    """
+    No config file and no declared outboxes -- there is simply nothing to route.
+
+    Deliberately distinct from SinkConfigError: this is a "wait for upstream"
+    condition like the analysis server waiting on agg parquet, not a
+    misconfiguration. The server idles and re-checks.
+    """
+
+
 DEFAULT_CONFIG_FILENAME = "notifications.toml"
 CONFIG_ENV_VAR = "QLIR_NOTIFICATIONS_CONFIG"
 
@@ -149,10 +159,12 @@ def load_config(*, declared_outboxes: list[str] | None = None) -> NotificationCo
     if path is None:
         names = declared_outboxes or []
         if not names:
-            raise SinkConfigError(
-                "No notifications config found and no outboxes have been declared yet.\n"
-                f"Either start the analysis server first (it writes analysis_outboxes.json), "
-                f"or create {DEFAULT_CONFIG_FILENAME} -- see notifications.example.toml."
+            # Nothing to route yet. This is a normal startup state, not an error:
+            # the notification server may legitimately start before the analysis
+            # server has declared anything. Callers wait and re-check rather than
+            # exiting, which is what keeps start-in-any-order true.
+            raise NoOutboxesYet(
+                "No notifications config found and no outboxes declared yet."
             )
         cfg = console_fallback(names)
         log.warning(

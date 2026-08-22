@@ -48,7 +48,8 @@ def persist(data, url, request_slice_key, responses_dir, data_root, inspection_r
     with file_path.open("w", encoding="utf-8") as f:
         json.dump(raw_response_payload, f, indent=2)
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-    print(term_fmt(f"{ts} [{ colorize("WROTE", Ansi.BLUE)} - SLICE]: {file_path}"))
+    wrote = colorize("WROTE", Ansi.BLUE)
+    print(term_fmt(f"{ts} [{wrote} - SLICE]: {file_path}"))
 
     # Return the metadata subset shape expected by worker.py
     return {

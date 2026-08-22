@@ -74,7 +74,10 @@ def mark_id_between(
 
     # If you prefer nullable int ids:
     # return out.astype("Int64")
-    return outimport pandas as pd
+    return out
+
+
+import pandas as pd
 
 
 def mark_id_between(

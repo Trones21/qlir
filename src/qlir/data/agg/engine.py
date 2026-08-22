@@ -27,13 +27,34 @@ def wait_load_manifest_json_no_serialize(manifest_path: Path) -> dict[str, Any]:
     Contract:
     - waits for the manifest to exist, then loads it 
     """
-    log.info("Waiting for manifest.json to exist | path=%s", manifest_path)
-    
+    poll_seconds = 0.2
+    log_every_seconds = 30.0
+
+    waiting_since = time.monotonic()
+    last_logged: float | None = None
+
     while True:
         if manifest_path.exists() and manifest_path.stat().st_size > 0:
-                break
-        log.warning("STILL waiting for manifest.json to exist | path=%s", manifest_path)
-        time.sleep(0.2)
+            if last_logged is not None:
+                log.info(
+                    "manifest.json is ready after %.0fs | path=%s",
+                    time.monotonic() - waiting_since, manifest_path,
+                )
+            break
+
+        # Poll fast, log slow. At 0.2s this logged ~5 lines/second, which buried
+        # the tmux pane during any real wait for the data server's first manifest.
+        now = time.monotonic()
+        if last_logged is None or (now - last_logged) >= log_every_seconds:
+            log.info(
+                "Waiting on upstream data_server: manifest.json does not exist yet | "
+                "path=%s | waited %.0fs, polling every %.1fs. This is expected until "
+                "the data server's Manifest Builder writes it.",
+                manifest_path, now - waiting_since, poll_seconds,
+            )
+            last_logged = now
+
+        time.sleep(poll_seconds)
 
     with manifest_path.open("r", encoding="utf-8") as f:
         return json.load(f)
