@@ -25,7 +25,7 @@ defined in `data.core.naming`.
     <root>/<datasource>/<instrument_id>_<resolution>.parquet
 
 Examples:
-    ~/qlir_data/drift/sol-perp_1m.parquet
+    ~/qlir_data/binance/solusdt_1m.parquet
     ~/qlir_data/helius/btc-perp_5m.parquet
 
 This module centralizes all path construction in one place.
@@ -106,7 +106,7 @@ def datasource_dir(
     Get the directory for a specific datasource under the data root.
 
     Example:
-        datasource_dir("drift") -> ~/qlir_data/drift
+        datasource_dir("binance") -> ~/qlir_data/binance
     """
     root = get_data_root(user_root)
     return root / datasource
@@ -193,7 +193,7 @@ def candles_path(
         Canonical instrument identifier (e.g. "sol-perp", "btc-perp")
     resolution : TimeFreq
     datasource : str
-        Name of the datasource (e.g. "drift", "helius", "kaiko")
+        Name of the datasource (e.g. "binance", "helius", "kaiko")
     dir_suffix_str:
         This is the full dir path -- so if you want the file at /DRIFT/candles/oracle/, you would pass /candles/oracle/ (DRIFT portion is arleady taken care of via datsource param )
     user_root : Path | str | None
@@ -231,7 +231,7 @@ def ensure_candles_dir(
     before an I/O write (handled by io/).
 
     Example:
-        dir_path = ensure_candles_dir("drift")
+        dir_path = ensure_candles_dir("binance")
     """
     path = datasource_dir(datasource, user_root=user_root)
     ensure_dir(path)

@@ -10,7 +10,7 @@ class DataSourceKind(Enum):
     High-level classification of data sources.
     """
 
-    EXECUTION_VENUE = auto()   # Drift, Hyperliquid, etc.
+    EXECUTION_VENUE = auto()   # Binance, Hyperliquid, etc.
     MARKET_DATA = auto()       # Kaiko, CryptoCompare, etc.
     INDEXER = auto()           # Helius, Triton, etc.
     MOCK = auto()              # Internal synthetic/mock data
@@ -59,17 +59,6 @@ class DataSource(Enum):
 
     Enum values are DataSourceSpec instances.
     """
-
-    DRIFT = DataSourceSpec(
-        name="drift",
-        kind=DataSourceKind.EXECUTION_VENUE,
-        supports_candles=True,
-        supports_execution=True,
-        requires_symbol_map=True,
-        supported_tiers={DataTier.FREE},
-        requires_api_key=False,
-        description="Drift perpetual futures (execution + candles via public API).",
-    )
 
     KAIKO = DataSourceSpec(
         name="kaiko",

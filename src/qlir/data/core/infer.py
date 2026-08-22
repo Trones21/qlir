@@ -194,7 +194,7 @@ def infer_datasource(file_path: str | Path) -> Optional[str]:
         3. Parent directory name (e.g. <root>/<datasource>/<file>)
 
     Returns:
-        datasource string (e.g. "drift") or None.
+        datasource string (e.g. "binance") or None.
     """
     if not isinstance(file_path, Path):
         file_path = Path(file_path)

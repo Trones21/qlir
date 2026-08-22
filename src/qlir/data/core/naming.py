@@ -139,7 +139,7 @@ def parquet_metadata(
     Canonical keys:
         - "instrument_id"   : canonical instrument identifier, e.g. "sol-perp"
         - "resolution"      : canonical resolution string, e.g. "1m"
-        - "datasource"      : optional datasource name, e.g. "drift"
+        - "datasource"      : optional datasource name, e.g. "binance"
         - "upstream_symbol" : optional venue-specific symbol, e.g. "SOL-PERP"
         - "qlir_version"    : optional version tag for the QLIR data layout
 
