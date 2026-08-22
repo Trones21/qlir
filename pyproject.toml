@@ -50,11 +50,10 @@ where = ["src"]
 # [tool.setuptools.package-data]
 # qlir = ["py.typed"]
 
+# NOTE: pytest.ini at the repo root takes precedence over this table, so the
+# settings below are inert. Edit pytest.ini instead.
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-q --maxfail=1"
-# Prefer editable install instead of pythonpath hacks:
-# pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
@@ -88,6 +87,10 @@ known-first-party = ["qlir"]
 
 
 [dependency-groups]
+# `poetry install --with dev` reads THIS table, not [project.optional-dependencies].
+# pytest must live here or `make test` silently falls back to a system-wide pytest
+# that cannot import qlir/pandas.
 dev = [
-    "ruff (>=0.14.11,<0.15.0)"
+    "ruff (>=0.14.11,<0.15.0)",
+    "pytest (>=8.0)",
 ]
