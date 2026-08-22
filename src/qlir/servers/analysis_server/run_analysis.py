@@ -12,7 +12,9 @@ from qlir.df.granularity.to_row_per_time_chunk.time_chunk import to_row_per_time
 from qlir.logging.logdf import logdf
 from qlir.servers.analysis_server.df_materialization.registry import DF_REGISTRY
 from qlir.servers.analysis_server.server import get_clean_data
-from qlir.servers.analysis_server.analyses.macd.macd_initial import macd_entry
+from qlir.servers.analysis_server.analyses.macd.macd_initial import (
+    df_macd_full_pyramidal_annotation,
+)
 from qlir.data.resampling.generate_candles import generate_candles_from_1m, minute_range
 from qlir.io.writer import write
 import logging
@@ -38,7 +40,7 @@ def main():
     )
 
     # Skip the registry, import the builder directly
-    df = macd_entry(full_df)
+    df = df_macd_full_pyramidal_annotation(full_df).df
 
     row_num = df["pyramid_len"].to_numpy().tolist().index(2)
 
@@ -142,7 +144,7 @@ def main():
 
 
     for k, df in dfs_dict.items():
-        tdf = macd_entry(df)
+        tdf = df_macd_full_pyramidal_annotation(df).df
         vc = tdf["is_histogram_pyramid"].value_counts()
         row = vc.to_dict()
         stats = {
