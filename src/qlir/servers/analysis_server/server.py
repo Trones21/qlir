@@ -152,16 +152,11 @@ def run_staleness_check(
     save_alert_states(alert_states)
 
 
-def _outbox_level(outbox_name: str) -> str:
-    if outbox_name == "qlir-data-pipeline":
-        return "pipeline"
-    if outbox_name == "qlir-events":
-        return "events"
-    if outbox_name.startswith("qlir-tradable"):
-        return "tradable"
-    if outbox_name == "qlir-positioning":
-        return "positioning"
-    return "unknown"
+# Outbox names are canonical identifiers declared by each outbox package in its
+# meta.py -- see emit/outboxes/load.py and ALERT_OUTBOXES.md. They are referenced
+# by name here rather than string-matched, so a rename lands in exactly one place.
+EVENTS_OUTBOX = "qlir-events"
+PIPELINE_OUTBOX = "qlir-data-pipeline"
 
 
 def _collect_required_df_names(outboxes: Mapping[str, Mapping[str, Any]]) -> set[str]:
@@ -305,7 +300,7 @@ def run_loop_iteration(
 
     triggered_events: set[str] = set()
 
-    events_cfg = outboxes.get("qlir-events")
+    events_cfg = outboxes.get(EVENTS_OUTBOX)
     if events_cfg:
         registry = events_cfg["trigger_registry"]
         active = events_cfg["active_triggers"]
@@ -322,7 +317,7 @@ def run_loop_iteration(
             if bool(last[col]):
                 triggered_events.add(trigger_key)
                 emit_alert(
-                    outbox="qlir-events",
+                    outbox=EVENTS_OUTBOX,
                     data={
                         "trigger": trigger_key,
                         "description": spec.get("description"),
@@ -337,7 +332,7 @@ def run_loop_iteration(
     # ----------------------------------------------------------------------
 
     for outbox_name, cfg in outboxes.items():
-        if outbox_name in ("qlir-events", "qlir-pipeline"):
+        if outbox_name in (EVENTS_OUTBOX, PIPELINE_OUTBOX):
             continue
 
         registry = cfg["trigger_registry"]
@@ -414,7 +409,13 @@ def main() -> None:
 
     # Write outbox registry for notification server discovery
     write_outbox_registry(
-        {name: {"alert_level": _outbox_level(name)} for name in outboxes}
+        {
+            name: {
+                "alert_level": cfg["alert_level"],
+                "priority": cfg["priority"],
+            }
+            for name, cfg in outboxes.items()
+        }
     )
 
     alert_states = load_alert_states()
