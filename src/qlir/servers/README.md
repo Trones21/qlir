@@ -168,10 +168,18 @@ the path helpers raise if it is missing.
   (currently **Telegram**), with retry/backoff and atomic move to `_sent/` or `_failed/`.
   Outbound only — it never decides what an alert means.
 - **Command:** `poetry run notifications_server`
-- **Routing:** `OUTBOX_ROUTES` in [notification_server/server.py](notification_server/server.py)
-  is authoritative. Current outboxes → Telegram bots:
-  `qlir-ops`, `qlir-data-pipeline`, `qlir-tradable-human`, `qlir-positioning`.
-  Each route reads a `*_TELEGRAM_BOT_TOKEN` env var plus a shared `TELEGRAM_CHAT_ID`.
+- **Routing:** driven by `notifications.toml` (git-ignored; copy from
+  [notifications.example.toml](../../../notifications.example.toml)). Sinks are named
+  and defined once, then referenced by `[routes]`, so one outbox can fan out to
+  several transports and one transport can serve several outboxes. Sink types:
+  `console`, `file`, `telegram`, `email` (SMTP), `webhook`. **With no config file
+  every declared outbox routes to the console**, so the pipeline runs end to end
+  with no credentials.
+- **Secrets:** never in the config — a key ending in `_env` names an environment
+  variable. Only sinks referenced by a route are validated at startup; a routed
+  sink that cannot be built stops the server and prints that transport's setup steps.
+- **Verify a transport:** `poetry run notify_smoke --list | --all | --sink NAME |
+  --outbox NAME`. Sends straight through the adapter, bypassing the queue.
 - **Docs:** [notification_server/README.md](notification_server/README.md),
   [adapters/telegram_setup.md](notification_server/adapters/telegram_setup.md)
 
@@ -196,11 +204,12 @@ the path helpers raise if it is missing.
 | `QLIR_DATA_ROOT` | data_server, agg_server, analysis_server | Root for market data (default `~/qlir_data`). |
 | `QLIR_ALERTS_DIR` | analysis_server, notification_server, ops_watcher | Root for alert outboxes. **Required** (no default). |
 | `QLIR_MANIFEST_LOG` | data_server | `1` enables Manifest Builder logging. |
-| `OPS_TELEGRAM_BOT_TOKEN`, `DATA_PIPELINE_TELEGRAM_BOT_TOKEN`, `TRADABLE_HUMAN_TELEGRAM_BOT_TOKEN`, `POSITIONING_TELEGRAM_BOT_TOKEN` | notification_server | Per-outbox Telegram bot tokens. |
-| `TELEGRAM_CHAT_ID` | notification_server | Telegram chat id (same across bots — it's your user id). |
+| `QLIR_NOTIFICATIONS_CONFIG` | notification_server | Explicit path to the notifications config. Otherwise it walks up from cwd looking for `notifications.toml`, then tries `~/.qlir/notifications.toml`. |
+| *(sink-specific)* | notification_server | Whatever your `notifications.toml` names in its `*_env` keys — Telegram tokens, SMTP credentials, webhook URLs. Nothing is required unless a route references it. |
 
-Telegram env vars are conventionally sourced from `~/set_telegram_env_vars.sh` (see
-[start_all_simple.sh](start_all_simple.sh)).
+[start_all_simple.sh](start_all_simple.sh) sources `~/set_telegram_env_vars.sh` if it
+exists, and carries on without it if not — notification delivery then follows
+`notifications.toml`, or falls back to the console.
 
 ---
 

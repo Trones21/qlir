@@ -68,9 +68,6 @@ ANALYSIS_LIMIT = int(os.environ.get("QLIR_ANALYSIS_LIMIT", "1000"))
 ANALYSIS_ETL_MODE = os.environ.get("QLIR_ETL_MODE", "full_each_loop")
 ANALYSIS_ETL_PIPELINE = os.environ.get("QLIR_ETL_PIPELINE", "candles_v1")
 
-PARQUET_CHUNKS_DIR = wait_get_agg_dir_path(
-    ANALYSIS_DATASOURCE, ANALYSIS_ENDPOINT, ANALYSIS_SYMBOL, ANALYSIS_INTERVAL, ANALYSIS_LIMIT
-)
 TS_COL = "tz_start"
 
 POLL_INTERVAL_SEC = 15
@@ -78,6 +75,20 @@ LAST_N_FILES = 5
 MAX_ALLOWED_LAG_SEC = 120
 
 STATE_PATH = "~/.qlir/state/analysis_server.json"
+
+
+def parquet_chunks_dir() -> Path:
+    """
+    Resolve the agg `parts/` dir, blocking until the agg server has written at least
+    one parquet file.
+
+    Resolved lazily (not at import time) because it polls forever: as a module-level
+    constant it made `import qlir.servers.analysis_server.server` hang indefinitely on
+    any machine without an agg dataset — which meant `pytest` hung on a fresh clone.
+    """
+    return wait_get_agg_dir_path(
+        ANALYSIS_DATASOURCE, ANALYSIS_ENDPOINT, ANALYSIS_SYMBOL, ANALYSIS_INTERVAL, ANALYSIS_LIMIT
+    )
 
 # --------------------------------------------------------------------------
 # Helpers
@@ -94,7 +105,7 @@ def is_data_stale(data_ts: datetime, max_lag_sec: int) -> bool:
 @telemetry(console=True, log_path=Path("telemetry/etl_times.log"))
 def get_clean_data() -> pd.DataFrame:
     return load_clean_data(
-        PARQUET_CHUNKS_DIR,
+        parquet_chunks_dir(),
         last_n_files=LAST_N_FILES,
     )
 
@@ -141,16 +152,11 @@ def run_staleness_check(
     save_alert_states(alert_states)
 
 
-def _outbox_level(outbox_name: str) -> str:
-    if outbox_name == "qlir-data-pipeline":
-        return "pipeline"
-    if outbox_name == "qlir-events":
-        return "events"
-    if outbox_name.startswith("qlir-tradable"):
-        return "tradable"
-    if outbox_name == "qlir-positioning":
-        return "positioning"
-    return "unknown"
+# Outbox names are canonical identifiers declared by each outbox package in its
+# meta.py -- see emit/outboxes/load.py and ALERT_OUTBOXES.md. They are referenced
+# by name here rather than string-matched, so a rename lands in exactly one place.
+EVENTS_OUTBOX = "qlir-events"
+PIPELINE_OUTBOX = "qlir-data-pipeline"
 
 
 def _collect_required_df_names(outboxes: Mapping[str, Mapping[str, Any]]) -> set[str]:
@@ -294,7 +300,7 @@ def run_loop_iteration(
 
     triggered_events: set[str] = set()
 
-    events_cfg = outboxes.get("qlir-events")
+    events_cfg = outboxes.get(EVENTS_OUTBOX)
     if events_cfg:
         registry = events_cfg["trigger_registry"]
         active = events_cfg["active_triggers"]
@@ -311,7 +317,7 @@ def run_loop_iteration(
             if bool(last[col]):
                 triggered_events.add(trigger_key)
                 emit_alert(
-                    outbox="qlir-events",
+                    outbox=EVENTS_OUTBOX,
                     data={
                         "trigger": trigger_key,
                         "description": spec.get("description"),
@@ -326,7 +332,7 @@ def run_loop_iteration(
     # ----------------------------------------------------------------------
 
     for outbox_name, cfg in outboxes.items():
-        if outbox_name in ("qlir-events", "qlir-pipeline"):
+        if outbox_name in (EVENTS_OUTBOX, PIPELINE_OUTBOX):
             continue
 
         registry = cfg["trigger_registry"]
@@ -403,7 +409,13 @@ def main() -> None:
 
     # Write outbox registry for notification server discovery
     write_outbox_registry(
-        {name: {"alert_level": _outbox_level(name)} for name in outboxes}
+        {
+            name: {
+                "alert_level": cfg["alert_level"],
+                "priority": cfg["priority"],
+            }
+            for name, cfg in outboxes.items()
+        }
     )
 
     alert_states = load_alert_states()
@@ -411,8 +423,9 @@ def main() -> None:
     update_runtime_state("last_processed_ts", last_processed_ts)
 
     # ETL provider (owns the incremental cache when enabled)
+    chunks_dir = parquet_chunks_dir()
     provider = CleanDataProvider(
-        PARQUET_CHUNKS_DIR,
+        chunks_dir,
         get_pipeline(ANALYSIS_ETL_PIPELINE),
         last_n_files=LAST_N_FILES,
         mode=ANALYSIS_ETL_MODE,
@@ -432,7 +445,7 @@ def main() -> None:
         now = utc_now()
         last_processed_ts, last_fingerprint = run_loop_iteration(
             provider=provider,
-            parquet_dir=PARQUET_CHUNKS_DIR,
+            parquet_dir=chunks_dir,
             outboxes=outboxes,
             required_df_names=required_df_names,
             alert_states=alert_states,

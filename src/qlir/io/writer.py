@@ -86,7 +86,7 @@ def write_dataset_meta(
     resolution : str
         Canonical resolution string (e.g. "1m", "5m", "1h", "1D").
     datasource : str, optional
-        Name of the datasource that produced the dataset ("drift", "helius", ...).
+        Name of the datasource that produced the dataset ("binance", "helius", ...).
     upstream_symbol : str, optional
         Venue-specific symbol used to fetch the data ("SOL-PERP", "SOL/USDC").
     qlir_version : str, optional

@@ -8,8 +8,18 @@ from typing import Any, Dict
 
 from qlir.servers.alerts.paths import get_alerts_root
 
-ALERTS_DIR = get_alerts_root()
-OUTBOX_REGISTRY_PATH = ALERTS_DIR / "analysis_outboxes.json"
+# NOTE: the alerts root is resolved lazily, never at import time. `get_alerts_root()`
+# raises when QLIR_ALERTS_DIR is unset, and resolving it at module scope made merely
+# *importing* server.py (e.g. to collect a test, or to read `_collect_required_df_names`)
+# fail on any machine that had not exported it yet.
+
+
+def alerts_dir() -> Path:
+    return get_alerts_root()
+
+
+def outbox_registry_path() -> Path:
+    return alerts_dir() / "analysis_outboxes.json"
 
 
 def utc_now_iso() -> str:
@@ -27,7 +37,8 @@ def write_outbox_registry(outboxes: Dict[str, Dict[str, Any]]) -> None:
     This is an authoritative, durable declaration.
     Notification servers discover outboxes from this file.
     """
-    ALERTS_DIR.mkdir(parents=True, exist_ok=True)
+    root = alerts_dir()
+    root.mkdir(parents=True, exist_ok=True)
 
     payload = {
         "version": 1,
@@ -35,7 +46,7 @@ def write_outbox_registry(outboxes: Dict[str, Dict[str, Any]]) -> None:
         "outboxes": outboxes,
     }
 
-    OUTBOX_REGISTRY_PATH.write_text(
+    outbox_registry_path().write_text(
         json.dumps(payload, indent=2, sort_keys=True)
     )
 
@@ -45,7 +56,7 @@ def ensure_outbox_declared(outbox: str) -> None:
     Defensive check: ensure the outbox exists on disk.
     Registry validation is intentionally light here.
     """
-    outbox_dir = ALERTS_DIR / outbox
+    outbox_dir = alerts_dir() / outbox
     outbox_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -74,6 +85,6 @@ def emit_alert(*, outbox: str, data: Any) -> None:
 
     # Filename is for uniqueness + debugging only
     fname = f"{alert['ts']}.json"
-    path = ALERTS_DIR / outbox / fname
+    path = alerts_dir() / outbox / fname
 
     path.write_text(json.dumps(alert))
