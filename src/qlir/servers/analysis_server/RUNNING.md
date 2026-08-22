@@ -51,7 +51,7 @@ places. Keeping them straight is the whole game:
 |---|---|---|---|---|
 | 1 | **`DF_REGISTRY`** | [df_materialization/registry.py](df_materialization/registry.py) | `df_name → builder fn` | Populated **at startup** by `df_registration_entrypoint()`. The file itself **must stay empty.** |
 | 2 | **`TRIGGER_REGISTRY`** (+ `ACTIVE_TRIGGERS`) | `emit/outboxes/<outbox>/trigger_registry.py` and `.../active_triggers.py` | trigger specs; list of which are live | You, per outbox. |
-| 3 | **outbox registry file** | `$QLIR_ALERTS_DIR/analysis_outboxes.json` on disk | which outboxes exist + their alert level | Written by `write_outbox_registry()` at startup; **read by the notification server** for discovery. |
+| 3 | **outbox registry file** | `$QLIR_ALERTS_DIR/analysis_outboxes.json` on disk | which outboxes exist + their alert level and priority | Written by `write_outbox_registry()` at startup from each outbox's `meta.py`; **read by the notification server** for discovery. |
 
 ### #1 — `DF_REGISTRY` must stay empty in the file
 [registry.py](df_materialization/registry.py) defines `DF_REGISTRY = {}` and the comment says
@@ -229,5 +229,16 @@ the watermark/backoff — derived data is always rebuilt from the agg parquet wi
   materialize time.
 - The referenced `"column"` must be a single boolean column; only its **last row** is read.
 - Use `type: "df_column"` or `type: "events"` — not the legacy `"signal"`.
-- Config in [server.py](server.py) is currently hardcoded (`SOLUSDT 1m limit=1000`,
-  `LAST_N_FILES=5`, `POLL_INTERVAL_SEC=15`); edit there to change the symbol/window.
+- An outbox's **package directory** (`qlir_events`) and its **outbox name**
+  (`qlir-events`) are different strings. The name is declared in the package's
+  `meta.py` and is what appears on disk under `$QLIR_ALERTS_DIR`, in
+  `analysis_outboxes.json`, and in the notification server's routes. A new outbox
+  package must have a `meta.py` or startup fails.
+- The dataset is env-driven, not hardcoded: `QLIR_ANALYSIS_SYMBOL`,
+  `QLIR_ANALYSIS_INTERVAL`, `QLIR_ANALYSIS_LIMIT`, `QLIR_ANALYSIS_DATASOURCE`,
+  `QLIR_ANALYSIS_ENDPOINT` (defaults: binance / klines / SOLUSDT / 1m / 1000).
+  `LAST_N_FILES=5` and `POLL_INTERVAL_SEC=15` are still constants in
+  [server.py](server.py).
+- On startup the server blocks until the agg server has written at least one
+  parquet file. That is deliberate -- it is what lets all four services start in
+  any order -- and it logs what it is waiting on every 30s.

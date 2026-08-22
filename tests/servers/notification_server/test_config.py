@@ -4,6 +4,7 @@ import pytest
 
 from qlir.servers.notification_server.adapters.registry import SinkConfigError
 from qlir.servers.notification_server.config import (
+    NoOutboxesYet,
     build_adapters,
     config_path,
     console_fallback,
@@ -188,12 +189,22 @@ def test_console_fallback_routes_every_declared_outbox():
     assert set(adapters) == {"qlir-events", "qlir-ops"}
 
 
-def test_no_config_and_no_declared_outboxes_explains_itself(monkeypatch, tmp_path):
+def test_no_config_and_no_declared_outboxes_is_a_wait_not_an_error(monkeypatch, tmp_path):
+    """
+    Nothing to route yet is a "wait for upstream" state, like agg waiting on the
+    raw manifest. It must be distinguishable from a misconfiguration, because the
+    server idles on one and exits on the other -- that is what keeps the services
+    startable in any order.
+    """
     monkeypatch.delenv("QLIR_NOTIFICATIONS_CONFIG", raising=False)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
-    with pytest.raises(SinkConfigError, match="analysis_outboxes.json"):
+
+    with pytest.raises(NoOutboxesYet):
         load_config(declared_outboxes=[])
+
+    # and it must NOT be a SinkConfigError, which the server treats as fatal
+    assert not issubclass(NoOutboxesYet, SinkConfigError)
 
 
 def test_config_is_found_by_walking_up_from_a_subdirectory(monkeypatch, tmp_path):

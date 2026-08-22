@@ -84,40 +84,39 @@ workflow is documented in:
 
 ---
 
-## Installation
+## Getting started
 
-Setup scripts for running the pipeline live in [src/qlir/servers/](src/qlir/servers/):
+**→ [GETTING_STARTED.md](GETTING_STARTED.md)** — clone to a running pipeline, in
+about ten minutes.
 
-- **[full_install.sh](src/qlir/servers/full_install.sh)** — one-shot installer; runs the two
-  scripts below in order.
-- **[install_system_deps.sh](src/qlir/servers/install_system_deps.sh)** — installs system
-  prerequisites: `tmux`, checks `git`/Python, and bootstraps `pip` and `poetry`.
-- **[clone_repo_and_install_py_deps.sh](src/qlir/servers/clone_repo_and_install_py_deps.sh)** —
-  clones the repo and runs `poetry install`.
+⚠️ The data server calls the Binance API, which **blocks US IP addresses**. Run at
+least that service on a host outside the US; see [infra/](infra/) for Terraform and
+CloudFormation that provision a non-US EC2 instance. The other three services run
+anywhere.
 
 ```bash
-cd src/qlir/servers
-bash ./full_install.sh        # or run install_system_deps.sh / clone_repo_and_install_py_deps.sh individually
+git clone https://github.com/Trones21poet/qlir.git && cd qlir
+poetry install --with dev
+export QLIR_ALERTS_DIR=~/alerts        # required, no default
+cd src/qlir/servers && ./start_all_simple.sh
 ```
 
-To provision a cloud host instead, see **[infra/](infra/)** (Terraform and CloudFormation for a
-single EC2 instance). ⚠️ The instance **must run outside the United States** — Binance blocks
-US IPs — so deploy to a non-US region (Europe recommended).
+Alerts go to the console until you configure a transport, so the pipeline runs end
+to end with no accounts, bots, or credentials. To send them somewhere real, copy
+`notifications.example.toml` to `notifications.toml` and run
+`poetry run notify_smoke --all`.
 
-## Quickstart
+### Claude Code skills
 
-```text
-1. Clone qlir.
-2. Run ./quickstart/qlir_quickstart.py to scaffold a project that depends on the library.
-3. Open the generated project folder and follow the instructions in its README.
-```
-
-> Note: the quickstart scaffolds a *consumer* project (an older `afterdata`-style ETL layout).
-> The live pipeline in this repo is the canonical reference for how things run today — see
-> [src/qlir/servers/README.md](src/qlir/servers/README.md).
+[.claude/skills/](.claude/skills/) has two skills for the fiddly parts:
+**`qlir-new-analysis`** (an idea, wired through to a live alert) and
+**`qlir-notifications`** (choosing channels, per-transport setup, debugging an
+alert that never arrived).
 
 ## Other docs
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — module architecture & import/UX conventions.
 - [TESTING.md](TESTING.md) — test layout and how to run tests.
 - [Todo.md](Todo.md) · [refactor_ideas.md](refactor_ideas.md) — working notes.
+- [other-docs/FUTURE_DATA_SOURCES.md](other-docs/FUTURE_DATA_SOURCES.md) — ingestion
+  directions worth exploring (additional venues, bulk historical import, remote storage).
