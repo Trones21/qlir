@@ -50,26 +50,53 @@ def wait_for_parquet_dir_ready(
     *,
     poll_seconds: float = 2.0,
     min_files: int = 1,
+    log_every_seconds: float = 30.0,
 ) -> None:
+    """
+    Block until the agg server has written at least `min_files` parquet files.
+
+    This wait is deliberate. The analysis server must not proceed without data,
+    and it must not exit either -- that is what lets all four services be started
+    at once, in any order, and restarted independently.
+
+    Polling stays fast (`poll_seconds`) so the pipeline picks up as soon as data
+    lands, but logging is throttled to `log_every_seconds` so a long wait does not
+    bury the tmux pane. The first reason is always logged immediately, so it is
+    never a mystery why the server is sitting still.
+    """
     ensure_logging()
+
+    waiting_since = time.monotonic()
+    last_logged: float | None = None
+
     while True:
         if path.exists():
             files = list(path.glob("*.parquet"))
             if len(files) >= min_files:
+                if last_logged is not None:
+                    log.info(
+                        "Parquet data is ready at %s (%d file(s)) after %.0fs — continuing",
+                        path,
+                        len(files),
+                        time.monotonic() - waiting_since,
+                    )
                 return
-
-            log.info(
-                "Parquet dir exists but empty (%d files) — waiting %.1fs",
-                len(files),
-                poll_seconds,
-            )
+            reason = f"parquet dir exists but holds {len(files)} file(s), need {min_files}"
         else:
+            reason = "parquet directory does not exist yet"
+
+        now = time.monotonic()
+        if last_logged is None or (now - last_logged) >= log_every_seconds:
             log.info(
-                "Parquet directory not found yet: %s — waiting %.1fs",
+                "Waiting on upstream agg_server: %s (%s). Waited %.0fs; polling every %.1fs. "
+                "This is expected until agg_server seals its first chunk.",
                 path,
+                reason,
+                now - waiting_since,
                 poll_seconds,
             )
-            
+            last_logged = now
+
         time.sleep(poll_seconds)
 
 
