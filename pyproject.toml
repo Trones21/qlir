@@ -13,7 +13,9 @@ dependencies = ["pandas", "requests", "numpy", "pyarrow", "tabulate", "matplotli
 "httpx (>=0.28.1,<0.29.0)",
 "typing-extensions (>=4.15.0,<5.0.0)",
 "psutil (>=7.2.2,<8.0.0)",
-"ib-async (>=1.0.0)"
+"ib-async (>=1.0.0)",
+# tomllib is stdlib from 3.11; this backfills the 3.10 floor in requires-python
+"tomli (>=2.0) ; python_version < '3.11'"
 ]
 authors = [{ name = "Thomas Rones" }]
 license = { text = "MIT" }
@@ -29,6 +31,7 @@ data_server = "qlir.servers.data_server.run_server:main"
 ibkr_data_server = "qlir.servers.ibkr_data_server.run_server:main"
 agg_server = "qlir.servers.agg_server.run_server:main"
 notifications_server = "qlir.servers.notification_server.server:main"
+notify_smoke = "qlir.servers.notification_server.smoke:main"
 analysis_server = "qlir.servers.analysis_server.server:main"
 ops_watcher = "qlir.servers.ops_watcher.server:main"
 analysis = "qlir.servers.analysis_server.run_analysis:main"

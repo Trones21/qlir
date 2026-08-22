@@ -1,130 +1,31 @@
 import json
-import os
 import shutil
 import time
 from pathlib import Path
 from typing import Any, Iterable
 
 from .adapters.base import NotificationAdapter
-from .adapters.telegram import TelegramAdapter
+from .adapters.registry import SinkConfigError
+from .config import build_adapters, load_config, read_declared_outboxes
 from .logging import setup_logging
 
 from qlir.servers.alerts.paths import get_alerts_root
 
-
-ALERTS_ROOT = get_alerts_root()
-SENT_ROOT = ALERTS_ROOT / "_sent"
-FAILED_ROOT = ALERTS_ROOT / "_failed"
-
 POLL_INTERVAL_SEC = 2.0
 MAX_RETRIES = 3
 
-
-# -------------------------------------------------
-# Outbox → adapter routing (AUTHORITATIVE)
-# -------------------------------------------------
-
-OUTBOX_ROUTES: dict[str, list[dict[str, str]]] = {
-    
-    "qlir-ops": [
-        {
-            "adapter": "telegram",
-            "bot_token_env": "OPS_TELEGRAM_BOT_TOKEN",
-            "chat_id_env": "TELEGRAM_CHAT_ID", # Note: Telegram uses your user id for the chat id, so it'll be the same for all your bots"
-        }
-    ],
-    "qlir-data-pipeline": [
-        {
-            "adapter": "telegram",
-            "bot_token_env": "DATA_PIPELINE_TELEGRAM_BOT_TOKEN",
-            "chat_id_env": "TELEGRAM_CHAT_ID",
-        }
-    ],
-    "qlir-tradable-human": [
-        {
-            "adapter": "telegram",
-            "bot_token_env": "TRADABLE_HUMAN_TELEGRAM_BOT_TOKEN",
-            "chat_id_env": "TELEGRAM_CHAT_ID",
-        }
-    ],
-    "qlir-positioning": [
-        {
-            "adapter": "telegram",
-            "bot_token_env": "POSITIONING_TELEGRAM_BOT_TOKEN",
-            "chat_id_env": "TELEGRAM_CHAT_ID",
-        }
-    ],
-}
-
-
-# -------------------------------------------------
-# Adapter factory + validation
-# -------------------------------------------------
-
-def build_adapter(spec: dict[str, str]) -> NotificationAdapter:
-    adapter_type = spec.get("adapter")
-
-    if adapter_type == "telegram":
-        bot_env = spec.get("bot_token_env")
-        chat_env = spec.get("chat_id_env")
-
-        if not bot_env or not chat_env:
-            raise RuntimeError(
-                f"telegram adapter requires 'bot_token_env' and 'chat_id_env': {spec}"
-            )
-
-        if bot_env not in os.environ:
-            raise RuntimeError(f"missing required env var: {bot_env}")
-
-        if chat_env not in os.environ:
-            raise RuntimeError(f"missing required env var: {chat_env}")
-
-        return TelegramAdapter(
-            bot_token=os.environ[bot_env],
-            chat_id=os.environ[chat_env],
-        )
-
-    raise RuntimeError(f"unknown adapter type: {adapter_type}")
-
-
-def build_outbox_adapters() -> dict[str, list[NotificationAdapter]]:
-    """
-    Build and validate adapters for all routed outboxes.
-    """
-    out: dict[str, list[NotificationAdapter]] = {}
-
-    for outbox, specs in OUTBOX_ROUTES.items():
-        adapters: list[NotificationAdapter] = []
-        for spec in specs:
-            adapters.append(build_adapter(spec))
-        out[outbox] = adapters
-
-    return out
+logger = setup_logging()
 
 
 # -------------------------------------------------
 # Helpers
 # -------------------------------------------------
-def has_outbox_dirs(alerts_root: Path, outbox_routes_keys: list[str]):
-    for route in outbox_routes_keys:
-        uri = Path(alerts_root / route)
-        if not uri.is_dir():
-            logger.info(f"notification_server/server.py::OUTBOX_ROUTES specifies an outbox, but the directory was not found. Expected at: {uri.absolute()}") 
 
-def has_root_outbox_dir(alerts_root: Path) -> bool:
-    return any(
-        d.is_dir() and not d.name.startswith("_")
-        for d in alerts_root.iterdir()
-    )
-
-
-def iter_outbox_dirs() -> Iterable[Path]:
-    for d in ALERTS_ROOT.iterdir():
+def iter_outbox_dirs(alerts_root: Path) -> Iterable[Path]:
+    for d in sorted(alerts_root.iterdir()):
         if not d.is_dir():
-            logger.debug(f"Skipping: item is file (we are only iterating dirs): {d}")
             continue
-        if d.name.startswith("_") or d.name.startswith("__"):
-            logger.debug(f"Skipping: dir name starting with _ or __ : {d}")
+        if d.name.startswith("_"):  # _sent / _failed
             continue
         yield d
 
@@ -143,61 +44,97 @@ def retries_exceeded(alert: dict[str, Any]) -> bool:
     return alert.get("_meta", {}).get("retries", 0) >= MAX_RETRIES
 
 
+def report_routing(
+    outbox_adapters: dict[str, list[NotificationAdapter]],
+    declared: dict[str, dict],
+) -> None:
+    """
+    Log what this server will and will not handle, and flag the two ways a
+    route can be pointless -- so a silent no-op is always visible at startup.
+    """
+    for outbox, adapters in sorted(outbox_adapters.items()):
+        kinds = ", ".join(type(a).__name__.replace("Adapter", "").lower() for a in adapters)
+        logger.info("routing %-26s -> %s", outbox, kinds)
+
+    # routed but nobody declares it: fine for ops_watcher, a typo otherwise
+    if declared:
+        undeclared = sorted(set(outbox_adapters) - set(declared))
+        if undeclared:
+            logger.warning(
+                "Routed but not declared in analysis_outboxes.json: %s. Expected for "
+                "outboxes produced outside the analysis server (e.g. qlir-ops from "
+                "ops_watcher); otherwise check for a typo.",
+                ", ".join(undeclared),
+            )
+
+        # declared but unrouted: alerts will pile up undelivered
+        unrouted = sorted(set(declared) - set(outbox_adapters))
+        if unrouted:
+            logger.warning(
+                "Declared by the analysis server but NOT routed here: %s. Alerts written "
+                "to these outboxes will accumulate on disk and never be delivered.",
+                ", ".join(unrouted),
+            )
+
+
 # -------------------------------------------------
 # Main loop
 # -------------------------------------------------
 
-logger = setup_logging()
-
 def main() -> None:
-    
-    ALERTS_ROOT.mkdir(parents=True, exist_ok=True)
-    SENT_ROOT.mkdir(parents=True, exist_ok=True)
-    FAILED_ROOT.mkdir(parents=True, exist_ok=True)
+    alerts_root = get_alerts_root()
+    sent_root = alerts_root / "_sent"
+    failed_root = alerts_root / "_failed"
 
-    logger.info(
-        "notification server started (alerts root: %s)", ALERTS_ROOT
-    )
-    logger.info(
-        "TODO: WHEN WE CREATE THE BOT TRADER: Work on Perf... it takes a few hundred ms between each alert send... need to figure out where this massive delay is coming from..."
-    )
-    logger.info(
-        "TODO: Use a logger similar to the data_server and agg_server  found in the example project with all the color formatting"
-    )
+    alerts_root.mkdir(parents=True, exist_ok=True)
+    sent_root.mkdir(parents=True, exist_ok=True)
+    failed_root.mkdir(parents=True, exist_ok=True)
 
-    # Build + validate all adapters at startup
-    outbox_adapters = build_outbox_adapters()
-    logger.info("configured outbox routes")
-    logger.info(outbox_adapters['qlir-ops'])
-    
-    has_outbox_dirs(ALERTS_ROOT, outbox_routes_keys=list(outbox_adapters.keys()))
+    logger.info("notification server starting (alerts root: %s)", alerts_root)
+
+    declared = read_declared_outboxes(alerts_root)
+    if declared:
+        logger.info("analysis server declares %d outbox(es): %s",
+                    len(declared), ", ".join(sorted(declared)))
+    else:
+        logger.info(
+            "No analysis_outboxes.json yet -- the analysis server has not declared any "
+            "outboxes. This is fine; it may not have started."
+        )
+
+    try:
+        cfg = load_config(declared_outboxes=sorted(declared))
+        outbox_adapters = build_adapters(cfg)
+    except SinkConfigError as e:
+        # A selected channel is unusable. Fail loudly with setup steps rather than
+        # starting up and silently dropping alerts.
+        logger.error("%s", e)
+        raise SystemExit(1)
+
+    logger.info("notification config: %s", cfg.source)
+    report_routing(outbox_adapters, declared)
 
     warned_unrouted: set[str] = set()
 
     while True:
-        if not has_root_outbox_dir(ALERTS_ROOT):
-            raise FileNotFoundError(f"No outbox dirs found in: {ALERTS_ROOT}")
-
-        for outbox in iter_outbox_dirs():
+        for outbox in iter_outbox_dirs(alerts_root):
             outbox_name = outbox.name
-
             adapters = outbox_adapters.get(outbox_name)
+
             if not adapters:
                 if outbox_name not in warned_unrouted:
                     logger.warning(
-                        "no adapters configured for outbox '%s'; skipping",
-                        outbox_name,
+                        "outbox '%s' has alerts but no route in %s; leaving them in place",
+                        outbox_name, cfg.source,
                     )
                     warned_unrouted.add(outbox_name)
                 continue
 
-            sent_dir = SENT_ROOT / outbox_name
-            failed_dir = FAILED_ROOT / outbox_name
+            sent_dir = sent_root / outbox_name
+            failed_dir = failed_root / outbox_name
             sent_dir.mkdir(parents=True, exist_ok=True)
             failed_dir.mkdir(parents=True, exist_ok=True)
-            
-            logger.debug(f"checking {outbox_name}")
-            
+
             for alert_path in sorted(outbox.glob("*.json")):
                 try:
                     alert = load_alert(alert_path)
@@ -209,18 +146,11 @@ def main() -> None:
                         adapter.send(alert["data"])
 
                     shutil.move(alert_path, sent_dir / alert_path.name)
-                    logger.info(
-                        "sent alert %s (outbox=%s)",
-                        alert_path.name,
-                        outbox_name,
-                    )
+                    logger.info("sent alert %s (outbox=%s)", alert_path.name, outbox_name)
 
                 except Exception as e:
                     logger.warning(
-                        "failed alert %s (outbox=%s): %s",
-                        alert_path.name,
-                        outbox_name,
-                        e,
+                        "failed alert %s (outbox=%s): %s", alert_path.name, outbox_name, e
                     )
 
                     try:
@@ -228,13 +158,10 @@ def main() -> None:
                         increment_retry(alert)
 
                         if retries_exceeded(alert):
-                            shutil.move(
-                                alert_path, failed_dir / alert_path.name
-                            )
+                            shutil.move(alert_path, failed_dir / alert_path.name)
                             logger.error(
                                 "alert %s moved to failed (outbox=%s)",
-                                alert_path.name,
-                                outbox_name,
+                                alert_path.name, outbox_name,
                             )
                         else:
                             with alert_path.open("w") as f:
@@ -243,8 +170,7 @@ def main() -> None:
                     except Exception as inner:
                         logger.error(
                             "failed to update retry metadata for %s: %s",
-                            alert_path.name,
-                            inner,
+                            alert_path.name, inner,
                         )
 
         time.sleep(POLL_INTERVAL_SEC)

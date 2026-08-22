@@ -1,0 +1,106 @@
+# QLIR notification routing
+# -------------------------
+# Copy to `notifications.toml` (git-ignored) and edit:
+#
+#     cp notifications.example.toml notifications.toml
+#     poetry run notify_smoke --list      # show what is configured
+#     poetry run notify_smoke --all       # send a test through every routed sink
+#
+# Without this file the notification server routes every declared outbox to the
+# console. That is the intended starting point: the pipeline runs end to end
+# before you set up any transport.
+#
+# TWO RULES WORTH KNOWING
+#
+# 1. Secrets never live in this file. A key ending in `_env` holds the NAME of an
+#    environment variable; the value stays in your environment. This file is safe
+#    to read, diff, and share.
+#
+# 2. Only sinks referenced by a [routes] entry are validated at startup. An
+#    unreferenced sink missing its credentials is inert, not an error. A
+#    referenced one that cannot be built stops the server with setup steps -- you
+#    asked for a channel it cannot deliver on, so it refuses to drop alerts
+#    silently.
+
+
+# ---------------------------------------------------------------------------
+# SINKS -- where an alert can go. Name them whatever you like.
+# ---------------------------------------------------------------------------
+
+# No setup, no network, no credentials. Always works.
+[sinks.stdout]
+type = "console"
+# stream = "stdout"   # or "stderr"
+# pretty = true
+
+# Durable local JSONL audit trail. Tail with: tail -f ~/qlir_alerts.jsonl
+[sinks.local_log]
+type = "file"
+path = "~/qlir_alerts.jsonl"
+
+# Telegram. Run `poetry run notify_smoke --sink tg_human` after setting the env vars.
+#   1. Message @BotFather, send /newbot, follow the prompts.
+#   2. Export the token it gives you as TRADABLE_HUMAN_TELEGRAM_BOT_TOKEN.
+#   3. Message @userinfobot for your numeric id, export it as TELEGRAM_CHAT_ID.
+#      It is your user id, so it is the same for every bot you own.
+#   4. Send your bot a message first -- a bot cannot open a conversation with you.
+[sinks.tg_human]
+type = "telegram"
+bot_token_env = "TRADABLE_HUMAN_TELEGRAM_BOT_TOKEN"
+chat_id_env = "TELEGRAM_CHAT_ID"
+
+[sinks.tg_ops]
+type = "telegram"
+bot_token_env = "OPS_TELEGRAM_BOT_TOKEN"
+chat_id_env = "TELEGRAM_CHAT_ID"
+
+# Email over SMTP.
+#   Gmail  -> smtp.gmail.com:587, and you must use an App Password.
+#   AWS SES-> email-smtp.<region>.amazonaws.com:587, using SES SMTP credentials
+#             (not IAM keys). A sandboxed SES account can only send to verified
+#             addresses.
+#   Many cloud hosts block outbound 587 by default -- check that before assuming
+#   your credentials are wrong.
+[sinks.email_me]
+type = "email"
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+from_addr = "you@example.com"
+to_addrs = ["you@example.com"]
+username_env = "QLIR_SMTP_USERNAME"
+password_env = "QLIR_SMTP_PASSWORD"
+use_tls = true
+# subject_prefix = "[qlir]"
+
+# Generic HTTP push -- the integration point for anything else.
+# The alert's `data` object is the JSON request body, so any service that accepts
+# a webhook can consume it: your own API, a queue gateway, Slack/Discord incoming
+# webhooks, an AWS API Gateway fronting SNS/Lambda/EventBridge.
+[sinks.my_service]
+type = "webhook"
+url_env = "QLIR_WEBHOOK_URL"     # or: url = "https://example.com/hook"
+method = "POST"
+# headers = { "X-Source" = "qlir" }
+# headers_from_env = { "Authorization" = "QLIR_WEBHOOK_AUTH" }
+# timeout = 10.0
+
+
+# ---------------------------------------------------------------------------
+# ROUTES -- which outboxes this server handles, and which sinks each feeds.
+#
+# Outbox names come from the analysis server's declaration
+# ($QLIR_ALERTS_DIR/analysis_outboxes.json); `qlir-ops` comes from ops_watcher.
+# An outbox with no route here is left alone -- its alerts stay on disk.
+# One outbox may fan out to as many sinks as you like.
+# ---------------------------------------------------------------------------
+
+[routes]
+"qlir-events"               = ["local_log"]
+"qlir-data-pipeline"        = ["stdout"]
+"qlir-tradable-human"       = ["stdout", "local_log"]
+"qlir-positioning"          = ["stdout"]
+"qlir-tradable-binance-bot" = ["local_log"]
+"qlir-ops"                  = ["stdout"]
+
+# Fuller example -- a tradable alert to your phone, your inbox, and your bot:
+# "qlir-tradable-human" = ["tg_human", "email_me", "my_service", "local_log"]
